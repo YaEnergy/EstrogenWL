@@ -1,0 +1,9 @@
+# ignore build directory
+build/
+
+.cache/
+compile_commands.json
+
+*.out
+
+estrogenwm.log

@@ -1,0 +1,34 @@
+PKG_CONFIG?=pkg-config
+WAYLAND_PROTOCOLS!=$(PKG_CONFIG) --variable=pkgdatadir wayland-protocols
+WAYLAND_SCANNER!=$(PKG_CONFIG) --variable=wayland_scanner wayland-scanner
+
+PACKAGES="wlroots-0.18" wayland-server xkbcommon
+CFLAGS_PKG_CONFIG!=$(PKG_CONFIG) --cflags $(PACKAGES)
+CFLAGS+=$(CFLAGS_PKG_CONFIG)
+LIBRARIES!=$(PKG_CONFIG) --libs $(PACKAGES)
+
+COMPILER_FLAGS := -Wall -O3
+
+INCLUDE_DIR := include
+SOURCE_FILES := src/main.c src/filesystem.c src/keybinding.c src/commands.c src/log.c
+
+OUT_DIR := build
+
+all: clean build
+
+# wayland-scanner is a tool which generates C headers and rigging for Wayland
+# protocols, which are specified in XML. wlroots requires you to rig these up
+# to your build system yourself and provide them in the include path.
+xdg-shell-protocol.h:
+	$(WAYLAND_SCANNER) server-header \
+		$(WAYLAND_PROTOCOLS)/stable/xdg-shell/xdg-shell.xml $@
+
+build:
+	mkdir build
+	cc $(COMPILER_FLAGS) -o $(OUT_DIR)/EstrogenWM -I$(INCLUDE_DIR) $(SOURCE_FILES) -DWLR_USE_UNSTABLE $(LIBRARIES) $(CFLAGS)
+
+clean:
+	rm -rf $(OUT_DIR)
+
+install:
+	echo "WIP"
