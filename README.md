@@ -1,7 +1,7 @@
 # EstrogenCompositor
 Tiling wayland compositor using wlroots
 
-## converting from EstrogenWM (X11 tiling wm)
+Converting from EstrogenWM (X11 tiling wm)!
 
 ## Plans to support:
 - Grid-based window tiling system

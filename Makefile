@@ -10,7 +10,7 @@ LIBRARIES!=$(PKG_CONFIG) --libs $(PACKAGES)
 COMPILER_FLAGS := -Wall -O3
 
 INCLUDE_DIR := include
-SOURCE_FILES := src/main.c src/filesystem.c src/keybinding.c src/commands.c src/log.c
+SOURCE_FILES := src/main.c src/filesystem.c src/keybinding.c src/commands.c src/log.c src/types/keybind_list.c src/types/keybind.c
 
 OUT_DIR := build
 
@@ -21,14 +21,16 @@ all: clean build
 # to your build system yourself and provide them in the include path.
 xdg-shell-protocol.h:
 	$(WAYLAND_SCANNER) server-header \
-		$(WAYLAND_PROTOCOLS)/stable/xdg-shell/xdg-shell.xml $@
+		$(WAYLAND_PROTOCOLS)/stable/xdg-shell/xdg-shell.xml $(INCLUDE_DIR)/xdg-shell-protocol.h
 
-build:
-	mkdir build
-	cc $(COMPILER_FLAGS) -o $(OUT_DIR)/EstrogenWM -I$(INCLUDE_DIR) $(SOURCE_FILES) -DWLR_USE_UNSTABLE $(LIBRARIES) $(CFLAGS)
+build: xdg-shell-protocol.h
+	if [ ! -d $(OUT_DIR) ]; then mkdir $(OUT_DIR); fi
+	cc $(COMPILER_FLAGS) -o $(OUT_DIR)/EstrogenCompositor -I$(INCLUDE_DIR) $(SOURCE_FILES) -DWLR_USE_UNSTABLE $(LIBRARIES) $(CFLAGS)
 
 clean:
-	rm -rf $(OUT_DIR)
+	rm -rf $(OUT_DIR)/*
 
 install:
 	echo "WIP"
+
+.PHONY: all build

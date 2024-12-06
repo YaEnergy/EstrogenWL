@@ -6,4 +6,6 @@ compile_commands.json
 
 *.out
 
-estrogenwm.log
+include/xdg-shell-protocol.h
+
+estrogencompositor.log
