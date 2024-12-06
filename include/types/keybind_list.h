@@ -19,7 +19,7 @@ int e_keybind_list_add(struct e_keybind_list* list, struct e_keybind keybind);
 int e_keybind_list_index_of(struct e_keybind_list list, struct e_keybind keybind);
 
 //returns index of keybind that should activate, returns -1 if not found
-int e_keybind_list_should_activate_index_of(struct e_keybind_list list, xkb_keysym_t keysym, xkb_mod_mask_t mods);
+int e_keybind_list_should_activate_index_of(struct e_keybind_list list, xkb_keysym_t keysym, e_wlr_modifier_mask mods);
 
 struct e_keybind e_keybind_list_at(struct e_keybind_list list, int index);
 

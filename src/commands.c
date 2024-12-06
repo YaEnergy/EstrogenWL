@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <wayland-server-core.h>
 
 #include "types/server.h"
 
@@ -41,8 +42,8 @@ void e_commands_parse(struct e_server* server, const char* command)
     //type is exit
     else if (strcmp(argument, "exit") == 0)
     {
-        //exit EstrogenWM
-        exit(0);
+        //will quit EstrogenCompositor
+        wl_display_terminate(server->display);
     }
     //type is kill
     else if (strcmp(argument, "kill") == 0)

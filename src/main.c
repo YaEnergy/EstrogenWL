@@ -7,8 +7,12 @@
 #include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/util/log.h>
+#include <xkbcommon/xkbcommon-keysyms.h>
+#include <xkbcommon/xkbcommon-names.h>
+#include <xkbcommon/xkbcommon.h>
 
 #include "types/keybind_list.h"
+#include "types/keyboard.h"
 #include "types/server.h"
 #include "keybinding.h"
 #include "log.h"
@@ -64,12 +68,13 @@ int main()
 
     struct e_keybind_list keybind_list = e_keybind_list_new();
 
-    /*EKeybindingBind(display, XKeysymToKeycode(display, XStringToKeysym("F1")), Mod1Mask, "exec rofi -modi drun,run -show drun");
-    EKeybindingBind(display, XKeysymToKeycode(display, XStringToKeysym("F2")), Mod1Mask, "exec alacritty");
+    //check out: xkbcommon.org
+    //Important function: xkb_keysym_from_name (const char *name, enum xkb_keysym_flags flags)
     
-    EKeybindingBind(display, XKeysymToKeycode(display, XStringToKeysym("F4")), Mod1Mask, "exit");
-
-    EKeybindingBind(display, XKeysymToKeycode(display, XStringToKeysym("F5")), Mod1Mask, "kill");*/
+    e_keybinding_bind(&keybind_list, XKB_KEY_F1, WLR_MODIFIER_ALT, "exec rofi -modi drun,run -show drun");
+    e_keybinding_bind(&keybind_list, XKB_KEY_F2, WLR_MODIFIER_ALT, "exec alacritty");
+    e_keybinding_bind(&keybind_list, XKB_KEY_F3, WLR_MODIFIER_ALT, "exit");
+    e_keybinding_bind(&keybind_list, XKB_KEY_F4, WLR_MODIFIER_ALT, "kill");
 
     // add unix socket to wl display
     const char* socket = wl_display_add_socket_auto(server.display);
