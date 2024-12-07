@@ -33,36 +33,11 @@ int main()
     //TODO: wayland server
     struct e_server server = {0};
 
-    //handles accepting clients from Unix socket, managing wl globals, ...
-    e_log_info("creating display...");
-    server.display = wl_display_create();
-     if (server.display == NULL)
+    if (e_server_init(&server) != 0)
     {
-        e_log_error("failed to create display");
+        e_log_error("failed to init server");
         return 1;
     }
-
-    //backend handles input and output hardware, autocreate automatically creates the backend we want
-    e_log_info("creating backend...");
-    server.backend = wlr_backend_autocreate(wl_display_get_event_loop(server.display), NULL);
-    if (server.backend == NULL)
-    {
-        e_log_error("failed to create backend");
-        return 1;
-    }
-
-    //TODO: output notify
-
-    //renderer handles rendering
-    e_log_info("creating renderer....");
-    server.renderer = wlr_renderer_autocreate(server.backend);
-    if (server.renderer == NULL)
-    {
-        e_log_error("failed to create renderer");
-        return 1;
-    }
-
-    wlr_renderer_init_wl_display(server.renderer, server.display);
 
     // test keybinds
 
@@ -109,6 +84,7 @@ int main()
 
     wl_display_destroy_clients(server.display);
 
+    wlr_allocator_destroy(server.allocator);
     wlr_renderer_destroy(server.renderer);
     wlr_backend_destroy(server.backend);
     wl_display_destroy(server.display);

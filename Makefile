@@ -10,7 +10,7 @@ LIBRARIES!=$(PKG_CONFIG) --libs $(PACKAGES)
 COMPILER_FLAGS := -Wall -O3
 
 INCLUDE_DIR := include
-SOURCE_FILES := src/main.c src/filesystem.c src/keybinding.c src/commands.c src/log.c src/types/keybind_list.c src/types/keybind.c
+SOURCE_FILES := src/main.c src/filesystem.c src/keybinding.c src/commands.c src/log.c src/types/keybind_list.c src/types/keybind.c src/types/server.c src/types/output.c
 
 OUT_DIR := build
 
