@@ -44,6 +44,8 @@ static void e_server_new_output(struct wl_listener* listener, void* data)
     wlr_output_state_finish(&state);
 
     struct e_output* output = calloc(1, sizeof(*output));
+    output->wlr_output = wlr_output;
+    output->server = server;
 
     output->frame.notify = e_output_frame;
     wl_signal_add(&wlr_output->events.frame, &output->frame);
