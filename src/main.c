@@ -84,6 +84,7 @@ int main()
 
     wl_display_destroy_clients(server.display);
 
+    wlr_scene_node_destroy(&server.scene->tree.node);
     wlr_allocator_destroy(server.allocator);
     wlr_renderer_destroy(server.renderer);
     wlr_backend_destroy(server.backend);

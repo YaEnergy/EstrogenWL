@@ -18,6 +18,11 @@ Converting from EstrogenWM (X11 tiling wm)!
 - ???: Start $TERMINAL
 - ...
 
+## References
+- tinywl
+- sway
+- [Writing a Wayland compositor by Drew DeVault (out-of-date, but still useful)](https://drewdevault.com/2018/02/17/Writing-a-Wayland-compositor-1.html)
+
 ## Dependancies
 - wlroots
 - xkb

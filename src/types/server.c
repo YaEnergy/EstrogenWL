@@ -7,7 +7,13 @@
 
 #include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
+#include <wlr/render/allocator.h>
 #include <wlr/types/wlr_output.h>
+#include <wlr/types/wlr_scene.h>
+#include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_compositor.h>
+#include <wlr/types/wlr_subcompositor.h>
+#include <wlr/types/wlr_data_device.h>
 
 #include "log.h"
 
@@ -39,14 +45,23 @@ static void e_server_new_output(struct wl_listener* listener, void* data)
 
     struct e_output* output = calloc(1, sizeof(*output));
 
-    //TODO: frame listener for when to draw frames?
+    output->frame.notify = e_output_frame;
+    wl_signal_add(&wlr_output->events.frame, &output->frame);
 
     //TODO: request state listener for requesting state?
+    //neccessary for resizing X11 and wayland backend window, state must be committed
 
     output->destroy.notify = e_output_destroy;
     wl_signal_add(&wlr_output->events.destroy, &output->destroy);
 
     wl_list_insert(&server->outputs, &output->link);
+
+    //output layout auto adds wl_output to the display, allows wl clients to find out information about the display
+    //TODO: allow configuring the arrangement of outputs in the layout
+    //TODO: check for possible memory allocation error?
+    struct wlr_output_layout_output* layout_output = wlr_output_layout_add_auto(server->output_layout, wlr_output);
+    struct wlr_scene_output* scene_output = wlr_scene_output_create(server->scene, wlr_output);
+    wlr_scene_output_layout_add_output(server->scene_layout, layout_output, scene_output);
 }
 
 int e_server_init(struct e_server *server)
@@ -69,9 +84,8 @@ int e_server_init(struct e_server *server)
         return 1;
     }
 
-    //TODO: output notify
+    //init listener for new outputs
     wl_list_init(&server->outputs);
-
     server->new_output.notify = e_server_new_output;
     wl_signal_add(&server->backend->events.new_output, &server->new_output);
 
@@ -90,12 +104,34 @@ int e_server_init(struct e_server *server)
         return 1;
     }
 
+    //allocates memory for pixel buffers 
     server->allocator = wlr_allocator_autocreate(server->backend, server->renderer);
     if (server->allocator == NULL)
     {
         e_log_error("failed to create allocator");
         return 1;
     }
+
+    //compositor, subcompositor and data device manager are wl globals
+
+    //required for clients to allocate surfaces
+    wlr_compositor_create(server->display, 5, server->renderer);
+    //allows roles of subsurfaces to surfaces
+    wlr_subcompositor_create(server->display);
+    //handles clipboard
+    wlr_data_device_manager_create(server->display);
+
+    //wlroots utility for working with arrangement of screens in a physical layout
+    server->output_layout = wlr_output_layout_create(server->display);
+
+    //handles all rendering & damage tracking, 
+    //use this to add renderable things to the scene graph 
+    //and then call wlr_scene_commit_output to render the frame
+    server->scene = wlr_scene_create();
+    server->scene_layout = wlr_scene_attach_output_layout(server->scene, server->output_layout);
+
+    //TODO: xdg_shell, wl protocol for application windows
+    //TODO: listeners for new top level and pop up windows.
 
     return 0;
 }
