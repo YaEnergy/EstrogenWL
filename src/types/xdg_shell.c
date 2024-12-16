@@ -16,7 +16,6 @@ static void e_xdg_shell_new_popup_window(struct wl_listener* listener, void* dat
     //TODO: implement e_xdg_shell_new_popup_window
 }
 
-
 struct e_xdg_shell* e_xdg_shell_create(struct e_server* server)
 {
     struct e_xdg_shell* shell = calloc(1, sizeof(struct e_xdg_shell));

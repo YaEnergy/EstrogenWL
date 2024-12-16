@@ -4,13 +4,13 @@
 
 // Filesystem functions
 
-bool EPathIsValid(const char* path);
+bool e_path_is_valid(const char* path);
 
-bool EFileExists(const char* path);
+bool e_file_exists(const char* path);
 
-bool EDirectoryExists(const char* path);
+bool e_directory_exists(const char* path);
 
-int EDirectoryCreate(const char* path);
+int e_directory_create(const char* path);
 
 
 

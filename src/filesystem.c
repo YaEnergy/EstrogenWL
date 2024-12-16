@@ -8,13 +8,13 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-bool EPathIsValid(const char* path)
+bool e_path_is_valid(const char* path)
 {
     //TODO: Implement
     return false;
 }
 
-bool EFileExists(const char* path)
+bool e_file_exists(const char* path)
 {
     FILE* file = fopen(path, "r");
     
@@ -29,7 +29,7 @@ bool EFileExists(const char* path)
     }
 }
 
-bool EDirectoryExists(const char* path)
+bool e_directory_exists(const char* path)
 {
     DIR* dir = opendir(path);
 
@@ -44,7 +44,7 @@ bool EDirectoryExists(const char* path)
     }
 }
 
-int EDirectoryCreate(const char* path)
+int e_directory_create(const char* path)
 {
     return mkdir(path, 0777);
 }

@@ -16,7 +16,7 @@
 
 FILE* logFile = NULL;
 
-static char* getTimeString()
+static char* get_time_string()
 {
     time_t t;
     time(&t);
@@ -29,7 +29,7 @@ static char* getTimeString()
     return timeString;
 }
 
-static char* getFilePathInHome(const char* path)
+static char* get_file_path_in_home(const char* path)
 {
     char* homePath = getenv("HOME");
 
@@ -41,7 +41,7 @@ static char* getFilePathInHome(const char* path)
     if (strlen(homePath) + strlen(path) > FILENAME_MAX)
         return NULL;
 
-    char* fullPath = calloc(FILENAME_MAX, sizeof(char));
+    char* fullPath = calloc(strlen(homePath) + strlen(path), sizeof(char));
 
     //allocation fail
     if (fullPath == NULL)
@@ -68,15 +68,15 @@ int e_log_init()
         return 1;
 
     //open log file path for writing
-    char* logFilePath = getFilePathInHome(LOG_FILE_PATH);
+    char* logFilePath = get_file_path_in_home(LOG_FILE_PATH);
 
     if (logFilePath == NULL)
         return 1;
 
     //rename previous log file if exists
-    if (EFileExists(logFilePath))
+    if (e_file_exists(logFilePath))
     {
-        char* prevLogFilePath = getFilePathInHome(LOG_PREV_FILE_PATH);
+        char* prevLogFilePath = get_file_path_in_home(LOG_PREV_FILE_PATH);
 
         if (prevLogFilePath == NULL)
             return 1;
@@ -117,11 +117,11 @@ void e_log_info(const char *format, ...)
         return;
     }
 
-    printf("[INFO (%s)] %s\n", getTimeString(), message);
+    printf("[INFO (%s)] %s\n", get_time_string(), message);
 
     if (logFile != NULL)
     {
-        fprintf(logFile, "[INFO (%s)] %s\n", getTimeString(), message);
+        fprintf(logFile, "[INFO (%s)] %s\n", get_time_string(), message);
         fflush(logFile);
     }
 
@@ -145,11 +145,11 @@ void e_log_error(const char *format, ...)
         return;
     }
 
-    fprintf(stderr, "[ERROR (%s)] %s, errno: %s\n", getTimeString(), message, strerror(errno));
+    fprintf(stderr, "[ERROR (%s)] %s, errno: %s\n", get_time_string(), message, strerror(errno));
 
     if (logFile != NULL)
     {
-        fprintf(logFile, "[ERROR (%s)] %s, errno: %s\n", getTimeString(), message, strerror(errno));
+        fprintf(logFile, "[ERROR (%s)] %s, errno: %s\n", get_time_string(), message, strerror(errno));
         fflush(logFile);
     }
 
