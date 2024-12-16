@@ -10,11 +10,17 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output_layout.h>
 
+#include "types/xdg_shell.h"
+
 struct e_server
 {
+    //handles accepting clients from Unix socket, managing wl globals, ...
     struct wl_display* display;
-    struct wlr_cursor* cursor;
 
+    //TODO: implement cursor & cursor manager
+    //struct wlr_cursor* cursor;
+
+    //handles input and output hardware
     struct wlr_backend* backend;
     
     //allocates memory for pixel buffers 
@@ -31,8 +37,12 @@ struct e_server
     struct wlr_scene* scene;
     struct wlr_scene_output_layout* scene_layout;
 
+    struct e_xdg_shell* xdg_shell;
+
     struct wl_list outputs;
     struct wl_listener new_output;
 };
 
 int e_server_init(struct e_server* server);
+
+void e_server_destroy(struct e_server* server);

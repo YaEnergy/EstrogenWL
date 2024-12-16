@@ -14,10 +14,12 @@
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_data_device.h>
+#include <wlr/types/wlr_xdg_shell.h>
 
 #include "log.h"
 
 #include "types/output.h"
+#include "types/xdg_shell.h"
 
 static void e_server_new_output(struct wl_listener* listener, void* data)
 {
@@ -43,6 +45,7 @@ static void e_server_new_output(struct wl_listener* listener, void* data)
     wlr_output_commit_state(wlr_output, &state);
     wlr_output_state_finish(&state);
 
+    //allocate & configure output
     struct e_output* output = calloc(1, sizeof(*output));
     output->wlr_output = wlr_output;
     output->server = server;
@@ -131,9 +134,20 @@ int e_server_init(struct e_server *server)
     //and then call wlr_scene_commit_output to render the frame
     server->scene = wlr_scene_create();
     server->scene_layout = wlr_scene_attach_output_layout(server->scene, server->output_layout);
-
-    //TODO: xdg_shell, wl protocol for application windows
-    //TODO: listeners for new top level and pop up windows.
+    
+    //xdg shell v6, protocol for application windows
+    server->xdg_shell = e_xdg_shell_create(server);
 
     return 0;
+}
+
+void e_server_destroy(struct e_server* server)
+{
+    e_xdg_shell_destroy(server->xdg_shell);
+    
+    wlr_scene_node_destroy(&server->scene->tree.node);
+    wlr_allocator_destroy(server->allocator);
+    wlr_renderer_destroy(server->renderer);
+    wlr_backend_destroy(server->backend);
+    wl_display_destroy(server->display);
 }
