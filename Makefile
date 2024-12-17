@@ -10,7 +10,11 @@ LIBRARIES!=$(PKG_CONFIG) --libs $(PACKAGES)
 COMPILER_FLAGS := -Wall -O3
 
 INCLUDE_DIR := include
-SOURCE_FILES := src/main.c src/filesystem.c src/keybinding.c src/commands.c src/log.c src/types/keybind_list.c src/types/keybind.c src/types/server.c src/types/output.c src/types/xdg_shell.c
+
+SOURCE_WINDOW_FILES := src/types/windows/toplevel_window.c
+SOURCE_TYPE_FILES := src/types/keybind_list.c src/types/keybind.c src/types/server.c src/types/output.c src/types/xdg_shell.c
+SOURCE_MODULE_FILES := src/filesystem.c src/keybinding.c src/commands.c src/log.c
+SOURCE_FILES := src/main.c $(SOURCE_MODULE_FILES) $(SOURCE_TYPE_FILES) $(SOURCE_WINDOW_FILES)
 
 OUT_DIR := build
 

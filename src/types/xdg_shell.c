@@ -1,19 +1,30 @@
-#include "wayland-server-core.h"
+#include <stdlib.h>
+
+#include <wayland-server-core.h>
+#include <wayland-util.h>
 
 #include "types/server.h"
-#include <stdlib.h>
-#include <wayland-util.h>
 #include "types/xdg_shell.h"
-
+#include "types/windows/toplevel_window.h"
 
 static void e_xdg_shell_new_toplevel_window(struct wl_listener* listener, void* data)
 {
     //TODO: implement e_xdg_shell_new_toplevel_window
+
+    struct e_xdg_shell* shell = wl_container_of(listener, shell, new_toplevel_window);
+
+    struct wlr_xdg_toplevel* xdg_toplevel = data;
+
+    //creates a top level window for this shell's server
+    e_toplevel_window_create(shell->server, xdg_toplevel);
 }
 
 static void e_xdg_shell_new_popup_window(struct wl_listener* listener, void* data)
 {
     //TODO: implement e_xdg_shell_new_popup_window
+
+    //struct e_xdg_shell* shell = wl_container_of(listener, shell, new_popup_window);
+    //struct e_server* server = shell->server;
 }
 
 struct e_xdg_shell* e_xdg_shell_create(struct e_server* server)
