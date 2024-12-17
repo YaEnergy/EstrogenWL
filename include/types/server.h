@@ -37,6 +37,7 @@ struct e_server
     struct wlr_scene* scene;
     struct wlr_scene_output_layout* scene_layout;
 
+    //handles protocol for application windows
     struct e_xdg_shell* xdg_shell;
 
     struct wl_list outputs;
