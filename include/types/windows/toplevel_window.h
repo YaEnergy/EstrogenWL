@@ -16,9 +16,13 @@ struct e_toplevel_window
     
     struct wlr_scene_tree* scene_tree;
 
+    //surface is ready to be displayed
     struct wl_listener map;
+    //surface no longer wants to be displayed
     struct wl_listener unmap;
+    //new surface state got committed
     struct wl_listener commit;
+    //xdg_toplevel got destroyed
     struct wl_listener destroy;
 
     struct wl_list link;

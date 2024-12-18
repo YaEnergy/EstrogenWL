@@ -10,24 +10,35 @@
 
 #include "types/server.h"
 
-//make window and its tree visible
+//surface is ready to be displayed
 static void e_toplevel_window_map(struct wl_listener* listener, void* data)
 {
-    //TODO: implement e_toplevel_window_map
+    struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, map);
+
+    wl_list_insert(&toplevel_window->server->xdg_shell->toplevel_windows, &toplevel_window->link);
 }
 
-//make window and its tree invisible
+//surface no longer wants to be displayed
 static void e_toplevel_window_unmap(struct wl_listener* listener, void* data)
 {
-    //TODO: implement e_toplevel_window_unmap
+    struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, unmap);
+
+    wl_list_remove(&toplevel_window->link);
 }
 
-//new window frame
+//new surface state got committed
 static void e_toplevel_window_commit(struct wl_listener* listener, void* data)
 {
-    //TODO: implement e_toplevel_window_commit
+    struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, commit);
+
+    if (toplevel_window->xdg_toplevel->base->initial_commit)
+    {
+        //0x0 size to let windows configure their size themselves
+        wlr_xdg_toplevel_set_size(toplevel_window->xdg_toplevel, 0, 0);
+    }
 }
 
+//xdg_toplevel got destroyed
 static void e_toplevel_window_destroy(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, destroy);
@@ -53,6 +64,8 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
     toplevel_window->scene_tree->node.data = toplevel_window;
     xdg_toplevel->base->data = toplevel_window->scene_tree;
 
+    wl_list_init(&toplevel_window->link);
+
     //surface map event
     toplevel_window->map.notify = e_toplevel_window_map;
     wl_signal_add(&xdg_toplevel->base->surface->events.map, &toplevel_window->map);
@@ -62,9 +75,9 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
     wl_signal_add(&xdg_toplevel->base->surface->events.unmap, &toplevel_window->unmap);
 
     //surface commit event
-    toplevel_window->map.notify = e_toplevel_window_commit;
+    toplevel_window->commit.notify = e_toplevel_window_commit;
     wl_signal_add(&xdg_toplevel->base->surface->events.commit, &toplevel_window->commit);
-
+    
     //window destroy event
     toplevel_window->destroy.notify = e_toplevel_window_destroy;
     wl_signal_add(&xdg_toplevel->events.destroy, &toplevel_window->destroy);
