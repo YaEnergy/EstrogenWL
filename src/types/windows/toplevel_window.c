@@ -9,6 +9,7 @@
 #include <wlr/types/wlr_scene.h>
 
 #include "types/server.h"
+#include "wm.h"
 
 //surface is ready to be displayed
 static void e_toplevel_window_map(struct wl_listener* listener, void* data)
@@ -16,6 +17,8 @@ static void e_toplevel_window_map(struct wl_listener* listener, void* data)
     struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, map);
 
     wl_list_insert(&toplevel_window->server->xdg_shell->toplevel_windows, &toplevel_window->link);
+
+    e_tile_toplevel_windows(toplevel_window->server);
 }
 
 //surface no longer wants to be displayed
@@ -24,16 +27,18 @@ static void e_toplevel_window_unmap(struct wl_listener* listener, void* data)
     struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, unmap);
 
     wl_list_remove(&toplevel_window->link);
+    
+    e_tile_toplevel_windows(toplevel_window->server);
 }
 
 //new surface state got committed
 static void e_toplevel_window_commit(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, commit);
-
+        
     if (toplevel_window->xdg_toplevel->base->initial_commit)
     {
-        //0x0 size to let windows configure their size themselves
+        //0x0 size to let windows configure their size themselves    
         wlr_xdg_toplevel_set_size(toplevel_window->xdg_toplevel, 0, 0);
     }
 }
@@ -85,4 +90,14 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
     //TODO: request resize, fullscreen, ... events
 
     return toplevel_window;
+}
+
+void e_toplevel_window_set_position(struct e_toplevel_window* window, int x, int y)
+{
+    wlr_scene_node_set_position(&window->scene_tree->node, x, y);
+}
+
+void e_toplevel_window_set_size(struct e_toplevel_window* window, int32_t x, int32_t y)
+{
+    wlr_xdg_toplevel_set_size(window->xdg_toplevel, x, y);
 }

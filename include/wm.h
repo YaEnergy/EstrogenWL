@@ -4,16 +4,7 @@
 
 #include <stdbool.h>
 
-/*#include "window.h"
+#include "types/server.h"
 
-int EWMManageWindow(Display* connection, Window window);
+void e_tile_toplevel_windows(struct e_server* server);
 
-int EWMUnmanageWindow(Display* connection, Window window);
-
-bool EWMIsWindowManaged(Window window);
-
-void EWMFocusWindow(Display* connection, Window window);
-
-EWindow EWMGetManagedWindow(Window window);
-
-void EWMFree();*/
