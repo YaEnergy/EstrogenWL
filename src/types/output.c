@@ -11,6 +11,7 @@
 
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_scene.h>
+#include <wlr/types/wlr_output.h>
 #include <wlr/backend.h>
 
 static void e_output_frame(struct wl_listener* listener, void* data)

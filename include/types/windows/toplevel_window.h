@@ -35,6 +35,6 @@ struct e_toplevel_window
 //creates new top level window inside server
 struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, struct wlr_xdg_toplevel* xdg_toplevel);
 
-void e_toplevel_window_set_position(struct e_toplevel_window* window, int32_t x, int32_t y);
+void e_toplevel_window_set_position(struct e_toplevel_window* window, int x, int y);
 
 void e_toplevel_window_set_size(struct e_toplevel_window* window, int32_t x, int32_t y);
