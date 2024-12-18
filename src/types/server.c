@@ -46,18 +46,7 @@ static void e_server_new_output(struct wl_listener* listener, void* data)
     wlr_output_state_finish(&state);
 
     //allocate & configure output
-    struct e_output* output = calloc(1, sizeof(*output));
-    output->wlr_output = wlr_output;
-    output->server = server;
-
-    output->frame.notify = e_output_frame;
-    wl_signal_add(&wlr_output->events.frame, &output->frame);
-
-    //TODO: request state listener for requesting state?
-    //neccessary for resizing X11 and wayland backend window, state must be committed
-
-    output->destroy.notify = e_output_destroy;
-    wl_signal_add(&wlr_output->events.destroy, &output->destroy);
+    struct e_output* output = e_output_create(server, wlr_output);
 
     wl_list_insert(&server->outputs, &output->link);
 
