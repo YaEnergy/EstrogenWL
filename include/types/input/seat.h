@@ -11,6 +11,8 @@ struct e_seat
 {
     struct wlr_seat* wlr_seat;
 
+    struct wl_list keyboards;
+    
     //new input device found
     struct wl_listener new_input;
 
