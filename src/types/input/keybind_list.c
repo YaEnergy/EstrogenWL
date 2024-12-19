@@ -50,7 +50,7 @@ int e_keybind_list_index_of(struct e_keybind_list list, struct e_keybind keybind
     return -1;
 }
 
-int e_keybind_list_should_activate_index_of(struct e_keybind_list list, xkb_keysym_t keysym, xkb_mod_mask_t mods)
+int e_keybind_list_should_activate_index_of(struct e_keybind_list list, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods)
 {
     for (int i = 0; i < list.amount; i++)
     {

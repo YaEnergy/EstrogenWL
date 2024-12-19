@@ -5,8 +5,11 @@
 
 #include <wlr/types/wlr_keyboard.h>
 
+#include "types/input/seat.h"
+
 struct e_keyboard
 {
+    struct e_seat* seat;
     struct wlr_keyboard* wlr_keyboard;
 
     //keyboard events
@@ -14,7 +17,7 @@ struct e_keyboard
     //key pressed or released, emitted before keyboard xkb state is updated (including modifiers)
     struct wl_listener key;
     //modifier state changed, handle updated state by sending it to clients
-    //struct wl_listener modifiers;
+    struct wl_listener modifiers;
 
     //base input device events
 
@@ -24,4 +27,4 @@ struct e_keyboard
     struct wl_list link;
 };
 
-struct e_keyboard* e_keyboard_create(struct wlr_keyboard* wlr_keyboard);
+struct e_keyboard* e_keyboard_create_for_seat(struct wlr_input_device* input, struct e_seat* seat);

@@ -130,7 +130,7 @@ int e_server_init(struct e_server *server)
     server->xdg_shell = e_xdg_shell_create(server);
 
     //input device management
-    server->seat = e_seat_create(server->display, server->backend, "seat0");
+    server->seat = e_seat_create(server, "seat0");
 
     return 0;
 }
