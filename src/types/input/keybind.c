@@ -1,4 +1,4 @@
-#include "types/keybind.h"
+#include "types/input/keybind.h"
 
 #include <stdbool.h>
 

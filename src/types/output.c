@@ -1,6 +1,4 @@
 #include "types/output.h"
-#include "types/server.h"
-#include "wm.h"
 
 #include <bits/time.h>
 #include <stdlib.h>
@@ -13,6 +11,10 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/backend.h>
+
+#include "types/server.h"
+
+#include "wm.h"
 
 static void e_output_frame(struct wl_listener* listener, void* data)
 {

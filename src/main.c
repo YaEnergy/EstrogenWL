@@ -11,9 +11,10 @@
 #include <xkbcommon/xkbcommon-names.h>
 #include <xkbcommon/xkbcommon.h>
 
-#include "types/keybind_list.h"
-#include "types/keyboard.h"
+#include "types/input/keybind_list.h"
+#include "types/input/keyboard.h"
 #include "types/server.h"
+
 #include "keybinding.h"
 #include "log.h"
 

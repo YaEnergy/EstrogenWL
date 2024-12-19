@@ -15,11 +15,13 @@
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_xdg_shell.h>
+#include <wlr/types/wlr_seat.h>
 
 #include "log.h"
 
 #include "types/output.h"
 #include "types/xdg_shell.h"
+#include "types/input/seat.h"
 
 static void e_server_new_output(struct wl_listener* listener, void* data)
 {
@@ -126,6 +128,9 @@ int e_server_init(struct e_server *server)
     
     //xdg shell v6, protocol for application windows
     server->xdg_shell = e_xdg_shell_create(server);
+
+    //input device management
+    server->seat = e_seat_create(server->display, server->backend, "seat0");
 
     return 0;
 }

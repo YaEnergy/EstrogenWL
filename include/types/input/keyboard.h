@@ -2,7 +2,7 @@
 
 #include <wlr/types/wlr_keyboard.h>
 
-#include "server.h"
+#include "types/server.h"
 
 struct e_keyboard
 {

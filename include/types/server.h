@@ -11,6 +11,7 @@
 #include <wlr/types/wlr_output_layout.h>
 
 #include "types/xdg_shell.h"
+#include "types/input/seat.h"
 
 struct e_server
 {
@@ -42,6 +43,9 @@ struct e_server
 
     struct wl_list outputs;
     struct wl_listener new_output;
+
+    //collection & management of input devices: keyboard, mouse, ...
+    struct e_seat* seat;
 };
 
 int e_server_init(struct e_server* server);

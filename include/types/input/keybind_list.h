@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <xkbcommon/xkbcommon.h>
 
-#include "keybind.h"
+#include "types/input/keybind.h"
 
 struct e_keybind_list
 {

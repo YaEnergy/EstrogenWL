@@ -1,8 +1,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "types/keybind.h"
-#include "types/keybind_list.h"
+#include "types/input/keybind.h"
+#include "types/input/keybind_list.h"
 
 #include "log.h"
 
