@@ -31,6 +31,8 @@ static char* get_time_string()
 
 static char* get_file_path_in_home(const char* path)
 {
+    int fileNameBufferLength = FILENAME_MAX < 1024 ? FILENAME_MAX : 1024;
+    
     char* homePath = getenv("HOME");
 
     //no home path
@@ -38,20 +40,20 @@ static char* get_file_path_in_home(const char* path)
         return NULL;
 
     //full path will be too long
-    if (strlen(homePath) + strlen(path) > FILENAME_MAX)
+    if (strlen(homePath) + strlen(path) >= fileNameBufferLength)
         return NULL;
 
-    char* fullPath = calloc(strlen(homePath) + strlen(path), sizeof(char));
+    char* fullPath = calloc(fileNameBufferLength, sizeof(char));
 
     //allocation fail
     if (fullPath == NULL)
         return NULL;
     
     //join strings together, returns supposed to written length
-    int length = snprintf(fullPath, sizeof(char) * FILENAME_MAX, "%s%s", homePath, path);
+    int length = snprintf(fullPath, sizeof(char) * fileNameBufferLength, "%s%s", homePath, path);
 
     //path was too long
-    if (length > FILENAME_MAX)
+    if (length >= fileNameBufferLength)
     {
         free(fullPath);
         return NULL;
@@ -81,7 +83,12 @@ int e_log_init()
         if (prevLogFilePath == NULL)
             return 1;
 
-        rename(logFilePath, prevLogFilePath);
+        int renameResult = rename(logFilePath, prevLogFilePath);
+
+        if (renameResult != 0)
+        {
+            perror("failed to rename old log file\n");
+        }
 
         free(prevLogFilePath);
     }
@@ -92,7 +99,7 @@ int e_log_init()
 
     if (logFile == NULL)
     {
-        perror("failed to open log file");
+        perror("failed to open log file\n");
         return 1;
     }
 
