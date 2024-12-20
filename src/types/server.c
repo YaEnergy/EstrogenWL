@@ -21,7 +21,7 @@
 
 #include "types/output.h"
 #include "types/xdg_shell.h"
-#include "types/input/seat.h"
+#include "types/input/input_manager.h"
 
 static void e_server_new_output(struct wl_listener* listener, void* data)
 {
@@ -60,6 +60,15 @@ static void e_server_new_output(struct wl_listener* listener, void* data)
     wlr_scene_output_layout_add_output(server->scene_layout, layout_output, scene_output);
 }
 
+static void e_server_backend_destroy(struct wl_listener* listener, void* data)
+{
+    struct e_server* server = wl_container_of(listener, server, backend_destroy);
+
+    wl_list_remove(&server->outputs);
+    wl_list_remove(&server->new_output.link);
+    wl_list_remove(&server->backend_destroy.link);
+}
+
 int e_server_init(struct e_server *server)
 {
     //handles accepting clients from Unix socket, managing wl globals, ...
@@ -84,6 +93,9 @@ int e_server_init(struct e_server *server)
     wl_list_init(&server->outputs);
     server->new_output.notify = e_server_new_output;
     wl_signal_add(&server->backend->events.new_output, &server->new_output);
+
+    server->backend_destroy.notify = e_server_backend_destroy;
+    wl_signal_add(&server->backend->events.destroy, &server->backend_destroy);
 
     //renderer handles rendering
     e_log_info("creating renderer...");
@@ -130,15 +142,15 @@ int e_server_init(struct e_server *server)
     server->xdg_shell = e_xdg_shell_create(server);
 
     //input device management
-    server->seat = e_seat_create(server, "seat0");
+    server->input_manager = e_input_manager_create(server);
 
     return 0;
 }
 
 void e_server_destroy(struct e_server* server)
 {
-    e_xdg_shell_destroy(server->xdg_shell);
-    
+    e_input_manager_destroy(server->input_manager);
+
     wlr_scene_node_destroy(&server->scene->tree.node);
     wlr_allocator_destroy(server->allocator);
     wlr_renderer_destroy(server->renderer);

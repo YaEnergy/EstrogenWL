@@ -6,7 +6,7 @@
 
 #include "log.h"
 
-struct e_keybind_list e_keybind_list_new()
+struct e_keybind_list e_keybind_list_create()
 {
     struct e_keybind_list keybind_list = {NULL, 0};
     return keybind_list;

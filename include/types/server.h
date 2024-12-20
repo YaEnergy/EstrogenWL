@@ -11,7 +11,7 @@
 #include <wlr/types/wlr_output_layout.h>
 
 #include "types/xdg_shell.h"
-#include "types/input/seat.h"
+#include "types/input/input_manager.h"
 
 struct e_server
 {
@@ -23,6 +23,7 @@ struct e_server
 
     //handles input and output hardware
     struct wlr_backend* backend;
+    struct wl_listener backend_destroy;
     
     //allocates memory for pixel buffers 
     struct wlr_allocator* allocator;
@@ -45,7 +46,7 @@ struct e_server
     struct wl_listener new_output;
 
     //collection & management of input devices: keyboard, mouse, ...
-    struct e_seat* seat;
+    struct e_input_manager* input_manager;
 };
 
 int e_server_init(struct e_server* server);

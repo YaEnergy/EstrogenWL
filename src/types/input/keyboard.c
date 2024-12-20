@@ -35,12 +35,12 @@ static void e_keyboard_key(struct wl_listener* listener, void* data)
     if (event->state == WL_KEYBOARD_KEY_STATE_PRESSED)
     {
         //int keybindIndex = e_keybind_list_should_activate_index_of(keyboard->seat->keybind_list, xkb_keycode, wlr_keyboard_get_modifiers(keyboard->wlr_keyboard));
-        int keybindIndex = e_keybind_list_should_activate_index_of(keyboard->seat->keybind_list, xkb_keycode, WLR_MODIFIER_ALT);
+        int keybindIndex = e_keybind_list_should_activate_index_of(keyboard->seat->input_manager->keybind_list, xkb_keycode, WLR_MODIFIER_ALT);
 
         if (keybindIndex != -1)
         {
             handled = true;
-            e_commands_parse(keyboard->seat->server, e_keybind_list_at(keyboard->seat->keybind_list, keybindIndex).command);
+            e_commands_parse(keyboard->seat->input_manager->server, e_keybind_list_at(keyboard->seat->input_manager->keybind_list, keybindIndex).command);
             e_log_info("activated keybind index %i", keybindIndex);
         }
     }
@@ -75,7 +75,7 @@ static void e_keyboard_destroy(struct wl_listener* listener, void* data)
     free(keyboard);
 }
 
-struct e_keyboard* e_keyboard_create_for_seat(struct wlr_input_device* input, struct e_seat* seat)
+struct e_keyboard* e_keyboard_create(struct wlr_input_device* input, struct e_seat* seat)
 {
     struct wlr_keyboard* wlr_keyboard = wlr_keyboard_from_input_device(input);
     
@@ -97,10 +97,6 @@ struct e_keyboard* e_keyboard_create_for_seat(struct wlr_input_device* input, st
     //input device events
     keyboard->destroy.notify = e_keyboard_destroy;
     wl_signal_add(&wlr_keyboard->base.events.destroy, &keyboard->destroy);
-
-    //add to seat
-    wl_list_insert(&seat->keyboards, &keyboard->link);
-    wlr_seat_set_keyboard(seat->wlr_seat, wlr_keyboard);
 
     return keyboard;
 }

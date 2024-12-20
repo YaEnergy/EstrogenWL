@@ -40,16 +40,14 @@ int main()
     }
 
     // test keybinds
-
-    struct e_keybind_list keybind_list = e_keybind_list_new();
-
+    
     //check out: xkbcommon.org
     //Important function: xkb_keysym_from_name (const char *name, enum xkb_keysym_flags flags)
     
-    e_keybinding_bind(&server.seat->keybind_list, 59 + 8, WLR_MODIFIER_ALT, "exec rofi -modi drun,run -show drun");
-    e_keybinding_bind(&server.seat->keybind_list, 60 + 8, WLR_MODIFIER_ALT, "exec alacritty");
-    e_keybinding_bind(&server.seat->keybind_list, 61 + 8, WLR_MODIFIER_ALT, "exit");
-    e_keybinding_bind(&server.seat->keybind_list, 62 + 8, WLR_MODIFIER_ALT, "kill");
+    e_keybinding_bind(&server.input_manager->keybind_list, 59 + 8, WLR_MODIFIER_ALT, "exec rofi -modi drun,run -show drun");
+    e_keybinding_bind(&server.input_manager->keybind_list, 60 + 8, WLR_MODIFIER_ALT, "exec alacritty");
+    e_keybinding_bind(&server.input_manager->keybind_list, 61 + 8, WLR_MODIFIER_ALT, "exit");
+    e_keybinding_bind(&server.input_manager->keybind_list, 62 + 8, WLR_MODIFIER_ALT, "kill");
 
     // add unix socket to wl display
     const char* socket = wl_display_add_socket_auto(server.display);
@@ -79,8 +77,6 @@ int main()
     // display runs
 
     //destroy everything
-
-    e_keybind_list_destroy(&keybind_list);
 
     wl_display_destroy_clients(server.display);
 

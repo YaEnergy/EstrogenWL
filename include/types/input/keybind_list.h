@@ -13,7 +13,7 @@ struct e_keybind_list
     int amount;
 };
 
-struct e_keybind_list e_keybind_list_new();
+struct e_keybind_list e_keybind_list_create();
 
 int e_keybind_list_add(struct e_keybind_list* list, struct e_keybind keybind);
 

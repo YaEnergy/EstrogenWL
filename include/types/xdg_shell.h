@@ -18,8 +18,8 @@ struct e_xdg_shell
 
     //clients create new popup window
     struct wl_listener new_popup_window;
+
+    struct wl_listener destroy;
 };
 
 struct e_xdg_shell* e_xdg_shell_create(struct e_server* server);
-
-void e_xdg_shell_destroy(struct e_xdg_shell* shell);
