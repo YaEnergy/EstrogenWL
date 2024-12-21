@@ -39,38 +39,16 @@ int e_keybind_list_add(struct e_keybind_list* list, struct e_keybind keybind)
     return 0;
 }
 
-int e_keybind_list_index_of(struct e_keybind_list list, struct e_keybind keybind)
-{
-    for (int i = 0; i < list.amount; i++)
-    {
-        if (e_keybind_equals(list.keybinds[i], keybind))
-            return i;
-    }
-
-    return -1;
-}
-
-int e_keybind_list_should_activate_index_of(struct e_keybind_list list, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods)
-{
-    for (int i = 0; i < list.amount; i++)
-    {
-        if (e_keybind_should_activate(list.keybinds[i], keysym, mods))
-            return i;
-    }
-
-    return -1;
-}
-
-struct e_keybind e_keybind_list_at(struct e_keybind_list list, int index)
+struct e_keybind e_keybind_list_at(struct e_keybind_list* list, int index)
 {
     //index must be inside list
-    if (index < 0 || index >= list.amount)
+    if (index < 0 || index >= list->amount)
     {
         struct e_keybind nullbind = {};
         return nullbind;
     }
 
-    return list.keybinds[index];
+    return list->keybinds[index];
 }
 
 void e_keybind_list_destroy(struct e_keybind_list* list)

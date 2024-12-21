@@ -9,10 +9,7 @@
 #include <wlr/util/log.h>
 
 #include <xkbcommon/xkbcommon-keysyms.h>
-#include <xkbcommon/xkbcommon-names.h>
-#include <xkbcommon/xkbcommon.h>
 
-#include "types/input/keybind_list.h"
 #include "types/server.h"
 
 #include "keybinding.h"
@@ -44,10 +41,10 @@ int main()
     //check out: xkbcommon.org
     //Important function: xkb_keysym_from_name (const char *name, enum xkb_keysym_flags flags)
     
-    e_keybinding_bind(&server.input_manager->keybind_list, 59 + 8, WLR_MODIFIER_ALT, "exec rofi -modi drun,run -show drun");
-    e_keybinding_bind(&server.input_manager->keybind_list, 60 + 8, WLR_MODIFIER_ALT, "exec alacritty");
-    e_keybinding_bind(&server.input_manager->keybind_list, 61 + 8, WLR_MODIFIER_ALT, "exit");
-    e_keybinding_bind(&server.input_manager->keybind_list, 62 + 8, WLR_MODIFIER_ALT, "kill");
+    e_keybinding_bind(&server.input_manager->keybind_list, XKB_KEY_F1, WLR_MODIFIER_ALT, "exec rofi -modi drun,run -show drun");
+    e_keybinding_bind(&server.input_manager->keybind_list, XKB_KEY_F2, WLR_MODIFIER_ALT, "exec alacritty");
+    e_keybinding_bind(&server.input_manager->keybind_list, XKB_KEY_F3, WLR_MODIFIER_ALT, "exit");
+    e_keybinding_bind(&server.input_manager->keybind_list, XKB_KEY_F4, WLR_MODIFIER_ALT, "kill");
 
     // add unix socket to wl display
     const char* socket = wl_display_add_socket_auto(server.display);

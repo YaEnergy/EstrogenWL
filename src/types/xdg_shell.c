@@ -15,7 +15,7 @@ static void e_xdg_shell_new_toplevel_window(struct wl_listener* listener, void* 
 
     struct wlr_xdg_toplevel* xdg_toplevel = data;
 
-    e_log_info("New toplevel window: %s", xdg_toplevel->title);
+    e_log_info("New toplevel window");
 
     //creates a top level window for this shell's server
     e_toplevel_window_create(shell->server, xdg_toplevel);

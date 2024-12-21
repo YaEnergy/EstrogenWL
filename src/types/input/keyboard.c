@@ -1,8 +1,7 @@
 #include "types/input/keyboard.h"
-#include "log.h"
-#include "types/input/seat.h"
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #include <wayland-server-core.h>
@@ -11,37 +10,36 @@
 
 #include <wlr/types/wlr_keyboard.h>
 
-#include "types/input/keybind_list.h"
-#include "types/input/keybind.h"
+#include <xkbcommon/xkbcommon.h>
 
-#include "commands.h"
-#include "log.h"
+#include "types/input/seat.h"
+
+#include "keybinding.h"
 
 //key pressed or released, emitted before keyboard xkb state is updated (including modifiers)
 static void e_keyboard_key(struct wl_listener* listener, void* data)
 {
     struct e_keyboard* keyboard = wl_container_of(listener, keyboard, key);
     struct wlr_keyboard_key_event* event = data;
-    
-    //TODO: for testing rn always passes alt modifier
-
-    //TODO: handle keybinds, if none activated, send inputs to focussed client
-    //translate libinput keycode to xkbcommon keycode
-    uint32_t xkb_keycode = event->keycode + 8;
 
     bool handled = false;
 
     //handle keybinds if any
     if (event->state == WL_KEYBOARD_KEY_STATE_PRESSED)
     {
-        //int keybindIndex = e_keybind_list_should_activate_index_of(keyboard->seat->keybind_list, xkb_keycode, wlr_keyboard_get_modifiers(keyboard->wlr_keyboard));
-        int keybindIndex = e_keybind_list_should_activate_index_of(keyboard->seat->input_manager->keybind_list, xkb_keycode, WLR_MODIFIER_ALT);
+        //translate libinput keycode to xkbcommon keycode
+        uint32_t xkb_keycode = event->keycode + 8;
 
-        if (keybindIndex != -1)
+        uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->wlr_keyboard);
+
+        //list of syms based on this keymap for this keyboard
+        const xkb_keysym_t* syms;
+        int num_syms = xkb_state_key_get_syms(keyboard->wlr_keyboard->xkb_state, xkb_keycode, &syms);
+
+        for (int i = 0; i < num_syms; i++)
         {
-            handled = true;
-            e_commands_parse(keyboard->seat->input_manager->server, e_keybind_list_at(keyboard->seat->input_manager->keybind_list, keybindIndex).command);
-            e_log_info("activated keybind index %i", keybindIndex);
+            if (e_keybinding_handle(keyboard->seat->input_manager->server, &keyboard->seat->input_manager->keybind_list, syms[i], modifiers))
+                handled = true;
         }
     }
     
@@ -51,8 +49,6 @@ static void e_keyboard_key(struct wl_listener* listener, void* data)
         wlr_seat_set_keyboard(keyboard->seat->wlr_seat, keyboard->wlr_keyboard);
         wlr_seat_keyboard_notify_key(keyboard->seat->wlr_seat, event->time_msec, event->keycode, event->state);
     }
-
-    e_log_info("Keycode: %lu; State: %lu; Handled: %i, modifiers: %lu", event->keycode, event->state, handled, wlr_keyboard_get_modifiers(keyboard->wlr_keyboard));
 }
 
 static void e_keyboard_modifiers(struct wl_listener* listener, void* data)
@@ -83,7 +79,17 @@ struct e_keyboard* e_keyboard_create(struct wlr_input_device* input, struct e_se
     keyboard->seat = seat;
     keyboard->wlr_keyboard = wlr_keyboard;
 
-    //TODO: keymap?
+    //TODO: allow choosing of default keymap
+    //set up keymap (DEFAULT: US)
+    struct xkb_context* xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+    struct xkb_keymap* keymap = xkb_keymap_new_from_names(xkb_context, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);
+
+    wlr_keyboard_set_keymap(wlr_keyboard, keymap);
+
+    xkb_keymap_unref(keymap);
+    xkb_context_unref(xkb_context);
+
+    //TODO: set repeat info
 
     wl_list_init(&keyboard->link);
     

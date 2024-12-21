@@ -74,7 +74,7 @@ int e_server_init(struct e_server *server)
     //handles accepting clients from Unix socket, managing wl globals, ...
     e_log_info("creating display...");
     server->display = wl_display_create();
-    
+
      if (server->display == NULL)
     {
         e_log_error("failed to create display");
