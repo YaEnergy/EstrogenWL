@@ -3,9 +3,9 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
-#include "types/server.h"
+#include "server.h"
 
-#include "types/input/keybind_list.h"
+#include "input/keybind_list.h"
 
 struct e_input_manager
 {

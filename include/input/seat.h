@@ -6,7 +6,7 @@
 #include <wlr/backend.h>
 #include <wlr/types/wlr_seat.h>
 
-#include "types/input/input_manager.h"
+#include "input/input_manager.h"
 
 //collection & management of input devices: keyboard, mouse, ...
 struct e_seat

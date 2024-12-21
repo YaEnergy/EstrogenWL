@@ -10,10 +10,10 @@
 
 #include <xkbcommon/xkbcommon-keysyms.h>
 
-#include "types/server.h"
+#include "server.h"
 
-#include "keybinding.h"
-#include "log.h"
+#include "input/keybinding.h"
+#include "util/log.h"
 
 // Entry point program
 int main()

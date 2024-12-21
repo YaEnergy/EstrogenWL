@@ -1,4 +1,4 @@
-#include "types/input/seat.h"
+#include "input/seat.h"
 
 #include <stdlib.h>
 
@@ -10,11 +10,11 @@
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_keyboard.h>
 
-#include "types/server.h"
-#include "types/input/input_manager.h"
-#include "types/input/keyboard.h"
+#include "server.h"
+#include "input/input_manager.h"
+#include "input/keyboard.h"
 
-#include "log.h"
+#include "util/log.h"
 
 //2024-12-18 22:29:22 | starting to be able to do this more on my own now, I feel like I'm learning a lot :3
 

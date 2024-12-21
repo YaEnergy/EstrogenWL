@@ -6,9 +6,9 @@
 #include <unistd.h>
 #include <wayland-server-core.h>
 
-#include "types/server.h"
+#include "server.h"
 
-#include "log.h"
+#include "util/log.h"
 
 #define SHELL_PATH "/bin/sh"
 

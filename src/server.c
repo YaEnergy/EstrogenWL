@@ -1,4 +1,4 @@
-#include "types/server.h"
+#include "server.h"
 
 #include <stdlib.h>
 
@@ -17,11 +17,11 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_seat.h>
 
-#include "log.h"
+#include "util/log.h"
 
-#include "types/output.h"
-#include "types/xdg_shell.h"
-#include "types/input/input_manager.h"
+#include "output.h"
+#include "windows/xdg_shell.h"
+#include "input/input_manager.h"
 
 static void e_server_new_output(struct wl_listener* listener, void* data)
 {

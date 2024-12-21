@@ -4,7 +4,7 @@
 
 #include <stdbool.h>
 
-#include "types/server.h"
+#include "server.h"
 
 void e_tile_toplevel_windows(struct e_server* server);
 

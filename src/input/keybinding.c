@@ -1,4 +1,4 @@
-#include "keybinding.h"
+#include "input/keybinding.h"
 
 #include <stdbool.h>
 
@@ -6,9 +6,9 @@
 
 #include "commands.h"
 
-#include "types/input/keybind.h"
-#include "types/input/keybind_list.h"
-#include "types/server.h"
+#include "input/keybind.h"
+#include "input/keybind_list.h"
+#include "server.h"
 
 int e_keybinding_bind(struct e_keybind_list* list, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods, const char* command)
 {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types/input/keybind.h"
+#include "input/keybind.h"
 
 struct e_keybind_list
 {

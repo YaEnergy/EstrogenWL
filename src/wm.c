@@ -2,10 +2,9 @@
 
 #include <wayland-util.h>
 
-#include "types/server.h"
-#include "types/output.h"
-#include "types/xdg_shell.h"
-#include "types/windows/toplevel_window.h"
+#include "server.h"
+#include "output.h"
+#include "windows/toplevel_window.h"
 
 void e_tile_toplevel_windows(struct e_server *server)
 {

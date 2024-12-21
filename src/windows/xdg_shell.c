@@ -3,11 +3,11 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
-#include "log.h"
-#include "types/server.h"
-#include "types/xdg_shell.h"
-#include "types/windows/popup_window.h"
-#include "types/windows/toplevel_window.h"
+#include "util/log.h"
+#include "server.h"
+#include "windows/xdg_shell.h"
+#include "windows/popup_window.h"
+#include "windows/toplevel_window.h"
 
 static void e_xdg_shell_new_toplevel_window(struct wl_listener* listener, void* data)
 {

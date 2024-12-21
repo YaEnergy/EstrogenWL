@@ -1,4 +1,4 @@
-#include "log.h"
+#include "util/log.h"
 
 #include <errno.h>
 #include <stdlib.h>
@@ -7,7 +7,7 @@
 #include <time.h>
 #include <stdarg.h>
 
-#include "filesystem.h"
+#include "util/filesystem.h"
 
 #define LOG_FILE_PATH "/.local/share/estrogencompositor.log"
 #define LOG_PREV_FILE_PATH "/.local/share/estrogencompositor_prev.log"

@@ -1,15 +1,15 @@
-#include "types/input/input_manager.h"
+#include "input/input_manager.h"
 
 #include <stdlib.h>
 
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
-#include "types/server.h"
-#include "types/input/seat.h"
-#include "types/input/keybind_list.h"
+#include "server.h"
+#include "input/seat.h"
+#include "input/keybind_list.h"
 
-#include "log.h"
+#include "util/log.h"
 
 static void e_input_manager_new_input(struct wl_listener* listener, void* data)
 {

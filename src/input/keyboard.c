@@ -1,4 +1,4 @@
-#include "types/input/keyboard.h"
+#include "input/keyboard.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -12,9 +12,9 @@
 
 #include <xkbcommon/xkbcommon.h>
 
-#include "types/input/seat.h"
+#include "input/seat.h"
 
-#include "keybinding.h"
+#include "input/keybinding.h"
 
 //key pressed or released, emitted before keyboard xkb state is updated (including modifiers)
 static void e_keyboard_key(struct wl_listener* listener, void* data)

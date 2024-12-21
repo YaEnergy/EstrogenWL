@@ -8,7 +8,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_scene.h>
 
-#include "types/server.h"
+#include "server.h"
 
 struct e_toplevel_window
 {

@@ -10,8 +10,8 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output_layout.h>
 
-#include "types/xdg_shell.h"
-#include "types/input/input_manager.h"
+#include "windows/xdg_shell.h"
+#include "input/input_manager.h"
 
 struct e_server
 {

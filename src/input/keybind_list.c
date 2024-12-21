@@ -1,10 +1,11 @@
+#include "input/keybind_list.h"
+
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "types/input/keybind.h"
-#include "types/input/keybind_list.h"
+#include "input/keybind.h"
 
-#include "log.h"
+#include "util/log.h"
 
 struct e_keybind_list e_keybind_list_create()
 {

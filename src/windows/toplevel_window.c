@@ -1,4 +1,4 @@
-#include "types/windows/toplevel_window.h"
+#include "windows/toplevel_window.h"
 
 #include <stdlib.h>
 
@@ -8,7 +8,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_scene.h>
 
-#include "types/server.h"
+#include "server.h"
 #include "wm.h"
 
 //surface is ready to be displayed

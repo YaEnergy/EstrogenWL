@@ -5,7 +5,7 @@
 
 #include <wlr/types/wlr_keyboard.h>
 
-#include "types/input/seat.h"
+#include "input/seat.h"
 
 struct e_keyboard
 {

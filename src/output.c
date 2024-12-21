@@ -1,4 +1,4 @@
-#include "types/output.h"
+#include "output.h"
 
 #include <bits/time.h>
 #include <stdlib.h>
@@ -12,7 +12,7 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/backend.h>
 
-#include "types/server.h"
+#include "server.h"
 
 #include "wm.h"
 

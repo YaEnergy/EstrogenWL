@@ -1,4 +1,4 @@
-#include "types/windows/popup_window.h"
+#include "windows/popup_window.h"
 
 #include <stdlib.h>
 
@@ -7,7 +7,7 @@
 
 #include <wlr/types/wlr_xdg_shell.h>
 
-#include "log.h"
+#include "util/log.h"
 
 //new surface state got committed
 static void e_popup_window_commit(struct wl_listener* listener, void* data)
