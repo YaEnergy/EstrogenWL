@@ -4,8 +4,8 @@
 
 #include <wayland-server-core.h>
 #include <wayland-util.h>
-#include <wlr/types/wlr_xdg_shell.h>
 
+#include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_scene.h>
 
 #include "types/server.h"

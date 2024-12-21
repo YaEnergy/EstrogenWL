@@ -3,8 +3,10 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
+#include "log.h"
 #include "types/server.h"
 #include "types/xdg_shell.h"
+#include "types/windows/popup_window.h"
 #include "types/windows/toplevel_window.h"
 
 static void e_xdg_shell_new_toplevel_window(struct wl_listener* listener, void* data)
@@ -13,16 +15,21 @@ static void e_xdg_shell_new_toplevel_window(struct wl_listener* listener, void* 
 
     struct wlr_xdg_toplevel* xdg_toplevel = data;
 
+    e_log_info("New toplevel window: %s", xdg_toplevel->title);
+
     //creates a top level window for this shell's server
     e_toplevel_window_create(shell->server, xdg_toplevel);
 }
 
 static void e_xdg_shell_new_popup_window(struct wl_listener* listener, void* data)
 {
-    //TODO: implement e_xdg_shell_new_popup_window
+    struct e_xdg_shell* shell = wl_container_of(listener, shell, new_popup_window);
+    struct wlr_xdg_popup* xdg_popup = data;
 
-    //struct e_xdg_shell* shell = wl_container_of(listener, shell, new_popup_window);
-    //struct e_server* server = shell->server;
+    e_log_info("New popup window");
+
+    //creates a popup window, will destroy itself when done
+    e_popup_window_create(xdg_popup);
 }
 
 static void e_xdg_shell_destroy(struct wl_listener* listener, void* data)

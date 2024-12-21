@@ -67,6 +67,8 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
     //create xdg surface for xdg toplevel and window, and set up window scene tree
     toplevel_window->scene_tree = wlr_scene_xdg_surface_create(&toplevel_window->server->scene->tree, xdg_toplevel->base);
     toplevel_window->scene_tree->node.data = toplevel_window;
+
+    //allows popup window scene trees to add themselves to this toplevel window's scene tree
     xdg_toplevel->base->data = toplevel_window->scene_tree;
 
     wl_list_init(&toplevel_window->link);

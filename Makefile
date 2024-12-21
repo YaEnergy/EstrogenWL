@@ -11,7 +11,7 @@ COMPILER_FLAGS := -Wall -O3
 
 INCLUDE_DIR := include
 
-SOURCE_WINDOW_FILES := src/types/windows/toplevel_window.c
+SOURCE_WINDOW_FILES := src/types/windows/toplevel_window.c src/types/windows/popup_window.c
 SOURCE_INPUT_FILES := src/types/input/input_manager.c src/types/input/seat.c src/types/input/keyboard.c src/types/input/keybind_list.c src/types/input/keybind.c
 SOURCE_TYPE_FILES := src/types/server.c src/types/output.c src/types/xdg_shell.c
 SOURCE_MODULE_FILES := src/filesystem.c src/keybinding.c src/commands.c src/log.c src/wm.c
