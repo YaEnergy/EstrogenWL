@@ -46,30 +46,7 @@ int main()
     e_keybinding_bind(&server.input_manager->keybind_list, XKB_KEY_F3, WLR_MODIFIER_ALT, "exit");
     e_keybinding_bind(&server.input_manager->keybind_list, XKB_KEY_F4, WLR_MODIFIER_ALT, "kill");
 
-    // add unix socket to wl display
-    const char* socket = wl_display_add_socket_auto(server.display);
-    if (!socket)
-    {
-        e_log_error("failed to create socket");
-        wlr_backend_destroy(server.backend);
-        return 1;
-    }
-
-    //set WAYLAND_DISPLAY env var
-    setenv("WAYLAND_DISPLAY", socket, true);
-
-    //running
-    e_log_info("starting backend");
-    if (!wlr_backend_start(server.backend))
-    {
-        e_log_error("failed to start backend");
-        wlr_backend_destroy(server.backend);
-        wl_display_destroy(server.display);
-        return 1;
-    }
-
-    e_log_info("running wl display on WAYLAND_DISPLAY=%s", socket);
-    wl_display_run(server.display);
+    e_server_run(&server);
 
     // display runs
 

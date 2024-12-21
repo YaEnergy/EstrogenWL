@@ -65,6 +65,7 @@ struct e_output* e_output_create(struct e_server* server, struct wlr_output* wlr
     output->server = server;
 
     //add signals
+    wl_list_init(&output->link);
 
     output->frame.notify = e_output_frame;
     wl_signal_add(&wlr_output->events.frame, &output->frame);

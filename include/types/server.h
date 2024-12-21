@@ -51,4 +51,6 @@ struct e_server
 
 int e_server_init(struct e_server* server);
 
+bool e_server_run(struct e_server* server);
+
 void e_server_destroy(struct e_server* server);

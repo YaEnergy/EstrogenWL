@@ -151,6 +151,37 @@ int e_server_init(struct e_server *server)
     return 0;
 }
 
+bool e_server_run(struct e_server *server)
+{
+    // add unix socket to wl display
+    const char* socket = wl_display_add_socket_auto(server->display);
+    
+    if (!socket)
+    {
+        e_log_error("failed to create socket");
+        wlr_backend_destroy(server->backend);
+        return false;
+    }
+
+    //set WAYLAND_DISPLAY env var
+    setenv("WAYLAND_DISPLAY", socket, true);
+
+    //running
+    e_log_info("starting backend");
+    if (!wlr_backend_start(server->backend))
+    {
+        e_log_error("failed to start backend");
+        wlr_backend_destroy(server->backend);
+        wl_display_destroy(server->display);
+        return false;
+    }
+
+    e_log_info("running wl display on WAYLAND_DISPLAY=%s", socket);
+    wl_display_run(server->display);
+
+    return true;
+}
+
 void e_server_destroy(struct e_server* server)
 {
     e_input_manager_destroy(server->input_manager);
