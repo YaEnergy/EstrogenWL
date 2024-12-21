@@ -15,14 +15,14 @@ struct e_keybind_list e_keybind_list_create()
 int e_keybind_list_add(struct e_keybind_list* list, struct e_keybind keybind)
 {
     //allocate new list with more space
-    struct e_keybind* newKeybinds = NULL;
+    struct e_keybind* new_keybinds = NULL;
 
     if (list->amount == 0)
-        newKeybinds = calloc(list->amount + 1, sizeof(struct e_keybind));
+        new_keybinds = calloc(list->amount + 1, sizeof(struct e_keybind));
     else
-        newKeybinds = realloc(list->keybinds, sizeof(struct e_keybind) * (list->amount + 1));
+        new_keybinds = realloc(list->keybinds, sizeof(struct e_keybind) * (list->amount + 1));
     
-    if (newKeybinds == NULL)
+    if (new_keybinds == NULL)
     {
         //allocation fail
         e_log_error("Failed to expand keybind list, couldn't allocate new list");
@@ -31,7 +31,7 @@ int e_keybind_list_add(struct e_keybind_list* list, struct e_keybind keybind)
     }
 
     //point towards new keybind list
-    list->keybinds = newKeybinds;
+    list->keybinds = new_keybinds;
 
     list->keybinds[list->amount] = keybind;
     list->amount++;

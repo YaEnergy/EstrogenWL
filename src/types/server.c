@@ -74,6 +74,7 @@ int e_server_init(struct e_server *server)
     //handles accepting clients from Unix socket, managing wl globals, ...
     e_log_info("creating display...");
     server->display = wl_display_create();
+    
      if (server->display == NULL)
     {
         e_log_error("failed to create display");
@@ -83,6 +84,7 @@ int e_server_init(struct e_server *server)
     //backend handles input and output hardware, autocreate automatically creates the backend we want
     e_log_info("creating backend...");
     server->backend = wlr_backend_autocreate(wl_display_get_event_loop(server->display), NULL);
+
     if (server->backend == NULL)
     {
         e_log_error("failed to create backend");
@@ -100,6 +102,7 @@ int e_server_init(struct e_server *server)
     //renderer handles rendering
     e_log_info("creating renderer...");
     server->renderer = wlr_renderer_autocreate(server->backend);
+
     if (server->renderer == NULL)
     {
         e_log_error("failed to create renderer");
@@ -114,6 +117,7 @@ int e_server_init(struct e_server *server)
 
     //allocates memory for pixel buffers 
     server->allocator = wlr_allocator_autocreate(server->backend, server->renderer);
+
     if (server->allocator == NULL)
     {
         e_log_error("failed to create allocator");
