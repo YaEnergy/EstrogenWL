@@ -15,7 +15,10 @@ struct e_seat
     struct wlr_seat* wlr_seat;
 
     struct wl_list keyboards;
-    
+
+    //surface that currently has focus
+    struct wlr_surface* focus_surface;
+
     //new input device found
     struct wl_listener new_input;
 
@@ -23,5 +26,7 @@ struct e_seat
 };
 
 struct e_seat* e_seat_create(struct e_input_manager* input_manager, const char* name);
+
+void e_seat_focus_on(struct e_seat* seat, struct wlr_surface* surface);
 
 void e_seat_add_keyboard(struct e_seat* seat, struct wlr_input_device* input);

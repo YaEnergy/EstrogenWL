@@ -47,6 +47,19 @@ struct e_seat* e_seat_create(struct e_input_manager* input_manager, const char* 
     return seat;
 }
 
+void e_seat_focus_on(struct e_seat* seat, struct wlr_surface* surface)
+{
+    struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
+
+    if (wlr_keyboard == NULL)
+        wlr_seat_keyboard_notify_enter(seat->wlr_seat, surface, wlr_keyboard->keycodes, wlr_keyboard->num_keycodes, &wlr_keyboard->modifiers);
+    
+    //TODO: focus pointer
+
+    seat->focus_surface = surface;
+
+    e_log_info("seat focus");
+}
 
 void e_seat_add_keyboard(struct e_seat* seat, struct wlr_input_device* input)
 {

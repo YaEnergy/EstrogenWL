@@ -8,6 +8,8 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_scene.h>
 
+#include "input/input_manager.h"
+#include "input/seat.h"
 #include "server.h"
 #include "wm.h"
 
@@ -90,6 +92,8 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
     wl_signal_add(&xdg_toplevel->events.destroy, &toplevel_window->destroy);
 
     //TODO: request resize, fullscreen, ... events
+
+    e_seat_focus_on(server->input_manager->seat, xdg_toplevel->base->surface);
 
     return toplevel_window;
 }
