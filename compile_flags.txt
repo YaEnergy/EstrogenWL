@@ -1,6 +1,7 @@
 -Wall
 -O3
 -Iinclude
+-Iprotocols/include
 -DWLR_USE_UNSTABLE
 -lwlroots-0.18
 -lwayland-server

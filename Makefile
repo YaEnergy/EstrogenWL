@@ -1,3 +1,7 @@
+# wayland-scanner is a tool which generates C headers and rigging for Wayland
+# protocols, which are specified in XML. wlroots requires you to rig these up
+# to your build system yourself and provide them in the include path.
+
 PKG_CONFIG?=pkg-config
 WAYLAND_PROTOCOLS!=$(PKG_CONFIG) --variable=pkgdatadir wayland-protocols
 WAYLAND_SCANNER!=$(PKG_CONFIG) --variable=wayland_scanner wayland-scanner
@@ -7,9 +11,11 @@ CFLAGS_PKG_CONFIG!=$(PKG_CONFIG) --cflags $(PACKAGES)
 CFLAGS+=$(CFLAGS_PKG_CONFIG)
 LIBRARIES!=$(PKG_CONFIG) --libs $(PACKAGES)
 
-COMPILER_FLAGS := -Wall -O0
+COMPILER_FLAGS := -Wall -O3
 
 INCLUDE_DIR := include
+PROTOCOL_DIR := protocols
+PROTOCOL_INCLUDE_DIR := protocols/include
 
 SOURCE_UTIL_FILES := src/util/log.c src/util/filesystem.c
 SOURCE_WINDOW_FILES := src/windows/xdg_shell.c src/windows/toplevel_window.c src/windows/popup_window.c
@@ -21,16 +27,19 @@ OUT_DIR := build
 
 all: clean build
 
-# wayland-scanner is a tool which generates C headers and rigging for Wayland
-# protocols, which are specified in XML. wlroots requires you to rig these up
-# to your build system yourself and provide them in the include path.
 xdg-shell-protocol.h:
 	$(WAYLAND_SCANNER) server-header \
-		$(WAYLAND_PROTOCOLS)/stable/xdg-shell/xdg-shell.xml $(INCLUDE_DIR)/xdg-shell-protocol.h
+		$(WAYLAND_PROTOCOLS)/stable/xdg-shell/xdg-shell.xml $(PROTOCOL_INCLUDE_DIR)/xdg-shell-protocol.h
 
-build: xdg-shell-protocol.h
+wlr-layer-shell-unstable-v1-protocol.h:
+	$(WAYLAND_SCANNER) server-header \
+		$(PROTOCOL_DIR)/wlr-layer-shell-unstable-v1.xml $(PROTOCOL_INCLUDE_DIR)/wlr-layer-shell-unstable-v1-protocol.h
+
+gen-protocols: xdg-shell-protocol.h wlr-layer-shell-unstable-v1-protocol.h
+
+build: gen-protocols
 	if [ ! -d $(OUT_DIR) ]; then mkdir $(OUT_DIR); fi
-	cc $(COMPILER_FLAGS) -o $(OUT_DIR)/EstrogenCompositor -I$(INCLUDE_DIR) $(SOURCE_FILES) -DWLR_USE_UNSTABLE $(LIBRARIES) $(CFLAGS)
+	cc $(COMPILER_FLAGS) -o $(OUT_DIR)/EstrogenCompositor -I$(INCLUDE_DIR) -I$(PROTOCOL_INCLUDE_DIR) $(SOURCE_FILES) -DWLR_USE_UNSTABLE $(LIBRARIES) $(CFLAGS)
 
 clean:
 	rm -rf $(OUT_DIR)/*

@@ -18,9 +18,6 @@ struct e_server
     //handles accepting clients from Unix socket, managing wl globals, ...
     struct wl_display* display;
 
-    //TODO: implement cursor & cursor manager
-    //struct wlr_cursor* cursor;
-
     //handles input and output hardware
     struct wlr_backend* backend;
     struct wl_listener backend_destroy;

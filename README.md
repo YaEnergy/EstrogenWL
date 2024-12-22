@@ -1,22 +1,43 @@
 # EstrogenCompositor
-Tiling wayland compositor using wlroots
 
-Converting from EstrogenWM (X11 tiling wm)!
+Tiling wayland compositor using wlroots.
 
-## Plans to support:
-- Grid-based window tiling system
+This project is mostly made to have fun & learn! :3
+This already has been quite the adventure...
+
+## Support
+
+- Supported (atleast working)
+  - Input devices
+    - Keyboard
+  - Shells
+    - xdg_shell
+  - Single seat
+  - Windows
+    - Tiling (very basic)
+- Plans to support
+  - Input devices
+    - Pointers
+  - Shells
+    - wlr\_layer\_shell\_unstable\_v1
+  - xwayland
+  - Configuration
+    - Keybinding
+    - Compositor
+  - Windows
+    - Fullscreen
+    - Maximalization
+    - Minimalization
+    - Focus
     - Resizing
-    - Movement
-- Floating windows
-- Sloppy focus (focus follows pointer)
-- Borders (woaw)
-- desktop file (for login managers)
-- Keybinding
-- ...
-
-## Default keybinds:
-- ???: Start $TERMINAL
-- ...
+    - Movement & reordering
+    - Borders
+  - Desktop extension file for login managers
+- No plans to support (yet)
+  - Input devices
+    - Touch
+  - HiDPI
+  - Multi-seat support
 
 ## References
 - tinywl
@@ -30,6 +51,7 @@ Converting from EstrogenWM (X11 tiling wm)!
 ## Project structure:
 - src: C source files
 - include: header files
+- protocols: wayland protocol xml files & generated header files
 - install: files neccessary for installation of EstrogenCompositor
 - compile_flags.txt: for clangd
 - Makefile
