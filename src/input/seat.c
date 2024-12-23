@@ -48,6 +48,8 @@ struct e_seat* e_seat_create(struct e_input_manager* input_manager, const char* 
     return seat;
 }
 
+// focus
+
 void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface)
 {
     struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
@@ -94,9 +96,25 @@ void e_seat_clear_focus(struct e_seat *seat)
     seat->focus_surface = NULL;
 }
 
+// input devices
+
+static void e_seat_update_capabilities(struct e_seat* seat)
+{
+    //send to clients what the capabilities of this seat are
+
+    //seat capabilities mask, always has capability for pointers
+    uint32_t capabilities = WL_SEAT_CAPABILITY_POINTER;
+
+    //keyboard available?
+    if (!wl_list_empty(&seat->keyboards))
+        capabilities |= WL_SEAT_CAPABILITY_KEYBOARD;
+
+    wlr_seat_set_capabilities(seat->wlr_seat, capabilities);
+}
+
 void e_seat_add_keyboard(struct e_seat* seat, struct wlr_input_device* input)
 {
-    e_log_info("new keyboard input device");
+    e_log_info("adding keyboard input device");
 
     struct e_keyboard* keyboard = e_keyboard_create(input, seat);
 
@@ -104,14 +122,5 @@ void e_seat_add_keyboard(struct e_seat* seat, struct wlr_input_device* input)
     wl_list_insert(&seat->keyboards, &keyboard->link);
     wlr_seat_set_keyboard(seat->wlr_seat, keyboard->wlr_keyboard);
 
-    //send to clients what the capabilities of this seat are
-
-    //seat capabilities mask
-    uint32_t capabilities = 0;
-
-    //keyboard available?
-    if (!wl_list_empty(&seat->keyboards))
-        capabilities |= WL_SEAT_CAPABILITY_KEYBOARD;
-
-    wlr_seat_set_capabilities(seat->wlr_seat, capabilities);
+    e_seat_update_capabilities(seat);
 }

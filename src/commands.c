@@ -84,10 +84,11 @@ void e_commands_kill_focussed_window(struct e_server* server)
     {
         wlr_xdg_toplevel_send_close(wlr_xdg_toplevel);
         e_log_info("asked to close wlr_xdg_toplevel, title: %s", wlr_xdg_toplevel->title);
-        return;
     }
-    
-    e_log_info("failed to destroy focussed window");
+    else 
+    {
+        e_log_info("failed to destroy focussed window");
+    }
 }
 
 void e_commands_switch_focussed_window_type(struct e_server* server)

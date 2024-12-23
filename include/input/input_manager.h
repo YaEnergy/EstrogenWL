@@ -16,6 +16,8 @@ struct e_input_manager
 
     struct e_seat* seat;
 
+    struct e_cursor* cursor;
+
     struct e_keybind_list keybind_list;
 
     //new input found on the backend

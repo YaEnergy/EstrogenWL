@@ -6,8 +6,10 @@
 #include <wayland-util.h>
 
 #include "server.h"
+
 #include "input/seat.h"
 #include "input/keybind_list.h"
+#include "input/cursor.h"
 
 #include "util/log.h"
 
@@ -27,8 +29,9 @@ static void e_input_manager_new_input(struct wl_listener* listener, void* data)
         case WLR_INPUT_DEVICE_POINTER:
             e_log_info("new pointer input device");
 
-            //TODO: implement pointer device stuff
-
+            //attach pointer to cursor
+            wlr_cursor_attach_input_device(input_manager->cursor->wlr_cursor, input);
+            
             break;
         default:
             e_log_info("new unsupported input device, ignoring...");
@@ -44,6 +47,8 @@ struct e_input_manager* e_input_manager_create(struct e_server* server)
     
     input_manager->keybind_list = e_keybind_list_create();
 
+    input_manager->cursor = e_cursor_create(server->output_layout);
+
     //listen for new input devices on backend
     input_manager->new_input.notify = e_input_manager_new_input;
     wl_signal_add(&server->backend->events.new_input, &input_manager->new_input);
@@ -55,6 +60,8 @@ struct e_input_manager* e_input_manager_create(struct e_server* server)
 
 void e_input_manager_destroy(struct e_input_manager* input_manager)
 {
+    e_cursor_destroy(input_manager->cursor);
+    
     e_keybind_list_destroy(&input_manager->keybind_list);
 
     wl_list_remove(&input_manager->new_input.link);

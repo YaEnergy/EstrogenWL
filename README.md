@@ -16,6 +16,7 @@ This already has been quite the adventure...
   - Windows
     - Tiling (very basic)
 - Plans to support
+  - Cursor
   - Input devices
     - Pointers
   - Shells

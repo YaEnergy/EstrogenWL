@@ -14,6 +14,7 @@
 
 #include "input/keybinding.h"
 #include "util/log.h"
+#include "windows/xdg_shell.h"
 
 // Entry point program
 int main()
@@ -51,9 +52,7 @@ int main()
     // display runs
 
     //destroy everything
-
-    wl_display_destroy_clients(server.display);
-
+    
     e_server_destroy(&server);
 
     e_log_deinit();

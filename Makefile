@@ -19,7 +19,7 @@ PROTOCOL_INCLUDE_DIR := protocols/include
 
 SOURCE_UTIL_FILES := src/util/log.c src/util/filesystem.c
 SOURCE_WINDOW_FILES := src/windows/xdg_shell.c src/windows/toplevel_window.c src/windows/popup_window.c
-SOURCE_INPUT_FILES := src/input/input_manager.c src/input/seat.c src/input/keyboard.c src/input/keybind_list.c src/input/keybind.c src/input/keybinding.c
+SOURCE_INPUT_FILES := src/input/input_manager.c src/input/seat.c src/input/cursor.c src/input/keyboard.c src/input/keybind_list.c src/input/keybind.c src/input/keybinding.c
 SOURCE_TOP_FILES := src/commands.c src/wm.c src/server.c src/output.c
 SOURCE_FILES := src/main.c $(SOURCE_TOP_FILES) $(SOURCE_WINDOW_FILES) $(SOURCE_INPUT_FILES) $(SOURCE_UTIL_FILES)
 
