@@ -38,3 +38,5 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
 void e_toplevel_window_set_position(struct e_toplevel_window* window, int x, int y);
 
 void e_toplevel_window_set_size(struct e_toplevel_window* window, int32_t x, int32_t y);
+
+//struct e_toplevel_window* e_toplevel_window_at(struct e_server* server, double lx, double ly, struct wlr_surface* surface, double* sx, double* sy);

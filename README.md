@@ -8,6 +8,12 @@ This already has been quite the adventure...
 ## Support
 
 - Supported (atleast working)
+  - Cursor
+    - Default theme
+    - Button
+    - Frame
+    - (Absolute) Motion
+    - Axis (scrolling, …)
   - Input devices
     - Keyboard
   - Shells
@@ -16,9 +22,6 @@ This already has been quite the adventure...
   - Windows
     - Tiling (very basic)
 - Plans to support
-  - Cursor
-  - Input devices
-    - Pointers
   - Shells
     - wlr\_layer\_shell\_unstable\_v1
   - xwayland
@@ -34,6 +37,7 @@ This already has been quite the adventure...
     - Movement & reordering
     - Borders
   - Desktop extension file for login managers
+  - …
 - No plans to support (yet)
   - Input devices
     - Touch

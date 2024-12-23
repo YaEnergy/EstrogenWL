@@ -59,8 +59,6 @@ void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface)
     if (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface != surface)
         wlr_seat_keyboard_notify_enter(seat->wlr_seat, surface, wlr_keyboard->keycodes, wlr_keyboard->num_keycodes, &wlr_keyboard->modifiers);
     
-    //TODO: focus pointer
-
     seat->focus_surface = surface;
 
     e_log_info("seat focus");
@@ -77,8 +75,6 @@ bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface)
 
     if (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface != surface)
         return false;
-    
-    //TODO: pointer
 
     return true;
 }
@@ -90,8 +86,6 @@ void e_seat_clear_focus(struct e_seat *seat)
     //if there is an active keyboard, clear its focus
     if (wlr_keyboard != NULL)
         wlr_seat_keyboard_notify_clear_focus(seat->wlr_seat);
-
-    //TODO: clear focus pointer
 
     seat->focus_surface = NULL;
 }
