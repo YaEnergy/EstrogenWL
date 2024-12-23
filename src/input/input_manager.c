@@ -41,7 +41,7 @@ struct e_input_manager* e_input_manager_create(struct e_server* server)
     struct e_input_manager* input_manager = calloc(1, sizeof(struct e_input_manager));
 
     input_manager->server = server;
-
+    
     input_manager->keybind_list = e_keybind_list_create();
 
     //listen for new input devices on backend

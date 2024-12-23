@@ -37,6 +37,7 @@ struct e_seat* e_seat_create(struct e_input_manager* input_manager, const char* 
 
     seat->wlr_seat = wlr_seat;
     seat->input_manager = input_manager;
+    seat->focus_surface = NULL;
 
     wl_list_init(&seat->keyboards);
 
@@ -47,11 +48,13 @@ struct e_seat* e_seat_create(struct e_input_manager* input_manager, const char* 
     return seat;
 }
 
-void e_seat_focus_on(struct e_seat* seat, struct wlr_surface* surface)
+void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface)
 {
     struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
 
-    if (wlr_keyboard == NULL)
+    //set active keyboard focus to surface
+    //only if there is an active keyboard and this keyboard doesn't already have focus on the surface
+    if (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface != surface)
         wlr_seat_keyboard_notify_enter(seat->wlr_seat, surface, wlr_keyboard->keycodes, wlr_keyboard->num_keycodes, &wlr_keyboard->modifiers);
     
     //TODO: focus pointer
@@ -59,6 +62,36 @@ void e_seat_focus_on(struct e_seat* seat, struct wlr_surface* surface)
     seat->focus_surface = surface;
 
     e_log_info("seat focus");
+}
+
+//returns true if seat has full focus on this surface
+//(all active devices have focus on this surface)
+bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface)
+{
+    if (seat->focus_surface != surface)
+        return false;
+
+    struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
+
+    if (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface != surface)
+        return false;
+    
+    //TODO: pointer
+
+    return true;
+}
+
+void e_seat_clear_focus(struct e_seat *seat)
+{
+     struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
+
+    //if there is an active keyboard, clear its focus
+    if (wlr_keyboard != NULL)
+        wlr_seat_keyboard_notify_clear_focus(seat->wlr_seat);
+
+    //TODO: clear focus pointer
+
+    seat->focus_surface = NULL;
 }
 
 void e_seat_add_keyboard(struct e_seat* seat, struct wlr_input_device* input)

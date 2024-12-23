@@ -21,6 +21,8 @@ static void e_toplevel_window_map(struct wl_listener* listener, void* data)
     wl_list_insert(&toplevel_window->server->xdg_shell->toplevel_windows, &toplevel_window->link);
 
     e_tile_toplevel_windows(toplevel_window->server);
+
+    e_seat_set_focus(toplevel_window->server->input_manager->seat, toplevel_window->xdg_toplevel->base->surface);
 }
 
 //surface no longer wants to be displayed
@@ -31,6 +33,10 @@ static void e_toplevel_window_unmap(struct wl_listener* listener, void* data)
     wl_list_remove(&toplevel_window->link);
     
     e_tile_toplevel_windows(toplevel_window->server);
+
+    //if this window's surface had focus, clear it
+    if (e_seat_has_focus(toplevel_window->server->input_manager->seat, toplevel_window->xdg_toplevel->base->surface))
+        e_seat_clear_focus(toplevel_window->server->input_manager->seat);
 }
 
 //new surface state got committed
@@ -92,8 +98,6 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
     wl_signal_add(&xdg_toplevel->events.destroy, &toplevel_window->destroy);
 
     //TODO: request resize, fullscreen, ... events
-
-    e_seat_focus_on(server->input_manager->seat, xdg_toplevel->base->surface);
 
     return toplevel_window;
 }
