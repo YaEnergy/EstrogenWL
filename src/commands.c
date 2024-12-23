@@ -4,7 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 #include <wayland-server-core.h>
+
+#include <wlr/types/wlr_xdg_shell.h>
 
 #include "server.h"
 
@@ -75,7 +78,16 @@ void e_commands_run_command_as_new_process(const char* command)
 
 void e_commands_kill_focussed_window(struct e_server* server)
 {
-    //TODO: implement
+    struct wlr_xdg_toplevel* wlr_xdg_toplevel = wlr_xdg_toplevel_try_from_wlr_surface(server->input_manager->seat->focus_surface);
+
+    if (wlr_xdg_toplevel != NULL)
+    {
+        wlr_xdg_toplevel_send_close(wlr_xdg_toplevel);
+        e_log_info("asked to close wlr_xdg_toplevel, title: %s", wlr_xdg_toplevel->title);
+        return;
+    }
+    
+    e_log_info("failed to destroy focussed window");
 }
 
 void e_commands_switch_focussed_window_type(struct e_server* server)

@@ -8,6 +8,7 @@
 #include "server.h"
 
 #include "input/keybind_list.h"
+#include "input/seat.h"
 
 struct e_input_manager
 {
