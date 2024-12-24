@@ -84,11 +84,11 @@ static void e_cursor_motion_absolute(struct wl_listener* listener, void* data)
 //scroll event
 static void e_cursor_axis(struct wl_listener* listener, void* data)
 {
-    struct e_cursor* cursor = wl_container_of(listener, cursor, motion);
-    struct wlr_pointer_axis_event* pointer_axis_event = data;
+    struct e_cursor* cursor = wl_container_of(listener, cursor, axis);
+    struct wlr_pointer_axis_event* event = data;
     
     //send to clients
-    wlr_seat_pointer_notify_axis(cursor->input_manager->seat->wlr_seat, pointer_axis_event->time_msec, pointer_axis_event->orientation, pointer_axis_event->delta, pointer_axis_event->delta_discrete, pointer_axis_event->source, pointer_axis_event->relative_direction);
+    wlr_seat_pointer_notify_axis(cursor->input_manager->seat->wlr_seat, event->time_msec, event->orientation, event->delta, event->delta_discrete, event->source, event->relative_direction);
 }
 
 struct e_cursor* e_cursor_create(struct e_input_manager* input_manager, struct wlr_output_layout* output_layout)
