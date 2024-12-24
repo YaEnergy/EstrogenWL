@@ -10,6 +10,7 @@
 
 #include "input/input_manager.h"
 #include "input/seat.h"
+#include "windows/surface.h"
 #include "server.h"
 #include "wm.h"
 
@@ -112,7 +113,21 @@ void e_toplevel_window_set_size(struct e_toplevel_window* window, int32_t x, int
     wlr_xdg_toplevel_set_size(window->xdg_toplevel, x, y);
 }
 
-/*struct e_toplevel_window* e_toplevel_window_at(struct e_server* server, double lx, double ly, struct wlr_surface* surface, double* sx, double* sy)
+struct e_toplevel_window* e_toplevel_window_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy)
 {
-    struct wlr_scene_node* 
-}*/
+    struct wlr_scene_node* snode;
+   *surface = e_wlr_surface_at(node, lx, ly, &snode, sx, sy);
+
+    if (snode == NULL || *surface == NULL)
+        return NULL;
+        
+    //keep going up the tree, until our parent is the root of the tree, 
+    //which means we'll have found the top window
+    while (snode != NULL && snode->parent != NULL && snode->parent->node.parent != NULL)
+        snode = &snode->parent->node;
+
+    if (snode == NULL)
+        return NULL;
+
+    return snode->data; //e_toplevel_window*
+}

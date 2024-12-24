@@ -9,6 +9,7 @@
 
 #include <wlr/types/wlr_xdg_shell.h>
 
+#include "input/seat.h"
 #include "server.h"
 
 #include "util/log.h"
@@ -78,11 +79,17 @@ void e_commands_run_command_as_new_process(const char* command)
 
 void e_commands_kill_focussed_window(struct e_server* server)
 {
-    struct wlr_xdg_toplevel* wlr_xdg_toplevel = wlr_xdg_toplevel_try_from_wlr_surface(server->input_manager->seat->focus_surface);
+    struct e_seat* seat = server->input_manager->seat;
+
+    if (seat->focus_surface == NULL)
+        return;
+
+    struct wlr_xdg_toplevel* wlr_xdg_toplevel = wlr_xdg_toplevel_try_from_wlr_surface(seat->focus_surface);
 
     if (wlr_xdg_toplevel != NULL)
     {
         wlr_xdg_toplevel_send_close(wlr_xdg_toplevel);
+        e_seat_clear_focus(seat);
         e_log_info("asked to close wlr_xdg_toplevel, title: %s", wlr_xdg_toplevel->title);
     }
     else 

@@ -15,7 +15,7 @@
 
 #include "input/seat.h"
 #include "server.h"
-#include "windows/xdg_shell.h"
+#include "windows/toplevel_window.h"
 
 static void e_cursor_frame(struct wl_listener* listener, void* data)
 {
@@ -34,39 +34,24 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
     wlr_seat_pointer_notify_button(cursor->input_manager->seat->wlr_seat, event->time_msec, event->button, event->state);
 }
 
-//TODO: move this function to somewhere, also add one for top level windows
-static struct wlr_surface* e_wlr_surface_at_in_tree(struct wlr_scene_node* node, double lx, double ly, double* sx, double* sy)
-{
-    struct wlr_scene_node* found_node = wlr_scene_node_at(node, lx, ly, sx, sy);
-
-    if (found_node == NULL || found_node->type != WLR_SCENE_NODE_BUFFER)
-        return NULL;
-
-    struct wlr_scene_buffer* buffer = wlr_scene_buffer_from_node(found_node);
-    struct wlr_scene_surface* scene_surface = wlr_scene_surface_try_from_buffer(buffer);
-
-    if (scene_surface == NULL)
-        return NULL;
-
-    return scene_surface->surface;
-}
-
 static void e_cursor_handle_move(struct e_cursor* cursor, uint32_t time_msec)
 {
     struct e_server* server = cursor->input_manager->server;
     struct e_seat* seat = cursor->input_manager->seat;
 
     double sx, sy;
-    struct wlr_surface* hover_surface = e_wlr_surface_at_in_tree(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &sx, &sy);
-    
+    struct wlr_surface* hover_surface;
+    struct e_toplevel_window* toplevel_window = e_toplevel_window_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_surface, &sx, &sy);
+
     if (hover_surface != NULL)
     {
         wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface, sx, sy); //is only sent once
         wlr_seat_pointer_notify_motion(seat->wlr_seat, time_msec, sx, sy);
 
         //sloppy focus
-        if (!e_seat_has_focus(seat, hover_surface))
-            e_seat_set_focus(seat, hover_surface);
+        if (toplevel_window != NULL)
+            if (!e_seat_has_focus(seat, toplevel_window->xdg_toplevel->base->surface))
+                e_seat_set_focus(seat, toplevel_window->xdg_toplevel->base->surface);
     }
     else 
     {
@@ -118,8 +103,6 @@ struct e_cursor* e_cursor_create(struct e_input_manager* input_manager, struct w
 
     //load "default" xcursor theme
     cursor->xcursor_manager = wlr_xcursor_manager_create("default", 24);
-    //TODO: implement check for fails when loading default cursor theme
-    //wlr_xcursor_manager_load(cursor->xcursor_manager, 1.0f);
     wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
 
     // events
