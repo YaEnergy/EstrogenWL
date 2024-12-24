@@ -21,6 +21,7 @@
 
 #include "output.h"
 #include "windows/xdg_shell.h"
+#include "windows/gamma_control_manager.h"
 #include "input/input_manager.h"
 
 static void e_server_new_output(struct wl_listener* listener, void* data)
@@ -147,6 +148,8 @@ int e_server_init(struct e_server *server)
 
     //input device management
     server->input_manager = e_input_manager_create(server);
+
+    e_gamma_control_manager_create(server->display);
 
     return 0;
 }

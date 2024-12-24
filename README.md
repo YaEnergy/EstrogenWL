@@ -16,11 +16,13 @@ This already has been quite the adventure...
     - Axis (scrolling, …)
   - Input devices
     - Keyboard
+    - Pointer
   - Shells
     - xdg_shell
   - Single seat
   - Windows
     - Tiling (very basic)
+  - Gamma control
 - Plans to support
   - Shells
     - wlr\_layer\_shell\_unstable\_v1
