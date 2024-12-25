@@ -43,12 +43,15 @@ static void e_cursor_handle_move(struct e_cursor* cursor, uint32_t time_msec)
     struct wlr_surface* hover_surface;
     struct e_toplevel_window* toplevel_window = e_toplevel_window_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_surface, &sx, &sy);
 
+    if (toplevel_window == NULL)
+        wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
+
     if (hover_surface != NULL)
     {
         wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface, sx, sy); //is only sent once
         wlr_seat_pointer_notify_motion(seat->wlr_seat, time_msec, sx, sy);
 
-        //sloppy focus
+        //sloppy focus on toplevel windows
         if (toplevel_window != NULL)
             if (!e_seat_has_focus(seat, toplevel_window->xdg_toplevel->base->surface))
                 e_seat_set_focus(seat, toplevel_window->xdg_toplevel->base->surface);

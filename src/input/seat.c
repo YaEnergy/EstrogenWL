@@ -13,10 +13,21 @@
 #include "server.h"
 #include "input/input_manager.h"
 #include "input/keyboard.h"
+#include "input/cursor.h"
 
 #include "util/log.h"
 
 //2024-12-18 22:29:22 | starting to be able to do this more on my own now, I feel like I'm learning a lot :3
+
+static void e_seat_request_set_cursor(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, request_set_cursor);
+    struct wlr_seat_pointer_request_set_cursor_event* event = data;
+
+    //any client can request, only allow focused client to actually set the surface of the cursor
+    if (event->seat_client == seat->wlr_seat->pointer_state.focused_client)
+        wlr_cursor_set_surface(seat->input_manager->cursor->wlr_cursor, event->surface, event->hotspot_x, event->hotspot_y);
+}
 
 static void e_seat_destroy(struct wl_listener* listener, void* data)
 {
@@ -24,6 +35,7 @@ static void e_seat_destroy(struct wl_listener* listener, void* data)
 
     wl_list_remove(&seat->keyboards);
 
+    wl_list_remove(&seat->request_set_cursor.link);
     wl_list_remove(&seat->destroy.link);
 
     free(seat);
@@ -42,6 +54,9 @@ struct e_seat* e_seat_create(struct e_input_manager* input_manager, const char* 
     wl_list_init(&seat->keyboards);
 
     //events
+    seat->request_set_cursor.notify = e_seat_request_set_cursor;
+    wl_signal_add(&wlr_seat->events.request_set_cursor, &seat->request_set_cursor);
+
     seat->destroy.notify = e_seat_destroy;
     wl_signal_add(&wlr_seat->events.destroy, &seat->destroy);
 
@@ -64,8 +79,7 @@ void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface)
     e_log_info("seat focus");
 }
 
-//returns true if seat has full focus on this surface
-//(all active devices have focus on this surface)
+//returns true if seat has focus on this surface
 bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface)
 {
     if (seat->focus_surface != surface)
@@ -73,10 +87,7 @@ bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface)
 
     struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
 
-    if (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface != surface)
-        return false;
-
-    return true;
+    return (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface == surface);
 }
 
 void e_seat_clear_focus(struct e_seat *seat)
@@ -115,6 +126,9 @@ void e_seat_add_keyboard(struct e_seat* seat, struct wlr_input_device* input)
     //add to seat
     wl_list_insert(&seat->keyboards, &keyboard->link);
     wlr_seat_set_keyboard(seat->wlr_seat, keyboard->wlr_keyboard);
+    
+    if (seat->focus_surface != NULL)
+        e_seat_set_focus(seat, seat->focus_surface);
 
     e_seat_update_capabilities(seat);
 }

@@ -23,7 +23,7 @@ static void e_gamma_control_manager_set_gamma(struct wl_listener* listener, void
     //apply control to state
     wlr_gamma_control_v1_apply(event->control, &state);
 
-    //apply new output state, if failed, send that it failed and destroy the control
+    //apply new output state changes, if failed, send that it failed and destroy the control
     if (!wlr_output_commit_state(event->output, &state))
         wlr_gamma_control_v1_send_failed_and_destroy(event->control);
     

@@ -14,6 +14,7 @@
 
 #include "server.h"
 
+#include "util/log.h"
 #include "wm.h"
 
 static void e_output_frame(struct wl_listener* listener, void* data)
@@ -21,7 +22,7 @@ static void e_output_frame(struct wl_listener* listener, void* data)
     struct e_output* output = wl_container_of(listener, output, frame);
     struct wlr_scene* scene = output->server->scene;
     
-    //render scene, commit it's output to show it, and send frame from this timestamp
+    //render scene, commit its output to show it, and send frame from this timestamp
 
     struct wlr_scene_output* scene_output = wlr_scene_get_scene_output(scene, output->wlr_output);
 
@@ -41,7 +42,8 @@ static void e_output_request_state(struct wl_listener* listener, void* data)
     struct e_output* output = wl_container_of(listener, output, request_state);
     struct wlr_output_event_request_state* event = data;
 
-    wlr_output_commit_state(output->wlr_output, event->state);
+    if (!wlr_output_commit_state(output->wlr_output, event->state))
+        e_log_error("Failed to commit output request state");
 
     //retile tiled windows
     e_tile_toplevel_windows(output->server);
@@ -55,6 +57,7 @@ static void e_output_destroy(struct wl_listener* listener, void* data)
     wl_list_remove(&output->frame.link);
     wl_list_remove(&output->request_state.link);
     wl_list_remove(&output->destroy.link);
+    
     free(output);
 }
 

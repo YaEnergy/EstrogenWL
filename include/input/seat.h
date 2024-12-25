@@ -20,6 +20,9 @@ struct e_seat
     //surface that currently has focus
     struct wlr_surface* focus_surface;
 
+    //clients requests to set the surface of the cursor
+    struct wl_listener request_set_cursor;
+
     //new input device found
     struct wl_listener new_input;
 
@@ -28,10 +31,10 @@ struct e_seat
 
 struct e_seat* e_seat_create(struct e_input_manager* input_manager, const char* name);
 
+// only sets keyboard (if active) focus, pointer focus is only on hover
 void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface);
 
-//returns true if seat has full focus on this surface
-//(all active devices have focus on this surface)
+//returns true if seat has focus on this surface
 bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface);
 
 void e_seat_clear_focus(struct e_seat* seat);

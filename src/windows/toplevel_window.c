@@ -116,7 +116,7 @@ void e_toplevel_window_set_size(struct e_toplevel_window* window, int32_t x, int
 struct e_toplevel_window* e_toplevel_window_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy)
 {
     struct wlr_scene_node* snode;
-   *surface = e_wlr_surface_at(node, lx, ly, &snode, sx, sy);
+    *surface = e_wlr_surface_at(node, lx, ly, &snode, sx, sy);
 
     if (snode == NULL || *surface == NULL)
         return NULL;
@@ -129,5 +129,5 @@ struct e_toplevel_window* e_toplevel_window_at(struct wlr_scene_node* node, doub
     if (snode == NULL)
         return NULL;
 
-    return snode->data; //e_toplevel_window*
+    return snode->data; //struct e_toplevel_window*
 }
