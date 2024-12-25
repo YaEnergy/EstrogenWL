@@ -20,8 +20,11 @@ struct e_seat
     //surface that currently has focus
     struct wlr_surface* focus_surface;
 
-    //clients requests to set the surface of the cursor
+    //client requests to set the surface of the cursor
     struct wl_listener request_set_cursor;
+
+    //user requests to set selection (copying data)
+    struct wl_listener request_set_selection;
 
     //new input device found
     struct wl_listener new_input;

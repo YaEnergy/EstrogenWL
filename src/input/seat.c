@@ -9,6 +9,7 @@
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_keyboard.h>
+#include <wlr/types/wlr_data_device.h>
 
 #include "server.h"
 #include "input/input_manager.h"
@@ -29,6 +30,14 @@ static void e_seat_request_set_cursor(struct wl_listener* listener, void* data)
         wlr_cursor_set_surface(seat->input_manager->cursor->wlr_cursor, event->surface, event->hotspot_x, event->hotspot_y);
 }
 
+static void e_seat_request_set_selection(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, request_set_selection);
+    struct wlr_seat_request_set_selection_event* event = data;
+    
+    wlr_seat_set_selection(seat->wlr_seat, event->source, event->serial);
+}
+
 static void e_seat_destroy(struct wl_listener* listener, void* data)
 {
     struct e_seat* seat = wl_container_of(listener, seat, destroy);
@@ -36,6 +45,7 @@ static void e_seat_destroy(struct wl_listener* listener, void* data)
     wl_list_remove(&seat->keyboards);
 
     wl_list_remove(&seat->request_set_cursor.link);
+    wl_list_remove(&seat->request_set_selection.link);
     wl_list_remove(&seat->destroy.link);
 
     free(seat);
@@ -56,6 +66,9 @@ struct e_seat* e_seat_create(struct e_input_manager* input_manager, const char* 
     //events
     seat->request_set_cursor.notify = e_seat_request_set_cursor;
     wl_signal_add(&wlr_seat->events.request_set_cursor, &seat->request_set_cursor);
+
+    seat->request_set_selection.notify = e_seat_request_set_selection;
+    wl_signal_add(&wlr_seat->events.request_set_selection, &seat->request_set_selection);
 
     seat->destroy.notify = e_seat_destroy;
     wl_signal_add(&wlr_seat->events.destroy, &seat->destroy);
