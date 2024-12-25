@@ -46,7 +46,7 @@ void e_commands_parse(struct e_server* server, const char* command)
     //type is exit
     else if (strcmp(argument, "exit") == 0)
     {
-        //will quit EstrogenCompositor
+        //will quit EstrogenWL
         wl_display_terminate(server->display);
     }
     //type is kill

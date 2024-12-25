@@ -9,8 +9,8 @@
 
 #include "util/filesystem.h"
 
-#define LOG_FILE_PATH "/.local/share/estrogencompositor.log"
-#define LOG_PREV_FILE_PATH "/.local/share/estrogencompositor_prev.log"
+#define LOG_FILE_PATH "/.local/share/estrogenwl.log"
+#define LOG_PREV_FILE_PATH "/.local/share/estrogenwl_prev.log"
 
 #define LOG_MSG_MAX_LENGTH 1024
 
@@ -103,7 +103,7 @@ int e_log_init()
         return 1;
     }
 
-    e_log_info("ESTROGENCOMPOSITOR LOG START");
+    e_log_info("ESTROGENWL LOG START");
     return 0;
 }
 

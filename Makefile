@@ -28,10 +28,14 @@ OUT_DIR := build
 all: clean build
 
 xdg-shell-protocol.h:
+	if [ ! -d $(PROTOCOL_INCLUDE_DIR) ]; then mkdir $(PROTOCOL_INCLUDE_DIR); fi 
+	
 	$(WAYLAND_SCANNER) server-header \
 		$(WAYLAND_PROTOCOLS)/stable/xdg-shell/xdg-shell.xml $(PROTOCOL_INCLUDE_DIR)/xdg-shell-protocol.h
 
 wlr-layer-shell-unstable-v1-protocol.h:
+	if [ ! -d $(PROTOCOL_INCLUDE_DIR) ]; then mkdir $(PROTOCOL_INCLUDE_DIR); fi 
+
 	$(WAYLAND_SCANNER) server-header \
 		$(PROTOCOL_DIR)/wlr-layer-shell-unstable-v1.xml $(PROTOCOL_INCLUDE_DIR)/wlr-layer-shell-unstable-v1-protocol.h
 
@@ -39,7 +43,7 @@ gen-protocols: xdg-shell-protocol.h wlr-layer-shell-unstable-v1-protocol.h
 
 build: gen-protocols
 	if [ ! -d $(OUT_DIR) ]; then mkdir $(OUT_DIR); fi
-	cc $(COMPILER_FLAGS) -o $(OUT_DIR)/EstrogenCompositor -I$(INCLUDE_DIR) -I$(PROTOCOL_INCLUDE_DIR) $(SOURCE_FILES) -DWLR_USE_UNSTABLE $(LIBRARIES) $(CFLAGS)
+	cc $(COMPILER_FLAGS) -o $(OUT_DIR)/EstrogenWL -I$(INCLUDE_DIR) -I$(PROTOCOL_INCLUDE_DIR) $(SOURCE_FILES) -DWLR_USE_UNSTABLE $(LIBRARIES) $(CFLAGS)
 
 clean:
 	rm -rf $(OUT_DIR)/*

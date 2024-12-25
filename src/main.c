@@ -20,7 +20,7 @@
 int main()
 {
     wlr_log_init(WLR_DEBUG, NULL);
-    printf("Welcome to EstrogenCompositor!\n");
+    printf("Welcome to EstrogenWL!\n");
 
     if (e_log_init() != 0)
     {

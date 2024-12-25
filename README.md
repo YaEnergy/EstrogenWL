@@ -1,4 +1,4 @@
-# EstrogenCompositor
+# EstrogenWL
 
 Tiling wayland compositor using wlroots.
 
@@ -59,7 +59,7 @@ This already has been quite the adventure...
 - src: C source files
 - include: header files
 - protocols: wayland protocol xml files & generated header files
-- install: files neccessary for installation of EstrogenCompositor
+- install: files neccessary for installation of EstrogenWL
 - compile_flags.txt: for clangd
 - Makefile
 - README.md
