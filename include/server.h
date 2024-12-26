@@ -51,3 +51,6 @@ int e_server_init(struct e_server* server);
 bool e_server_run(struct e_server* server);
 
 void e_server_destroy(struct e_server* server);
+
+//get output at specified index, returns NULL if failed
+struct e_output* e_server_get_output(struct e_server* server, int index);

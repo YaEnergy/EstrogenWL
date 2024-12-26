@@ -8,24 +8,16 @@
 
 void e_tile_toplevel_windows(struct e_server *server)
 {
-    // gets width & height of last output
+    // gets width & height of first output
     //TODO: tiling doesn't work well with multiple outputs
 
-    int width = 0;
-    int height = 0;
+    struct e_output* output = e_server_get_output(server, 0);
 
-    //TODO: find a better way to get output width and height of specific outputs
-
-    struct e_output* output;
-
-    if (wl_list_empty(&server->outputs))
+    if (output == NULL)
         return;
 
-    wl_list_for_each(output, &server->outputs, link)
-    {
-        width = output->wlr_output->width;
-        height = output->wlr_output->height;
-    }
+    int width = output->wlr_output->width;
+    int height = output->wlr_output->height;
 
     //position and resize all toplevel windows
 

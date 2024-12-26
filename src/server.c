@@ -125,7 +125,7 @@ int e_server_init(struct e_server *server)
         return 1;
     }
 
-    //compositor, subcompositor and data device manager are wl globals
+    //compositor, subcompositor and data device manager can handle everything we need them to do on their own
 
     //required for clients to allocate surfaces
     wlr_compositor_create(server->display, 5, server->renderer);
@@ -149,6 +149,7 @@ int e_server_init(struct e_server *server)
     //input device management
     server->input_manager = e_input_manager_create(server);
 
+    //gamma control manager for output, does everything it needs to on its own
     e_gamma_control_manager_create(server->display);
 
     return 0;
@@ -196,4 +197,23 @@ void e_server_destroy(struct e_server* server)
     wlr_renderer_destroy(server->renderer);
     wlr_backend_destroy(server->backend);
     wl_display_destroy(server->display);
+}
+
+//get output at specified index, returns NULL if failed
+struct e_output* e_server_get_output(struct e_server* server, int index)
+{
+    if (wl_list_empty(&server->outputs))
+        return NULL;
+
+    struct e_output* output;
+    int i = 0;
+    wl_list_for_each(output, &server->outputs, link)
+    {
+        if (i == index)
+            return output;
+
+        i++;
+    }
+
+    return NULL;
 }

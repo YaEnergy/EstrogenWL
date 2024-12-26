@@ -72,9 +72,6 @@ struct e_xdg_shell* e_xdg_shell_create(struct e_server* server)
 
     shell->destroy.notify = e_xdg_shell_destroy;
     wl_signal_add(&shell->xdg_shell->events.destroy, &shell->destroy);
-    
-    //set server's xdg shell
-    server->xdg_shell = shell;
 
     return shell;
 }

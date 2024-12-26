@@ -79,7 +79,7 @@ struct e_keyboard* e_keyboard_create(struct wlr_input_device* input, struct e_se
     keyboard->seat = seat;
     keyboard->wlr_keyboard = wlr_keyboard;
 
-    //TODO: allow choosing of default keymap
+    //TODO: allow configuring of keyboard xkb keymaps
     //set up keymap (DEFAULT: US)
     struct xkb_context* xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
     struct xkb_keymap* keymap = xkb_keymap_new_from_names(xkb_context, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);
@@ -89,7 +89,8 @@ struct e_keyboard* e_keyboard_create(struct wlr_input_device* input, struct e_se
     xkb_keymap_unref(keymap);
     xkb_context_unref(xkb_context);
 
-    //TODO: set repeat info
+    //TODO: allow configuring of keyboard repeat info
+    wlr_keyboard_set_repeat_info(wlr_keyboard, 25, 600);
 
     wl_list_init(&keyboard->link);
     
