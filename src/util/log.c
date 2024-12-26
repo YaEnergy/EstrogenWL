@@ -9,8 +9,9 @@
 
 #include "util/filesystem.h"
 
-#define LOG_FILE_PATH "/.local/share/estrogenwl.log"
-#define LOG_PREV_FILE_PATH "/.local/share/estrogenwl_prev.log"
+#define LOG_DIR_PATH ".local/share/estrogenwl"
+#define LOG_FILE_PATH ".local/share/estrogenwl/estrogenwl.log"
+#define LOG_PREV_FILE_PATH ".local/share/estrogenwl/estrogenwl_prev.log"
 
 #define LOG_MSG_MAX_LENGTH 1024
 
@@ -29,7 +30,7 @@ static char* get_time_string()
     return timeString;
 }
 
-static char* get_file_path_in_home(const char* path)
+static char* get_path_in_home(const char* path)
 {
     int fileNameBufferLength = FILENAME_MAX < 1024 ? FILENAME_MAX : 1024;
     
@@ -39,10 +40,6 @@ static char* get_file_path_in_home(const char* path)
     if (homePath == NULL)
         return NULL;
 
-    //full path will be too long
-    if (strlen(homePath) + strlen(path) >= fileNameBufferLength)
-        return NULL;
-
     char* fullPath = calloc(fileNameBufferLength, sizeof(char));
 
     //allocation fail
@@ -50,7 +47,7 @@ static char* get_file_path_in_home(const char* path)
         return NULL;
     
     //join strings together, returns supposed to written length
-    int length = snprintf(fullPath, sizeof(char) * fileNameBufferLength, "%s%s", homePath, path);
+    int length = snprintf(fullPath, sizeof(char) * fileNameBufferLength, "%s/%s", homePath, path);
 
     //path was too long
     if (length >= fileNameBufferLength)
@@ -68,9 +65,22 @@ int e_log_init()
 {
     if (logFile != NULL)
         return 1;
+    
+    char* logDirPath = get_path_in_home(LOG_DIR_PATH);
+
+    if (logDirPath == NULL)
+        return 1;
+
+    if (e_directory_create(logDirPath) != 0)
+    {
+        free(logDirPath);
+        return 1;
+    }
+
+    free(logDirPath);
 
     //open log file path for writing
-    char* logFilePath = get_file_path_in_home(LOG_FILE_PATH);
+    char* logFilePath = get_path_in_home(LOG_FILE_PATH);
 
     if (logFilePath == NULL)
         return 1;
@@ -78,7 +88,7 @@ int e_log_init()
     //rename previous log file if exists
     if (e_file_exists(logFilePath))
     {
-        char* prevLogFilePath = get_file_path_in_home(LOG_PREV_FILE_PATH);
+        char* prevLogFilePath = get_path_in_home(LOG_PREV_FILE_PATH);
 
         if (prevLogFilePath == NULL)
             return 1;
@@ -86,13 +96,11 @@ int e_log_init()
         int renameResult = rename(logFilePath, prevLogFilePath);
 
         if (renameResult != 0)
-        {
             perror("failed to rename old log file\n");
-        }
 
         free(prevLogFilePath);
     }
-
+    
     logFile = fopen(logFilePath, "w");
 
     free(logFilePath);
