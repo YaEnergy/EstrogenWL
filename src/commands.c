@@ -9,6 +9,7 @@
 
 #include <wlr/types/wlr_xdg_shell.h>
 
+#include "desktop/windows/window.h"
 #include "input/seat.h"
 #include "server.h"
 
@@ -23,13 +24,12 @@ static void e_commands_kill_focussed_window(struct e_server* server)
     if (seat->focus_surface == NULL)
         return;
 
-    struct wlr_xdg_toplevel* wlr_xdg_toplevel = wlr_xdg_toplevel_try_from_wlr_surface(seat->focus_surface);
+    struct e_window* window = e_window_from_surface(server, seat->focus_surface);
 
-    if (wlr_xdg_toplevel != NULL)
+    if (window != NULL)
     {
-        wlr_xdg_toplevel_send_close(wlr_xdg_toplevel);
-        e_seat_clear_focus(seat);
-        e_log_info("asked to close wlr_xdg_toplevel, title: %s", wlr_xdg_toplevel->title);
+        e_window_send_close(window);
+        e_log_info("asked to close window");
     }
     else 
     {
@@ -49,6 +49,7 @@ static void e_commands_toggle_fullscreen_focussed_window(struct e_server* server
     if (seat->focus_surface == NULL)
         return;
 
+    //TODO: add support for all winodw types by using the base e_window instead of wlr_xdg_toplevel
     struct wlr_xdg_toplevel* wlr_xdg_toplevel = wlr_xdg_toplevel_try_from_wlr_surface(seat->focus_surface);
 
     if (wlr_xdg_toplevel != NULL)

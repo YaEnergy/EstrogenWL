@@ -14,8 +14,6 @@
 
 struct e_toplevel_window
 {
-    struct e_server* server;
-
     //base window
     struct e_window* base;
 

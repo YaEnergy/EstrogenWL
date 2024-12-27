@@ -1,4 +1,4 @@
-#include "desktop/windows/popup.h"
+#include "desktop/popup.h"
 
 #include <stdlib.h>
 

@@ -8,8 +8,6 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_scene.h>
 
-#include "input/input_manager.h"
-#include "input/seat.h"
 #include "desktop/windows/window.h"
 #include "server.h"
 
@@ -19,8 +17,6 @@ static void e_toplevel_window_map(struct wl_listener* listener, void* data)
     struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, map);
 
     e_window_map(toplevel_window->base);
-
-    e_seat_set_focus(toplevel_window->server->input_manager->seat, toplevel_window->xdg_toplevel->base->surface);
 }
 
 //surface no longer wants to be displayed
@@ -29,10 +25,6 @@ static void e_toplevel_window_unmap(struct wl_listener* listener, void* data)
     struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, unmap);
 
     e_window_unmap(toplevel_window->base);
-
-    //if this window's surface had focus, clear it
-    if (e_seat_has_focus(toplevel_window->server->input_manager->seat, toplevel_window->xdg_toplevel->base->surface))
-        e_seat_clear_focus(toplevel_window->server->input_manager->seat);
 }
 
 //new surface state got committed
@@ -66,20 +58,14 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
 {
     struct e_toplevel_window* toplevel_window = calloc(1, sizeof(struct e_toplevel_window));
 
-    //give pointer to server and xdg toplevel
-    toplevel_window->server = server;
+    //give pointer to xdg toplevel
     toplevel_window->xdg_toplevel = xdg_toplevel;
 
     struct e_window* window = e_window_create(server, E_WINDOW_TOPLEVEL);
     window->toplevel_window = toplevel_window;
     toplevel_window->base = window;
 
-    //create xdg surface for xdg toplevel and window, and set up window scene tree
-    window->scene_tree = wlr_scene_xdg_surface_create(&toplevel_window->server->scene->tree, xdg_toplevel->base);
-    window->scene_tree->node.data = window;
-
-    //allows popup window scene trees to add themselves to this toplevel window's scene tree
-    xdg_toplevel->base->data = window->scene_tree;
+    e_window_init_xdg_scene_tree(window, &server->scene->tree, xdg_toplevel->base);
 
     //surface map event
     toplevel_window->map.notify = e_toplevel_window_map;
@@ -96,7 +82,7 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
     //window destroy event
     toplevel_window->destroy.notify = e_toplevel_window_destroy;
     wl_signal_add(&xdg_toplevel->events.destroy, &toplevel_window->destroy);
-
+    
     //TODO: request resize, fullscreen, ... events
 
     return toplevel_window;

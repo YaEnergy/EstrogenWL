@@ -1,9 +1,14 @@
 #include "desktop/windows/window.h"
 
 #include <stdlib.h>
+#include <wayland-util.h>
 
 #include "desktop/surface.h"
 
+#include "desktop/windows/toplevel_window.h"
+#include "input/seat.h"
+
+#include "server.h"
 #include "util/log.h"
 
 #include "wm.h"
@@ -25,9 +30,14 @@ struct e_window* e_window_create(struct e_server* server, enum e_window_type typ
     return window;
 }
 
-void e_window_destroy(struct e_window *window)
+void e_window_init_xdg_scene_tree(struct e_window* window, struct wlr_scene_tree* parent, struct wlr_xdg_surface* xdg_surface)
 {
-    free(window);
+    //create scene xdg surface for xdg toplevel and window, and set up window scene tree
+    window->scene_tree = wlr_scene_xdg_surface_create(parent, xdg_surface);
+    window->scene_tree->node.data = window;
+
+    //allows popup scene trees to add themselves to this window's scene tree
+    xdg_surface->data = window->scene_tree;
 }
 
 void e_window_set_position(struct e_window* window, int x, int y)
@@ -59,6 +69,12 @@ void e_window_map(struct e_window *window)
     wl_list_insert(&window->server->windows, &window->link);
 
     e_tile_windows(window->server);
+
+    struct wlr_surface* window_surface = e_window_get_surface(window);
+
+    //set focus to this window's main surface
+    if (window_surface != NULL)
+        e_seat_set_focus(window->server->input_manager->seat, window_surface);
 }
 
 void e_window_unmap(struct e_window *window)
@@ -66,6 +82,12 @@ void e_window_unmap(struct e_window *window)
     wl_list_remove(&window->link);
 
     e_tile_windows(window->server);
+
+    struct wlr_surface* window_surface = e_window_get_surface(window);
+
+    //if this window's surface had focus, clear it
+    if (window_surface != NULL && e_seat_has_focus(window->server->input_manager->seat, window_surface))
+        e_seat_clear_focus(window->server->input_manager->seat);
 }
 
 struct wlr_surface* e_window_get_surface(struct e_window* window)
@@ -78,6 +100,29 @@ struct wlr_surface* e_window_get_surface(struct e_window* window)
             e_log_error("Can't get surface of window, window is an unsupported type!");
             return NULL;
     }
+}
+
+struct e_window* e_window_from_surface(struct e_server* server, struct wlr_surface* surface)
+{
+    if (wl_list_empty(&server->windows))
+        return NULL;
+
+    struct e_window* window;
+
+    wl_list_for_each(window, &server->windows, link)
+    {
+        struct wlr_surface* window_surface = e_window_get_surface(window);
+
+        if (window_surface == NULL)
+            continue;
+        
+        //found window with given surface as main surface
+        if (window_surface == surface)
+            return window;
+    }
+
+    //none found
+    return NULL; 
 }
 
 struct e_window* e_window_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy)
@@ -97,4 +142,25 @@ struct e_window* e_window_at(struct wlr_scene_node* node, double lx, double ly, 
         return NULL;
 
     return snode->data; //struct e_window*
+}
+
+void e_window_send_close(struct e_window *window)
+{
+    switch(window->type)
+    {
+        case E_WINDOW_TOPLEVEL:
+            wlr_xdg_toplevel_send_close(window->toplevel_window->xdg_toplevel);
+            break;
+        default:
+            e_log_error("Can't request to close window, window is an unsupported type!");
+            break;
+    }
+}
+
+void e_window_destroy(struct e_window *window)
+{
+    if (window->scene_tree != NULL)
+        wlr_scene_node_destroy(&window->scene_tree->node);
+
+    free(window);
 }

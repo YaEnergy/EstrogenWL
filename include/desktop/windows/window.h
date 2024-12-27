@@ -22,7 +22,7 @@ enum e_window_type
     //E_WINDOW_XWAYLAND
 };
 
-//a window: xdg toplevel, xdg popup or (currently unimplemented) xwayland window
+//a window: xdg toplevel or (currently unimplemented) xwayland window
 struct e_window
 {
     struct e_server* server;
@@ -43,24 +43,31 @@ struct e_window
 //I mean it would be a bit weird to even call this function somewhere else.
 struct e_window* e_window_create(struct e_server* server, enum e_window_type type);
 
-//Requests that this window uses its method of closing
-void e_window_request_close(struct e_window* window);
-
-//Completely destroys the window and frees up its used memory
-void e_window_destroy(struct e_window* window);
+void e_window_init_xdg_scene_tree(struct e_window* window, struct wlr_scene_tree* parent, struct wlr_xdg_surface* xdg_surface);
 
 void e_window_set_position(struct e_window* window, int x, int y);
 
 void e_window_set_size(struct e_window* window, int32_t x, int32_t y);
 
+//display window
 void e_window_map(struct e_window* window);
 
+//stop displaying window
 void e_window_unmap(struct e_window* window);
 
 //gets the window's main surface
 struct wlr_surface* e_window_get_surface(struct e_window* window);
 
+//finds the window which has this surface as its main surface, NULL if not found
+struct e_window* e_window_from_surface(struct e_server* server, struct wlr_surface* surface);
+
 //Searches for a window at the specified layout coords in the given scene graph
 //Outs found surface and translated from layout to surface coords.
 //If nothing is found returns NULL, but surface may not always be NULL.
 struct e_window* e_window_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy);
+
+//Requests that this window uses its method of closing
+void e_window_send_close(struct e_window* window);
+
+//Destroys the base window and frees up its used memory
+void e_window_destroy(struct e_window* window);
