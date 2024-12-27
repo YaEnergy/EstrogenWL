@@ -1,4 +1,4 @@
-#include "windows/toplevel_window.h"
+#include "desktop/windows/toplevel_window.h"
 
 #include <stdlib.h>
 
@@ -10,18 +10,15 @@
 
 #include "input/input_manager.h"
 #include "input/seat.h"
-#include "windows/surface.h"
+#include "desktop/windows/window.h"
 #include "server.h"
-#include "wm.h"
 
 //surface is ready to be displayed
 static void e_toplevel_window_map(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, map);
 
-    wl_list_insert(&toplevel_window->server->xdg_shell->toplevel_windows, &toplevel_window->link);
-
-    e_tile_toplevel_windows(toplevel_window->server);
+    e_window_map(toplevel_window->base);
 
     e_seat_set_focus(toplevel_window->server->input_manager->seat, toplevel_window->xdg_toplevel->base->surface);
 }
@@ -31,9 +28,7 @@ static void e_toplevel_window_unmap(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, unmap);
 
-    wl_list_remove(&toplevel_window->link);
-    
-    e_tile_toplevel_windows(toplevel_window->server);
+    e_window_unmap(toplevel_window->base);
 
     //if this window's surface had focus, clear it
     if (e_seat_has_focus(toplevel_window->server->input_manager->seat, toplevel_window->xdg_toplevel->base->surface))
@@ -62,6 +57,8 @@ static void e_toplevel_window_destroy(struct wl_listener* listener, void* data)
     wl_list_remove(&toplevel_window->commit.link);
     wl_list_remove(&toplevel_window->destroy.link);
 
+    e_window_destroy(toplevel_window->base);
+
     free(toplevel_window);
 }
 
@@ -73,14 +70,16 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
     toplevel_window->server = server;
     toplevel_window->xdg_toplevel = xdg_toplevel;
 
+    struct e_window* window = e_window_create(server, E_WINDOW_TOPLEVEL);
+    window->toplevel_window = toplevel_window;
+    toplevel_window->base = window;
+
     //create xdg surface for xdg toplevel and window, and set up window scene tree
-    toplevel_window->scene_tree = wlr_scene_xdg_surface_create(&toplevel_window->server->scene->tree, xdg_toplevel->base);
-    toplevel_window->scene_tree->node.data = toplevel_window;
+    window->scene_tree = wlr_scene_xdg_surface_create(&toplevel_window->server->scene->tree, xdg_toplevel->base);
+    window->scene_tree->node.data = window;
 
     //allows popup window scene trees to add themselves to this toplevel window's scene tree
-    xdg_toplevel->base->data = toplevel_window->scene_tree;
-
-    wl_list_init(&toplevel_window->link);
+    xdg_toplevel->base->data = window->scene_tree;
 
     //surface map event
     toplevel_window->map.notify = e_toplevel_window_map;
@@ -101,33 +100,4 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
     //TODO: request resize, fullscreen, ... events
 
     return toplevel_window;
-}
-
-void e_toplevel_window_set_position(struct e_toplevel_window* window, int x, int y)
-{
-    wlr_scene_node_set_position(&window->scene_tree->node, x, y);
-}
-
-void e_toplevel_window_set_size(struct e_toplevel_window* window, int32_t x, int32_t y)
-{
-    wlr_xdg_toplevel_set_size(window->xdg_toplevel, x, y);
-}
-
-struct e_toplevel_window* e_toplevel_window_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy)
-{
-    struct wlr_scene_node* snode;
-    *surface = e_wlr_surface_at(node, lx, ly, &snode, sx, sy);
-
-    if (snode == NULL || *surface == NULL)
-        return NULL;
-        
-    //keep going up the tree, until our parent is the root of the tree, 
-    //which means we'll have found the top window
-    while (snode != NULL && snode->parent != NULL && snode->parent->node.parent != NULL)
-        snode = &snode->parent->node;
-
-    if (snode == NULL)
-        return NULL;
-
-    return snode->data; //struct e_toplevel_window*
 }

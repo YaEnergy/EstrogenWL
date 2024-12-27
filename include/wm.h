@@ -6,5 +6,5 @@
 
 #include "server.h"
 
-void e_tile_toplevel_windows(struct e_server* server);
+void e_tile_windows(struct e_server* server);
 

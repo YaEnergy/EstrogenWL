@@ -46,7 +46,7 @@ static void e_output_request_state(struct wl_listener* listener, void* data)
         e_log_error("Failed to commit output request state");
 
     //retile tiled windows
-    e_tile_toplevel_windows(output->server);
+    e_tile_windows(output->server);
 }
 
 static void e_output_destroy(struct wl_listener* listener, void* data)

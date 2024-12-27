@@ -8,7 +8,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_scene.h>
 
-struct e_popup_window
+struct e_popup
 {
     struct wlr_xdg_popup* xdg_popup;
 
@@ -20,5 +20,5 @@ struct e_popup_window
     struct wl_listener destroy;
 };
 
-//creates new popup window
-struct e_popup_window* e_popup_window_create(struct wlr_xdg_popup* xdg_popup);
+//creates new popup
+struct e_popup* e_popup_create(struct wlr_xdg_popup* xdg_popup);

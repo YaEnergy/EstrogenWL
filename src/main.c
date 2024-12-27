@@ -14,7 +14,6 @@
 
 #include "input/keybinding.h"
 #include "util/log.h"
-#include "windows/xdg_shell.h"
 
 // Entry point program
 int main()
@@ -46,6 +45,7 @@ int main()
     e_keybinding_bind(&server.input_manager->keybind_list, XKB_KEY_F2, WLR_MODIFIER_ALT, "exec alacritty");
     e_keybinding_bind(&server.input_manager->keybind_list, XKB_KEY_F3, WLR_MODIFIER_ALT, "exit");
     e_keybinding_bind(&server.input_manager->keybind_list, XKB_KEY_F4, WLR_MODIFIER_ALT, "kill");
+    e_keybinding_bind(&server.input_manager->keybind_list, XKB_KEY_F5, WLR_MODIFIER_ALT, "toggle_fullscreen");
 
     e_server_run(&server);
 

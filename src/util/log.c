@@ -70,12 +70,15 @@ int e_log_init()
 
     if (logDirPath == NULL)
         return 1;
-
-    if (e_directory_create(logDirPath) != 0)
+    
+    if (!e_directory_exists(logDirPath))
     {
-        free(logDirPath);
-        return 1;
-    }
+        if (e_directory_create(logDirPath) != 0)
+        {
+            free(logDirPath);
+            return 1;
+        }
+    } 
 
     free(logDirPath);
 

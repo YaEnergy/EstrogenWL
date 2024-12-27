@@ -11,13 +11,11 @@ struct e_xdg_shell
     struct wlr_xdg_shell* xdg_shell;
     struct e_server* server;
 
-    struct wl_list toplevel_windows;
-
     //clients create new top level window
     struct wl_listener new_toplevel_window;
 
-    //clients create new popup window
-    struct wl_listener new_popup_window;
+    //clients create new popup
+    struct wl_listener new_popup;
 
     struct wl_listener destroy;
 };

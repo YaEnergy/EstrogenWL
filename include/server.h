@@ -10,7 +10,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output_layout.h>
 
-#include "windows/xdg_shell.h"
+#include "desktop/xdg_shell.h"
 #include "input/input_manager.h"
 
 struct e_server
@@ -38,6 +38,8 @@ struct e_server
 
     //handles protocol for application windows
     struct e_xdg_shell* xdg_shell;
+
+    struct wl_list windows; //struct e_window
 
     struct wl_list outputs;
     struct wl_listener new_output;

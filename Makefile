@@ -18,10 +18,15 @@ PROTOCOL_DIR := protocols
 PROTOCOL_INCLUDE_DIR := protocols/include
 
 SOURCE_UTIL_FILES := src/util/log.c src/util/filesystem.c
-SOURCE_WINDOW_FILES := src/windows/xdg_shell.c src/windows/toplevel_window.c src/windows/popup_window.c src/windows/surface.c src/windows/gamma_control_manager.c
+
+SOURCE_DESKTOP_WINDOWS_FILES := src/desktop/windows/toplevel_window.c src/desktop/windows/popup.c src/desktop/windows/window.c
+SOURCE_DESKTOP_FILES := $(SOURCE_DESKTOP_WINDOWS_FILES) src/desktop/xdg_shell.c src/desktop/surface.c src/desktop/gamma_control_manager.c
+
 SOURCE_INPUT_FILES := src/input/input_manager.c src/input/seat.c src/input/cursor.c src/input/keyboard.c src/input/keybind_list.c src/input/keybind.c src/input/keybinding.c
+
 SOURCE_TOP_FILES := src/commands.c src/wm.c src/server.c src/output.c
-SOURCE_FILES := src/main.c $(SOURCE_TOP_FILES) $(SOURCE_WINDOW_FILES) $(SOURCE_INPUT_FILES) $(SOURCE_UTIL_FILES)
+
+SOURCE_FILES := src/main.c $(SOURCE_TOP_FILES) $(SOURCE_DESKTOP_FILES) $(SOURCE_INPUT_FILES) $(SOURCE_UTIL_FILES)
 
 OUT_DIR := build
 

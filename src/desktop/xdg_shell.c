@@ -7,9 +7,9 @@
 
 #include "util/log.h"
 #include "server.h"
-#include "windows/xdg_shell.h"
-#include "windows/popup_window.h"
-#include "windows/toplevel_window.h"
+#include "desktop/xdg_shell.h"
+#include "desktop/windows/popup.h"
+#include "desktop/windows/toplevel_window.h"
 
 static void e_xdg_shell_new_toplevel_window(struct wl_listener* listener, void* data)
 {
@@ -23,25 +23,23 @@ static void e_xdg_shell_new_toplevel_window(struct wl_listener* listener, void* 
     e_toplevel_window_create(shell->server, xdg_toplevel);
 }
 
-static void e_xdg_shell_new_popup_window(struct wl_listener* listener, void* data)
+static void e_xdg_shell_new_popup(struct wl_listener* listener, void* data)
 {
-    struct e_xdg_shell* shell = wl_container_of(listener, shell, new_popup_window);
+    struct e_xdg_shell* shell = wl_container_of(listener, shell, new_popup);
     struct wlr_xdg_popup* xdg_popup = data;
 
     e_log_info("New popup window");
 
     //creates a popup window, will destroy itself when done
-    e_popup_window_create(xdg_popup);
+    e_popup_create(xdg_popup);
 }
 
 static void e_xdg_shell_destroy(struct wl_listener* listener, void* data)
 {
     struct e_xdg_shell* shell = wl_container_of(listener, shell, destroy);
-
-    wl_list_remove(&shell->toplevel_windows);
-
+    
     wl_list_remove(&shell->new_toplevel_window.link);
-    wl_list_remove(&shell->new_popup_window.link);
+    wl_list_remove(&shell->new_popup.link);
     wl_list_remove(&shell->destroy.link);
 
     free(shell);
@@ -57,9 +55,6 @@ struct e_xdg_shell* e_xdg_shell_create(struct e_server* server)
     //create xdg shell v6 for this server's display
     shell->xdg_shell = wlr_xdg_shell_create(server->display, 6);
 
-    //init top level windows list
-    wl_list_init(&shell->toplevel_windows);
-
     //events
 
     //listen for new top level windows
@@ -67,8 +62,8 @@ struct e_xdg_shell* e_xdg_shell_create(struct e_server* server)
     wl_signal_add(&shell->xdg_shell->events.new_toplevel, &shell->new_toplevel_window);
 
     //listen for new pop up windows
-    shell->new_popup_window.notify = e_xdg_shell_new_popup_window;
-    wl_signal_add(&shell->xdg_shell->events.new_popup, &shell->new_popup_window);
+    shell->new_popup.notify = e_xdg_shell_new_popup;
+    wl_signal_add(&shell->xdg_shell->events.new_popup, &shell->new_popup);
 
     shell->destroy.notify = e_xdg_shell_destroy;
     wl_signal_add(&shell->xdg_shell->events.destroy, &shell->destroy);

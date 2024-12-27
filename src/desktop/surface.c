@@ -1,4 +1,4 @@
-#include "windows/surface.h"
+#include "desktop/surface.h"
 
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_scene.h>

@@ -20,8 +20,8 @@
 #include "util/log.h"
 
 #include "output.h"
-#include "windows/xdg_shell.h"
-#include "windows/gamma_control_manager.h"
+#include "desktop/xdg_shell.h"
+#include "desktop/gamma_control_manager.h"
 #include "input/input_manager.h"
 
 static void e_server_new_output(struct wl_listener* listener, void* data)
@@ -145,6 +145,9 @@ int e_server_init(struct e_server *server)
     
     //xdg shell v6, protocol for application windows
     server->xdg_shell = e_xdg_shell_create(server);
+
+    //init windows list
+    wl_list_init(&server->windows);
 
     //input device management
     server->input_manager = e_input_manager_create(server);
