@@ -7,6 +7,8 @@
 
 #include "server.h"
 
+#include "desktop/scene.h"
+
 #include "input/seat.h"
 #include "input/keybind_list.h"
 #include "input/cursor.h"
@@ -47,7 +49,7 @@ struct e_input_manager* e_input_manager_create(struct e_server* server)
     
     input_manager->keybind_list = e_keybind_list_create();
 
-    input_manager->cursor = e_cursor_create(input_manager, server->output_layout);
+    input_manager->cursor = e_cursor_create(input_manager, server->scene->output_layout);
 
     //listen for new input devices on backend
     input_manager->new_input.notify = e_input_manager_new_input;

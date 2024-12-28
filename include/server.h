@@ -10,6 +10,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output_layout.h>
 
+//#include "desktop/layer_shell.h"
 #include "desktop/xdg_shell.h"
 #include "input/input_manager.h"
 
@@ -27,21 +28,18 @@ struct e_server
     //renderer handles rendering, used by scene
     struct wlr_renderer* renderer;
 
-    //wlroots utility for working with arrangement of screens in a physical layout
-    struct wlr_output_layout* output_layout;
-
-    //handles all rendering & damage tracking, 
-    //use this to add renderable things to the scene graph 
-    //and then call wlr_scene_commit_output to render the frame
-    struct wlr_scene* scene;
-    struct wlr_scene_output_layout* scene_layout;
+    //root scene tree for all layers, and further down windows and layer surfaces
+    struct e_scene* scene;
 
     //handles protocol for application windows
     struct e_xdg_shell* xdg_shell;
 
+    //TODO: move this list from server to somewhere else
     struct wl_list windows; //struct e_window
 
-    struct wl_list outputs;
+    //handles protocol for layers
+    //struct e_layer_shell* layer_shell;
+
     struct wl_listener new_output;
 
     //collection & management of input devices: keyboard, mouse, ...
@@ -53,6 +51,3 @@ int e_server_init(struct e_server* server);
 bool e_server_run(struct e_server* server);
 
 void e_server_destroy(struct e_server* server);
-
-//get output at specified index, returns NULL if failed
-struct e_output* e_server_get_output(struct e_server* server, int index);

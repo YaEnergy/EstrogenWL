@@ -1,0 +1,86 @@
+#include "desktop/scene.h"
+
+#include <stdlib.h>
+
+#include <wayland-server-core.h>
+
+#include <wayland-util.h>
+#include <wlr/types/wlr_scene.h>
+#include <wlr/types/wlr_output_layout.h>
+
+struct e_scene* e_scene_create(struct wl_display* display)
+{
+    struct e_scene* scene = calloc(1, sizeof(struct e_scene));
+
+    //wlroots utility for working with arrangement of screens in a physical layout
+    scene->output_layout = wlr_output_layout_create(display);
+
+    //handles all rendering & damage tracking, 
+    //use this to add renderable things to the scene graph 
+    //and then call wlr_scene_commit_output to render the frame
+    scene->wlr_scene = wlr_scene_create();
+    scene->scene_layout = wlr_scene_attach_output_layout(scene->wlr_scene, scene->output_layout);
+
+    //create scene trees for all layers
+
+    //TODO: For e_window_at to function properly right now it has to check if it has a single parent, but after this change it'll need to have 2.
+    // there might also be some other issues
+
+    scene->layers.background = wlr_scene_tree_create(&scene->wlr_scene->tree);
+    scene->layers.tiling = wlr_scene_tree_create(&scene->wlr_scene->tree);
+    scene->layers.floating = wlr_scene_tree_create(&scene->wlr_scene->tree);
+    scene->layers.overlay = wlr_scene_tree_create(&scene->wlr_scene->tree);
+
+    wl_list_init(&scene->outputs);
+
+    return scene;
+}
+
+//get output at specified index, returns NULL if failed
+struct e_output* e_scene_get_output(struct e_scene* scene, int index)
+{
+    if (wl_list_empty(&scene->outputs))
+        return NULL;
+
+    struct e_output* output;
+    int i = 0;
+    wl_list_for_each(output, &scene->outputs, link)
+    {
+        if (i == index)
+            return output;
+
+        i++;
+    }
+
+    return NULL;
+}
+
+void e_scene_add_output(struct e_scene *scene, struct e_output *output)
+{
+    wl_list_insert(&scene->outputs, &output->link);
+
+    //output layout auto adds wl_output to the display, allows wl clients to find out information about the display
+    //TODO: allow configuring the arrangement of outputs in the layout
+    //TODO: check for possible memory allocation error?
+    struct wlr_output_layout_output* layout_output = wlr_output_layout_add_auto(scene->output_layout, output->wlr_output);
+    struct wlr_scene_output* scene_output = wlr_scene_output_create(scene->wlr_scene, output->wlr_output);
+    wlr_scene_output_layout_add_output(scene->scene_layout, layout_output, scene_output);
+
+    //give output some pointers to the scene's layers
+    output->layers.background = scene->layers.background;
+    output->layers.tiling = scene->layers.tiling;
+    output->layers.floating = scene->layers.floating;
+    output->layers.overlay = scene->layers.overlay;
+}
+
+void e_scene_destroy(struct e_scene *scene)
+{
+    //TODO: disable outputs
+    
+    //destroy root node
+    wlr_scene_node_destroy(&scene->wlr_scene->tree.node);
+
+    wl_list_remove(&scene->outputs);
+
+    free(scene);
+}

@@ -9,6 +9,7 @@
 #include <wlr/types/wlr_scene.h>
 
 #include "desktop/windows/window.h"
+#include "desktop/scene.h"
 #include "server.h"
 
 //surface is ready to be displayed
@@ -65,7 +66,7 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
     window->toplevel_window = toplevel_window;
     toplevel_window->base = window;
 
-    e_window_init_xdg_scene_tree(window, &server->scene->tree, xdg_toplevel->base);
+    e_window_init_xdg_scene_tree(window, server->scene->layers.tiling, xdg_toplevel->base);
 
     //surface map event
     toplevel_window->map.notify = e_toplevel_window_map;

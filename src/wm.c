@@ -5,13 +5,14 @@
 #include "server.h"
 #include "output.h"
 #include "desktop/windows/window.h"
+#include "desktop/scene.h"
 
 void e_tile_windows(struct e_server *server)
 {
     // gets width & height of first output
     //TODO: tiling doesn't work well with multiple outputs
 
-    struct e_output* output = e_server_get_output(server, 0);
+    struct e_output* output = e_scene_get_output(server->scene, 0);
 
     if (output == NULL)
         return;

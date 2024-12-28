@@ -11,6 +11,18 @@ struct e_output
     struct e_server* server;
     struct wlr_output* wlr_output;
 
+    struct
+    {
+        //desktop background
+        struct wlr_scene_tree* background;
+        //tiled windows
+        struct wlr_scene_tree* tiling;
+        //floating windows
+        struct wlr_scene_tree* floating; 
+        //layer shell surfaces that display above everything, such as the rofi-wayland launcher
+        struct wlr_scene_tree* overlay;
+    } layers;
+
     //output has a new frame ready
     struct wl_listener frame;
 

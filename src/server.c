@@ -17,11 +17,14 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_seat.h>
 
+#include "desktop/scene.h"
 #include "util/log.h"
 
 #include "output.h"
 #include "desktop/xdg_shell.h"
 #include "desktop/gamma_control_manager.h"
+//#include "desktop/layer_shell.h"
+#include "desktop/scene.h"
 #include "input/input_manager.h"
 
 static void e_server_new_output(struct wl_listener* listener, void* data)
@@ -51,21 +54,13 @@ static void e_server_new_output(struct wl_listener* listener, void* data)
     //allocate & configure output
     struct e_output* output = e_output_create(server, wlr_output);
 
-    wl_list_insert(&server->outputs, &output->link);
-
-    //output layout auto adds wl_output to the display, allows wl clients to find out information about the display
-    //TODO: allow configuring the arrangement of outputs in the layout
-    //TODO: check for possible memory allocation error?
-    struct wlr_output_layout_output* layout_output = wlr_output_layout_add_auto(server->output_layout, wlr_output);
-    struct wlr_scene_output* scene_output = wlr_scene_output_create(server->scene, wlr_output);
-    wlr_scene_output_layout_add_output(server->scene_layout, layout_output, scene_output);
+    e_scene_add_output(server->scene, output);
 }
 
 static void e_server_backend_destroy(struct wl_listener* listener, void* data)
 {
     struct e_server* server = wl_container_of(listener, server, backend_destroy);
 
-    wl_list_remove(&server->outputs);
     wl_list_remove(&server->new_output.link);
     wl_list_remove(&server->backend_destroy.link);
 }
@@ -93,7 +88,6 @@ int e_server_init(struct e_server *server)
     }
 
     //init listener for new outputs
-    wl_list_init(&server->outputs);
     server->new_output.notify = e_server_new_output;
     wl_signal_add(&server->backend->events.new_output, &server->new_output);
 
@@ -134,20 +128,15 @@ int e_server_init(struct e_server *server)
     //handles clipboard
     wlr_data_device_manager_create(server->display);
 
-    //wlroots utility for working with arrangement of screens in a physical layout
-    server->output_layout = wlr_output_layout_create(server->display);
-
-    //handles all rendering & damage tracking, 
-    //use this to add renderable things to the scene graph 
-    //and then call wlr_scene_commit_output to render the frame
-    server->scene = wlr_scene_create();
-    server->scene_layout = wlr_scene_attach_output_layout(server->scene, server->output_layout);
+    server->scene = e_scene_create(server->display);
+    
+    //init windows list
+    wl_list_init(&server->windows);
     
     //xdg shell v6, protocol for application windows
     server->xdg_shell = e_xdg_shell_create(server);
 
-    //init windows list
-    wl_list_init(&server->windows);
+    //server->layer_shell = e_layer_shell_create(server);
 
     //input device management
     server->input_manager = e_input_manager_create(server);
@@ -194,29 +183,10 @@ void e_server_destroy(struct e_server* server)
     wl_display_destroy_clients(server->display);
 
     e_input_manager_destroy(server->input_manager);
+    e_scene_destroy(server->scene);
 
-    wlr_scene_node_destroy(&server->scene->tree.node);
     wlr_allocator_destroy(server->allocator);
     wlr_renderer_destroy(server->renderer);
     wlr_backend_destroy(server->backend);
     wl_display_destroy(server->display);
-}
-
-//get output at specified index, returns NULL if failed
-struct e_output* e_server_get_output(struct e_server* server, int index)
-{
-    if (wl_list_empty(&server->outputs))
-        return NULL;
-
-    struct e_output* output;
-    int i = 0;
-    wl_list_for_each(output, &server->outputs, link)
-    {
-        if (i == index)
-            return output;
-
-        i++;
-    }
-
-    return NULL;
 }

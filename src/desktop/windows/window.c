@@ -144,14 +144,16 @@ struct e_window* e_window_at(struct wlr_scene_node* node, double lx, double ly, 
     if (snode == NULL || *surface == NULL)
         return NULL;
         
-    //keep going up the tree, until our parent is the root of the tree, 
+    //keep going up the tree, until our parent is one of the layers of the tree (2 ancenstors), 
     //which means we'll have found the top window
-    while (snode != NULL && snode->parent != NULL && snode->parent->node.parent != NULL)
+    while (snode != NULL && snode->parent != NULL && snode->parent->node.parent != NULL && snode->parent->node.parent->node.parent != NULL)
         snode = &snode->parent->node;
 
     if (snode == NULL)
         return NULL;
 
+    //TODO: currently always a e_window, but soon could also be something related to a layer shell surface. This function will need to account for that!
+    //We could get the root surface of the found surface and try getting the window from that surface?
     return snode->data; //struct e_window*
 }
 

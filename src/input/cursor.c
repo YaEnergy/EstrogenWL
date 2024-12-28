@@ -15,6 +15,8 @@
 
 #include "input/seat.h"
 #include "server.h"
+
+#include "desktop/scene.h"
 #include "desktop/windows/window.h"
 
 static void e_cursor_frame(struct wl_listener* listener, void* data)
@@ -41,7 +43,7 @@ static void e_cursor_handle_move(struct e_cursor* cursor, uint32_t time_msec)
 
     double sx, sy;
     struct wlr_surface* hover_surface;
-    struct e_window* window = e_window_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_surface, &sx, &sy);
+    struct e_window* window = e_window_at(&server->scene->wlr_scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_surface, &sx, &sy);
 
     if (window == NULL)
         wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");

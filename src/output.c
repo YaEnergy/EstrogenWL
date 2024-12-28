@@ -12,6 +12,8 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/backend.h>
 
+#include "desktop/scene.h"
+
 #include "server.h"
 
 #include "util/log.h"
@@ -20,7 +22,7 @@
 static void e_output_frame(struct wl_listener* listener, void* data)
 {
     struct e_output* output = wl_container_of(listener, output, frame);
-    struct wlr_scene* scene = output->server->scene;
+    struct wlr_scene* scene = output->server->scene->wlr_scene;
     
     //render scene, commit its output to show it, and send frame from this timestamp
 
