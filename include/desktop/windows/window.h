@@ -45,6 +45,9 @@ struct e_window* e_window_create(struct e_server* server, enum e_window_type typ
 
 void e_window_init_xdg_scene_tree(struct e_window* window, struct wlr_scene_tree* parent, struct wlr_xdg_surface* xdg_surface);
 
+//returns pointer to window's title, NULL on fail
+char* e_window_get_title(struct e_window* window);
+
 void e_window_set_position(struct e_window* window, int x, int y);
 
 void e_window_set_size(struct e_window* window, int32_t x, int32_t y);

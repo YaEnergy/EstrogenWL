@@ -30,6 +30,7 @@ static char* get_time_string()
     return timeString;
 }
 
+//returned char* must be freed on finish
 static char* get_path_in_home(const char* path)
 {
     int fileNameBufferLength = FILENAME_MAX < 1024 ? FILENAME_MAX : 1024;

@@ -1,13 +1,12 @@
 #include "desktop/windows/window.h"
 
 #include <stdlib.h>
+
 #include <wayland-util.h>
 
 #include "desktop/surface.h"
-
 #include "desktop/windows/toplevel_window.h"
 #include "input/seat.h"
-
 #include "server.h"
 #include "util/log.h"
 
@@ -38,6 +37,18 @@ void e_window_init_xdg_scene_tree(struct e_window* window, struct wlr_scene_tree
 
     //allows popup scene trees to add themselves to this window's scene tree
     xdg_surface->data = window->scene_tree;
+}
+
+char* e_window_get_title(struct e_window* window)
+{
+    switch(window->type)
+    {
+        case E_WINDOW_TOPLEVEL:
+            return window->toplevel_window->xdg_toplevel->title;
+        default:
+            e_log_error("Can't get title of window, window is an unsupported type!");
+            return NULL;
+    }
 }
 
 void e_window_set_position(struct e_window* window, int x, int y)
