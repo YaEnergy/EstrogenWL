@@ -20,7 +20,7 @@ PROTOCOL_INCLUDE_DIR := protocols/include
 SOURCE_UTIL_FILES := src/util/log.c src/util/filesystem.c
 
 SOURCE_DESKTOP_WINDOWS_FILES := src/desktop/windows/toplevel_window.c src/desktop/windows/window.c
-SOURCE_DESKTOP_FILES := $(SOURCE_DESKTOP_WINDOWS_FILES) src/desktop/scene.c src/desktop/layer_shell.c src/desktop/popup.c src/desktop/xdg_shell.c src/desktop/surface.c src/desktop/gamma_control_manager.c
+SOURCE_DESKTOP_FILES := $(SOURCE_DESKTOP_WINDOWS_FILES) src/desktop/scene.c src/desktop/layer_surface.c src/desktop/layer_shell.c src/desktop/popup.c src/desktop/xdg_shell.c src/desktop/surface.c src/desktop/gamma_control_manager.c
 
 SOURCE_INPUT_FILES := src/input/input_manager.c src/input/seat.c src/input/cursor.c src/input/keyboard.c src/input/keybind_list.c src/input/keybind.c src/input/keybinding.c
 

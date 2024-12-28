@@ -24,8 +24,9 @@ This already has been quite the adventure...
     - Tiling (very basic)
   - Gamma control
 - Plans to support
+  - Security context protocol
   - Shells
-    - wlr\_layer\_shell\_unstable\_v1
+    - wlr\_layer\_shell\_unstable\_v1 (right now very basic)
   - xwayland
   - Configuration
     - Keybinding

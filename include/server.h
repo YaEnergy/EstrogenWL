@@ -10,7 +10,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output_layout.h>
 
-//#include "desktop/layer_shell.h"
+#include "desktop/layer_shell.h"
 #include "desktop/xdg_shell.h"
 #include "input/input_manager.h"
 
@@ -38,7 +38,7 @@ struct e_server
     struct wl_list windows; //struct e_window
 
     //handles protocol for layers
-    //struct e_layer_shell* layer_shell;
+    struct e_layer_shell* layer_shell;
 
     struct wl_listener new_output;
 

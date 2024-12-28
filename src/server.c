@@ -23,7 +23,7 @@
 #include "output.h"
 #include "desktop/xdg_shell.h"
 #include "desktop/gamma_control_manager.h"
-//#include "desktop/layer_shell.h"
+#include "desktop/layer_shell.h"
 #include "desktop/scene.h"
 #include "input/input_manager.h"
 
@@ -136,7 +136,7 @@ int e_server_init(struct e_server *server)
     //xdg shell v6, protocol for application windows
     server->xdg_shell = e_xdg_shell_create(server);
 
-    //server->layer_shell = e_layer_shell_create(server);
+    server->layer_shell = e_layer_shell_create(server);
 
     //input device management
     server->input_manager = e_input_manager_create(server);
