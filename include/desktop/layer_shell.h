@@ -24,3 +24,5 @@ struct e_layer_shell
 struct e_layer_shell* e_layer_shell_create(struct e_server* server);
 
 void e_layer_shell_arrange_layer(struct e_layer_shell* layer_shell, struct wlr_output* wlr_output, enum zwlr_layer_shell_v1_layer layer);
+
+void e_layer_shell_arrange_all_layers(struct e_layer_shell* layer_shell, struct wlr_output* wlr_output);
