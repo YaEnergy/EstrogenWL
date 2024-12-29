@@ -1,5 +1,6 @@
 -Wall
 -Wextra
+-Wno-unused-parameter
 -O3
 -Iinclude
 -Iprotocols/include

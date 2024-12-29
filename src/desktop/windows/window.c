@@ -4,7 +4,7 @@
 
 #include <wayland-util.h>
 
-#include "desktop/surface.h"
+#include "desktop/scene.h"
 #include "desktop/windows/toplevel_window.h"
 #include "input/seat.h"
 #include "server.h"
@@ -67,6 +67,10 @@ void e_window_set_size(struct e_window* window, int32_t x, int32_t y)
     switch(window->type)
     {
         case E_WINDOW_TOPLEVEL:
+            //don't resize the toplevel to the same size
+            if (window->toplevel_window->xdg_toplevel->current.width == x && window->toplevel_window->xdg_toplevel->current.height == y)
+                return;
+
             wlr_xdg_toplevel_set_size(window->toplevel_window->xdg_toplevel, x, y);
             break;
         default:
@@ -139,7 +143,7 @@ struct e_window* e_window_from_surface(struct e_server* server, struct wlr_surfa
 struct e_window* e_window_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy)
 {
     struct wlr_scene_node* snode;
-    *surface = e_wlr_surface_at(node, lx, ly, &snode, sx, sy);
+    *surface = e_scene_wlr_surface_at(node, lx, ly, &snode, sx, sy);
 
     if (snode == NULL || *surface == NULL)
         return NULL;

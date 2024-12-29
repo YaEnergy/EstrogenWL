@@ -20,6 +20,7 @@ struct e_layer_surface
     struct wlr_scene_tree* scene_tree;
     
     //TODO: implement layer surface popups
+    //new xdg popup
     //struct wl_listener new_popup;
 
     //new surface state got committed

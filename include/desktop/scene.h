@@ -6,6 +6,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_output.h>
+#include <wlr/types/wlr_compositor.h>
 
 #include "output.h"
 
@@ -49,6 +50,10 @@ struct e_output* e_scene_get_output(struct e_scene* scene, int index);
 
 //get output from given wlr_output, returns NULL if failed
 struct e_output* e_scene_output_from_wlr(struct e_scene* scene, struct wlr_output* wlr_output);
+
+//returns a wlr_surface pointer at the specified layout coords, 
+//also outs the surface's node, and translates the layout coords to the surface coords
+struct wlr_surface* e_scene_wlr_surface_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_scene_node** snode, double* sx, double* sy);
 
 //adds the given output to the given scene and handles its layout for it
 void e_scene_add_output(struct e_scene* scene, struct e_output* output);

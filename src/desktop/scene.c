@@ -3,10 +3,11 @@
 #include <stdlib.h>
 
 #include <wayland-server-core.h>
-
 #include <wayland-util.h>
+
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_compositor.h>
 
 struct e_scene* e_scene_create(struct wl_display* display)
 {
@@ -88,6 +89,22 @@ void e_scene_add_output(struct e_scene *scene, struct e_output *output)
     output->layers.floating = scene->layers.floating;
     output->layers.top = scene->layers.top;
     output->layers.overlay = scene->layers.overlay;
+}
+
+struct wlr_surface* e_scene_wlr_surface_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_scene_node** snode, double* sx, double* sy)
+{
+    *snode = wlr_scene_node_at(node, lx, ly, sx, sy);
+
+    if (*snode == NULL || (*snode)->type != WLR_SCENE_NODE_BUFFER)
+        return NULL;
+
+    struct wlr_scene_buffer* buffer = wlr_scene_buffer_from_node(*snode);
+    struct wlr_scene_surface* scene_surface = wlr_scene_surface_try_from_buffer(buffer);
+
+    if (scene_surface == NULL)
+        return NULL;
+
+    return scene_surface->surface;
 }
 
 void e_scene_destroy(struct e_scene *scene)

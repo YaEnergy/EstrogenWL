@@ -10,9 +10,9 @@
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/util/box.h>
 
-#include "desktop/layer_shell.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
+#include "desktop/layer_shell.h"
 #include "desktop/scene.h"
 #include "server.h"
 
@@ -56,7 +56,7 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
 static void e_layer_surface_destroy(struct wl_listener* listener, void* data)
 {
     struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, destroy);
-    
+
     wl_list_remove(&layer_surface->link);
     wl_list_remove(&layer_surface->commit.link);
     wl_list_remove(&layer_surface->destroy.link);
@@ -92,6 +92,7 @@ void e_layer_surface_configure(struct e_layer_surface* layer_surface, struct wlr
 {
     struct wlr_layer_surface_v1* wlr_layer_surface_v1 = layer_surface->scene_layer_surface_v1->layer_surface;
 
+    //TODO: account for committed changes
     //enum wlr_layer_surface_v1_state_field
 
     //desired size committed?

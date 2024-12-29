@@ -129,7 +129,7 @@ void e_log_info(const char *format, ...)
     //print format with args into buffer
     int length = vsnprintf(message, sizeof(char) * LOG_MSG_MAX_LENGTH, format, args);
 
-    if (length >= sizeof(message))
+    if ((unsigned long)length >= sizeof(message))
     {
         e_log_error("Log message too long");
         va_end(args);
@@ -157,7 +157,7 @@ void e_log_error(const char *format, ...)
     //print format with args into buffer 
     int length = vsnprintf(message, sizeof(char) * LOG_MSG_MAX_LENGTH, format, args);
 
-    if (length >= sizeof(message))
+    if ((unsigned long)length >= sizeof(message))
     {
         e_log_error("Error message too long"); //this is so funny
         va_end(args);
