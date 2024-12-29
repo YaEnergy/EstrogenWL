@@ -13,6 +13,27 @@
 #include "desktop/scene.h"
 #include "server.h"
 
+//Maybe I should create these kinds of methods for e_windows aswell?
+void e_layer_shell_arrange_layer(struct e_layer_shell* layer_shell, struct wlr_output* wlr_output, enum zwlr_layer_shell_v1_layer layer)
+{
+    struct wlr_box full_area = {0, 0, 0, 0};
+    wlr_output_effective_resolution(wlr_output, &full_area.width, &full_area.height);
+
+    struct wlr_box remaining_area = {full_area.x, full_area.y, full_area.width, full_area.height};
+
+    //configure each layer surface in this output & layer
+    //TODO: remaining area might become too small, I'm not sure what to do in those edge cases yet
+    struct e_layer_surface* layer_surface;
+    wl_list_for_each(layer_surface, &layer_shell->layer_surfaces, link)
+    {
+        //is this surface on this output & layer? if so, then configure and update remaining area
+        if (e_layer_surface_get_wlr_output(layer_surface) == wlr_output && e_layer_surface_get_layer(layer_surface) == layer)
+        {
+            e_layer_surface_configure(layer_surface, &full_area, &remaining_area);
+        }
+    }
+}
+
 //new wlr_layer_surface_v1 that has been configured by client to configure and commit
 static void e_layer_shell_new_surface(struct wl_listener* listener, void* data)
 {
@@ -34,15 +55,13 @@ static void e_layer_shell_new_surface(struct wl_listener* listener, void* data)
     }
     
     e_layer_surface_create(layer_shell->server, layer_surface);
-
-    //honour layer_surface's desired size or dimensions I guess, I don't really have a reason to reject them
-    //wlr_layer_surface_v1_configure(layer_surface, layer_surface->current.desired_width, layer_surface->current.desired_height);
 }
 
 static void e_layer_shell_destroy(struct wl_listener* listener, void* data)
 {
     struct e_layer_shell* layer_shell = wl_container_of(listener, layer_shell, destroy);
 
+    wl_list_remove(&layer_shell->layer_surfaces);
     wl_list_remove(&layer_shell->new_surface.link);
     wl_list_remove(&layer_shell->destroy.link);
 
@@ -55,6 +74,8 @@ struct e_layer_shell* e_layer_shell_create(struct e_server* server)
     layer_shell->server = server;
 
     layer_shell->wlr_layer_shell_v1 = wlr_layer_shell_v1_create(server->display, 4);
+
+    wl_list_init(&layer_shell->layer_surfaces);
 
     //events
 

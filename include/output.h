@@ -11,15 +11,20 @@ struct e_output
     struct e_server* server;
     struct wlr_output* wlr_output;
 
+    //see: wlr-layer-shell-unstable-v1-protocol.h @ enum zwlr_layer_shell_v1_layer
     struct
     {
         //desktop background
         struct wlr_scene_tree* background;
+        //shell surfaces unders windows
+        struct wlr_scene_tree* bottom;
         //tiled windows
         struct wlr_scene_tree* tiling;
         //floating windows
         struct wlr_scene_tree* floating; 
-        //layer shell surfaces that display above everything, such as the rofi-wayland launcher
+        //shell surfaces above windows
+        struct wlr_scene_tree* top;
+        //layer shell surfaces that display above everything
         struct wlr_scene_tree* overlay;
     } layers;
 

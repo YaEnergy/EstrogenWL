@@ -23,12 +23,11 @@ struct e_scene* e_scene_create(struct wl_display* display)
 
     //create scene trees for all layers
 
-    //TODO: For e_window_at to function properly right now it has to check if it has a single parent, but after this change it'll need to have 2.
-    // there might also be some other issues
-
     scene->layers.background = wlr_scene_tree_create(&scene->wlr_scene->tree);
+    scene->layers.bottom = wlr_scene_tree_create(&scene->wlr_scene->tree);
     scene->layers.tiling = wlr_scene_tree_create(&scene->wlr_scene->tree);
     scene->layers.floating = wlr_scene_tree_create(&scene->wlr_scene->tree);
+    scene->layers.top = wlr_scene_tree_create(&scene->wlr_scene->tree);
     scene->layers.overlay = wlr_scene_tree_create(&scene->wlr_scene->tree);
 
     wl_list_init(&scene->outputs);
@@ -55,6 +54,22 @@ struct e_output* e_scene_get_output(struct e_scene* scene, int index)
     return NULL;
 }
 
+//get output from given wlr_output, returns NULL if failed
+struct e_output* e_scene_output_from_wlr(struct e_scene* scene, struct wlr_output* wlr_output)
+{
+    if (wl_list_empty(&scene->outputs))
+        return NULL;
+
+    struct e_output* output;
+    wl_list_for_each(output, &scene->outputs, link)
+    {
+        if (output->wlr_output == wlr_output)
+            return output;
+    }
+
+    return NULL;
+}
+
 void e_scene_add_output(struct e_scene *scene, struct e_output *output)
 {
     wl_list_insert(&scene->outputs, &output->link);
@@ -68,8 +83,10 @@ void e_scene_add_output(struct e_scene *scene, struct e_output *output)
 
     //give output some pointers to the scene's layers
     output->layers.background = scene->layers.background;
+    output->layers.bottom = scene->layers.bottom;
     output->layers.tiling = scene->layers.tiling;
     output->layers.floating = scene->layers.floating;
+    output->layers.top = scene->layers.top;
     output->layers.overlay = scene->layers.overlay;
 }
 
