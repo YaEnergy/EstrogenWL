@@ -11,6 +11,7 @@
 
 #include "desktop/windows/window.h"
 #include "desktop/scene.h"
+#include "input/cursor.h"
 #include "server.h"
 #include "util/log.h"
 #include "wm.h"
@@ -19,7 +20,8 @@
 
 static bool e_toplevel_window_wants_floating(struct e_toplevel_window* toplevel_window)
 {
-    return toplevel_window->xdg_toplevel->current.min_width > 5 || toplevel_window->xdg_toplevel->current.min_height > 5;
+    struct wlr_xdg_toplevel* xdg_toplevel = toplevel_window->xdg_toplevel;
+    return (xdg_toplevel->current.min_width > 0 || xdg_toplevel->current.min_height > 0) && (xdg_toplevel->current.min_width == xdg_toplevel->current.max_width || xdg_toplevel->current.min_height == xdg_toplevel->current.max_height);
 }
 
 //surface is ready to be displayed
@@ -28,6 +30,8 @@ static void e_toplevel_window_map(struct wl_listener* listener, void* data)
     struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, map);
 
     e_window_map(toplevel_window->base);
+
+    //TODO: handle toplevel_window->xdg_toplevel->requested if surface is mapped
 }
 
 //surface no longer wants to be displayed
@@ -58,6 +62,32 @@ static void e_toplevel_window_commit(struct wl_listener* listener, void* data)
             e_tile_windows(toplevel_window->base->server);
         }
     }
+
+    //TODO: handle toplevel_window->xdg_toplevel->requested if surface is mapped
+}
+
+static void e_toplevel_window_request_move(struct wl_listener* listener, void* data)
+{
+    struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, request_move);
+    //struct wlr_xdg_toplevel_move_event* event = data;
+
+    //TODO: any client can request this
+    
+    struct e_server* server = toplevel_window->base->server;
+    e_cursor_start_grab_window_mode(server->input_manager->cursor, toplevel_window->base, E_CURSOR_MODE_MOVE);
+}
+
+static void e_toplevel_window_request_resize(struct wl_listener* listener, void* data)
+{
+    struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, request_resize);
+    //struct wlr_xdg_toplevel_resize_event* event = data;
+
+    //TODO: any client can request this
+    
+    struct e_server* server = toplevel_window->base->server;
+    e_cursor_start_grab_window_mode(server->input_manager->cursor, toplevel_window->base, E_CURSOR_MODE_RESIZE);
+
+    e_log_info("request resize");
 }
 
 //xdg_toplevel got destroyed
@@ -68,6 +98,10 @@ static void e_toplevel_window_destroy(struct wl_listener* listener, void* data)
     wl_list_remove(&toplevel_window->map.link);
     wl_list_remove(&toplevel_window->unmap.link);
     wl_list_remove(&toplevel_window->commit.link);
+
+    wl_list_remove(&toplevel_window->request_move.link);
+    wl_list_remove(&toplevel_window->request_resize.link);
+
     wl_list_remove(&toplevel_window->destroy.link);
 
     e_window_destroy(toplevel_window->base);
@@ -88,18 +122,27 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
 
     e_window_init_xdg_scene_tree(window, server->scene->layers.tiling, xdg_toplevel->base);
 
-    //surface map event
+    // events
+
+    // surface events
+
     toplevel_window->map.notify = e_toplevel_window_map;
     wl_signal_add(&xdg_toplevel->base->surface->events.map, &toplevel_window->map);
 
-    //surface unmap event
     toplevel_window->unmap.notify = e_toplevel_window_unmap;
     wl_signal_add(&xdg_toplevel->base->surface->events.unmap, &toplevel_window->unmap);
 
-    //surface commit event
     toplevel_window->commit.notify = e_toplevel_window_commit;
     wl_signal_add(&xdg_toplevel->base->surface->events.commit, &toplevel_window->commit);
-    
+
+    // xdg toplevel events
+
+    toplevel_window->request_move.notify = e_toplevel_window_request_move;
+    wl_signal_add(&xdg_toplevel->events.request_move, &toplevel_window->request_move);
+
+    toplevel_window->request_resize.notify = e_toplevel_window_request_resize;
+    wl_signal_add(&xdg_toplevel->events.request_resize, &toplevel_window->request_resize);
+
     //window destroy event
     toplevel_window->destroy.notify = e_toplevel_window_destroy;
     wl_signal_add(&xdg_toplevel->events.destroy, &toplevel_window->destroy);

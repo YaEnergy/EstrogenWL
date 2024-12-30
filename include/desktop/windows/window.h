@@ -51,6 +51,12 @@ void e_window_init_xdg_scene_tree(struct e_window* window, struct wlr_scene_tree
 //returns pointer to window's title, NULL on fail
 char* e_window_get_title(struct e_window* window);
 
+//outs top left x and y of window, pointers are set to -1 on fail
+void e_window_get_position(struct e_window* window, int* x, int* y);
+
+//outs width (x) and height (y) of window, pointers are set to -1 on fail
+void e_window_get_size(struct e_window* window, int* x, int* y);
+
 void e_window_set_position(struct e_window* window, int x, int y);
 
 void e_window_set_size(struct e_window* window, int32_t x, int32_t y);

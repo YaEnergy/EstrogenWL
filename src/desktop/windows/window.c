@@ -9,6 +9,7 @@
 #include "desktop/scene.h"
 #include "desktop/windows/toplevel_window.h"
 #include "input/seat.h"
+#include "input/cursor.h"
 #include "server.h"
 #include "util/log.h"
 
@@ -53,6 +54,58 @@ char* e_window_get_title(struct e_window* window)
     }
 }
 
+//outs top left x and y of window, pointers are set to -1 on fail
+void e_window_get_position(struct e_window* window, int* x, int* y)
+{
+    if (x == NULL || y == NULL)
+    {
+        e_log_error("e_window_get_position: please give valid pointers");
+        abort();
+    }
+
+    if (window->scene_tree == NULL)
+    {
+        e_log_error("e_window_get_position: window has no scene tree");
+        abort();
+    }
+
+    switch(window->type)
+    {
+        case E_WINDOW_TOPLEVEL:
+            *x = window->scene_tree->node.x;
+            *y = window->scene_tree->node.y;
+            break;
+        default:
+            *x = -1;
+            *y = -1;
+            e_log_error("Can't get size of window, window is an unsupported type!");
+            break;
+    }
+}
+
+//outs width (x) and height (y) of window, x and y are set to -1 on fail
+void e_window_get_size(struct e_window* window, int* x, int* y)
+{
+    if (x == NULL || y == NULL)
+    {
+        e_log_error("e_window_get_size: please give valid pointers");
+        abort();
+    }
+
+    switch(window->type)
+    {
+        case E_WINDOW_TOPLEVEL:
+            *x = window->toplevel_window->xdg_toplevel->current.width;
+            *y = window->toplevel_window->xdg_toplevel->current.height;
+            break;
+        default:
+            *x = -1;
+            *y = -1;
+            e_log_error("Can't get size of window, window is an unsupported type!");
+            break;
+    }
+}
+
 void e_window_set_position(struct e_window* window, int x, int y)
 {
     if (window->scene_tree == NULL)
@@ -83,7 +136,7 @@ void e_window_set_size(struct e_window* window, int32_t x, int32_t y)
 
 void e_window_set_tiled(struct e_window* window, bool tiled)
 {
-    e_log_info("setting tiling mode of window to %b...", tiled);
+    e_log_info("setting tiling mode of window to %B...", tiled);
 
     if (window->tiled == tiled)
         return;
@@ -112,7 +165,7 @@ void e_window_set_tiled(struct e_window* window, bool tiled)
         e_tile_windows(window->server);
 }
 
-void e_window_map(struct e_window *window)
+void e_window_map(struct e_window* window)
 {
     e_log_info("map");
 
@@ -128,7 +181,7 @@ void e_window_map(struct e_window *window)
         e_seat_set_focus(window->server->input_manager->seat, window_surface);
 }
 
-void e_window_unmap(struct e_window *window)
+void e_window_unmap(struct e_window* window)
 {
     wl_list_remove(&window->link);
 
@@ -140,6 +193,10 @@ void e_window_unmap(struct e_window *window)
     //if this window's surface had focus, clear it
     if (window_surface != NULL && e_seat_has_focus(window->server->input_manager->seat, window_surface))
         e_seat_clear_focus(window->server->input_manager->seat);
+
+    //if this window was grabbed by the cursor make it let go
+    if (window->server->input_manager->cursor->grab_window == window)
+        e_cursor_reset_mode(window->server->input_manager->cursor);
 }
 
 struct wlr_surface* e_window_get_surface(struct e_window* window)

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include <wayland-server-core.h>
+#include <wayland-server-protocol.h>
 #include <wayland-util.h>
 
 #include <wlr/types/wlr_output_layout.h>
@@ -11,6 +12,9 @@
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 
+#include <wlr/util/box.h>
+
+#include "desktop/xdg_shell.h"
 #include "input/input_manager.h"
 
 #include "input/seat.h"
@@ -18,6 +22,13 @@
 
 #include "desktop/scene.h"
 #include "desktop/windows/window.h"
+
+#include "util/log.h"
+
+//TODO: these should probably be replaced by a method of founding out the mouse button number
+#define E_POINTER_BUTTON_MIDDLE 274
+#define E_POINTER_BUTTON_RIGHT 273
+#define E_POINTER_BUTTON_LEFT 272
 
 static void e_cursor_frame(struct wl_listener* listener, void* data)
 {
@@ -32,12 +43,75 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
     struct e_cursor* cursor = wl_container_of(listener, cursor, button);
     struct wlr_pointer_button_event* event = data;
 
+    if (event->button == E_POINTER_BUTTON_MIDDLE && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
+    {
+        struct wlr_keyboard* keyboard = wlr_seat_get_keyboard(cursor->input_manager->seat->wlr_seat);
+
+        //if ALT modifier is pressed on keyboard & middle click is held, start resizing the focussed window
+        if (keyboard != NULL && (wlr_keyboard_get_modifiers(keyboard) & WLR_MODIFIER_ALT))
+        {
+            struct e_window* focussed_window = e_window_from_surface(cursor->input_manager->server, cursor->input_manager->seat->focus_surface);
+
+            e_cursor_start_grab_window_mode(cursor, focussed_window, E_CURSOR_MODE_RESIZE);
+        }
+    }
+
+    if (event->state == WL_POINTER_BUTTON_STATE_RELEASED)
+        e_cursor_reset_mode(cursor);
+
     //send to clients
     wlr_seat_pointer_notify_button(cursor->input_manager->seat->wlr_seat, event->time_msec, event->button, event->state);
 }
 
+static void e_cursor_handle_mode_move(struct e_cursor* cursor)
+{
+    if (cursor->grab_window == NULL || cursor->grab_window->scene_tree == NULL)
+    {
+        e_log_error("Cursor move mode: window/window's scene tree grabbed by cursor is NULL");
+        e_cursor_reset_mode(cursor);
+        return;
+    }
+
+    //TODO: allow positioning of tiled windows
+
+    if (!cursor->grab_window->tiled)
+        e_window_set_position(cursor->grab_window, cursor->wlr_cursor->x - cursor->grab_wx, cursor->wlr_cursor->y - cursor->grab_wy);
+}
+
+static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
+{   
+    if (cursor->grab_window == NULL || cursor->grab_window->scene_tree == NULL)
+    {
+        e_log_error("Cursor resize mode: window/window's scene tree grabbed by cursor is NULL");
+        e_cursor_reset_mode(cursor);
+        return;
+    }
+
+    //TODO: allow resizing of tiled windows
+    //TODO: allow resize by specific edges (right, left, top, bottom)
+
+    if (!cursor->grab_window->tiled)
+    {
+        int width = cursor->grab_start_wbox.width + cursor->wlr_cursor->x - cursor->grab_wx - cursor->grab_window->scene_tree->node.x;
+        int height = cursor->grab_start_wbox.height + cursor->wlr_cursor->y - cursor->grab_wy - cursor->grab_window->scene_tree->node.y;
+        e_window_set_size(cursor->grab_window, width > 0 ? width : 0, height > 0 ? height : 0);
+    }
+}
+
 static void e_cursor_handle_move(struct e_cursor* cursor, uint32_t time_msec)
 {
+    switch (cursor->mode)
+    {
+        case E_CURSOR_MODE_MOVE:
+            e_cursor_handle_mode_move(cursor);
+            return;
+        case E_CURSOR_MODE_RESIZE:
+            e_cursor_handle_mode_resize(cursor);
+            return;
+        default:
+            break;
+    }
+
     struct e_server* server = cursor->input_manager->server;
     struct e_seat* seat = cursor->input_manager->seat;
 
@@ -72,7 +146,7 @@ static void e_cursor_motion(struct wl_listener* listener, void* data)
 {
     struct e_cursor* cursor = wl_container_of(listener, cursor, motion);
     struct wlr_pointer_motion_event* event = data;
-    
+
     //move & send to clients
     wlr_cursor_move(cursor->wlr_cursor, &event->pointer->base, event->delta_x, event->delta_y);
 
@@ -83,7 +157,7 @@ static void e_cursor_motion_absolute(struct wl_listener* listener, void* data)
 {
     struct e_cursor* cursor = wl_container_of(listener, cursor, motion_absolute);
     struct wlr_pointer_motion_absolute_event* event = data;
-    
+
     //move & send to clients
     wlr_cursor_warp_absolute(cursor->wlr_cursor, &event->pointer->base, event->x, event->y);
     
@@ -104,6 +178,7 @@ struct e_cursor* e_cursor_create(struct e_input_manager* input_manager, struct w
 {
     struct e_cursor* cursor = calloc(1, sizeof(struct e_cursor));
     cursor->input_manager = input_manager;
+    cursor->mode = E_CURSOR_MODE_DEFAULT;
 
     cursor->wlr_cursor = wlr_cursor_create();
 
@@ -132,6 +207,37 @@ struct e_cursor* e_cursor_create(struct e_input_manager* input_manager, struct w
     wl_signal_add(&cursor->wlr_cursor->events.axis, &cursor->axis);
 
     return cursor;
+}
+
+void e_cursor_set_mode(struct e_cursor* cursor, enum e_cursor_mode mode)
+{
+    e_log_info("set mode");
+    cursor->mode = mode;
+}
+
+void e_cursor_reset_mode(struct e_cursor* cursor)
+{
+    e_log_info("reset mode");
+    cursor->mode = E_CURSOR_MODE_DEFAULT;
+    cursor->grab_window = NULL;
+}
+
+void e_cursor_start_grab_window_mode(struct e_cursor* cursor, struct e_window* window, enum e_cursor_mode mode)
+{
+    struct e_server* server = cursor->input_manager->server;
+    struct e_window* focussed_window = e_window_from_surface(server, cursor->input_manager->seat->focus_surface);
+
+    if (window == NULL || window->scene_tree == NULL)
+        return;
+
+    e_cursor_set_mode(cursor, mode);
+
+    cursor->grab_window = window;
+    cursor->grab_wx = cursor->wlr_cursor->x - focussed_window->scene_tree->node.x;
+    cursor->grab_wy = cursor->wlr_cursor->y - focussed_window->scene_tree->node.y;
+
+    cursor->grab_start_wbox = (struct wlr_box){focussed_window->scene_tree->node.x, focussed_window->scene_tree->node.y, 0, 0};
+    e_window_get_size(window, &cursor->grab_start_wbox.width, &cursor->grab_start_wbox.height);
 }
 
 void e_cursor_destroy(struct e_cursor* cursor)
