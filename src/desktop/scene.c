@@ -33,6 +33,8 @@ struct e_scene* e_scene_create(struct wl_display* display)
 
     wl_list_init(&scene->outputs);
 
+    wl_list_init(&scene->windows);
+
     return scene;
 }
 

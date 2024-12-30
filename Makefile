@@ -13,7 +13,7 @@ LIBRARIES!=$(PKG_CONFIG) --libs $(PACKAGES)
 
 # -Wno-unused-parameter is added to silence warnings for unused void* data args in wl listener notify callbacks,
 # as many are not useful
-COMPILER_FLAGS := -Wall -Wextra -Wno-unused-parameter -g
+COMPILER_FLAGS := -Wall -Wextra -Wno-unused-parameter -g -xc
 
 INCLUDE_DIR := include
 PROTOCOL_DIR := protocols

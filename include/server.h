@@ -34,9 +34,6 @@ struct e_server
     //handles protocol for application windows
     struct e_xdg_shell* xdg_shell;
 
-    //TODO: move this list from server to somewhere else
-    struct wl_list windows; //struct e_window
-
     //handles protocol for layers
     struct e_layer_shell* layer_shell;
 

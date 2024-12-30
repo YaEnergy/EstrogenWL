@@ -1,5 +1,4 @@
 #include "desktop/gamma_control_manager.h"
-#include "desktop/surface.h"
 
 #include <stdlib.h>
 

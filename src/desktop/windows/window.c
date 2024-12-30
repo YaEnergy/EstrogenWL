@@ -4,6 +4,8 @@
 
 #include <wayland-util.h>
 
+#include <wlr/util/edges.h>
+
 #include "desktop/scene.h"
 #include "desktop/windows/toplevel_window.h"
 #include "input/seat.h"
@@ -79,11 +81,45 @@ void e_window_set_size(struct e_window* window, int32_t x, int32_t y)
     }
 }
 
+void e_window_set_tiled(struct e_window* window, bool tiled)
+{
+    e_log_info("setting tiling mode of window to %b...", tiled);
+
+    if (window->tiled == tiled)
+        return;
+
+    window->tiled = tiled;
+
+    if (window->scene_tree != NULL)
+    {
+        wlr_scene_node_reparent(&window->scene_tree->node, tiled ? window->server->scene->layers.tiling : window->server->scene->layers.floating);
+        wlr_scene_node_raise_to_top(&window->scene_tree->node);
+    }  
+
+    switch(window->type)
+    {
+        case E_WINDOW_TOPLEVEL:
+            wlr_xdg_toplevel_set_tiled(window->toplevel_window->xdg_toplevel, tiled ? WLR_EDGE_BOTTOM | WLR_EDGE_LEFT | WLR_EDGE_RIGHT | WLR_EDGE_TOP : WLR_EDGE_NONE);
+            break;
+        default:
+            e_log_error("Can't properly set tiled mode of window, window is an unsupported type!");
+            break;
+    }
+
+    //retile all windows, if this window is mapped
+    struct wlr_surface* window_surface = e_window_get_surface(window);
+    if (window_surface != NULL && window_surface->mapped)
+        e_tile_windows(window->server);
+}
+
 void e_window_map(struct e_window *window)
 {
-    wl_list_insert(&window->server->windows, &window->link);
+    e_log_info("map");
 
-    e_tile_windows(window->server);
+    wl_list_insert(&window->server->scene->windows, &window->link);
+
+    if (window->tiled)
+        e_tile_windows(window->server);
 
     struct wlr_surface* window_surface = e_window_get_surface(window);
 
@@ -96,7 +132,8 @@ void e_window_unmap(struct e_window *window)
 {
     wl_list_remove(&window->link);
 
-    e_tile_windows(window->server);
+    if (window->tiled)
+        e_tile_windows(window->server);
 
     struct wlr_surface* window_surface = e_window_get_surface(window);
 
@@ -119,12 +156,12 @@ struct wlr_surface* e_window_get_surface(struct e_window* window)
 
 struct e_window* e_window_from_surface(struct e_server* server, struct wlr_surface* surface)
 {
-    if (wl_list_empty(&server->windows))
+    if (wl_list_empty(&server->scene->windows))
         return NULL;
 
     struct e_window* window;
 
-    wl_list_for_each(window, &server->windows, link)
+    wl_list_for_each(window, &server->scene->windows, link)
     {
         struct wlr_surface* window_surface = e_window_get_surface(window);
 

@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -42,7 +43,25 @@ static void e_commands_kill_focussed_window(struct e_server* server)
 
 static void e_commands_toggle_tiling_focussed_window(struct e_server* server)
 {
-    //TODO: implement
+    struct e_seat* seat = server->input_manager->seat;
+
+    if (seat->focus_surface == NULL)
+        return;
+
+    struct e_window* window = e_window_from_surface(server, seat->focus_surface);
+
+    if (window != NULL)
+    {
+        e_window_set_tiled(window, !window->tiled);
+
+        char* window_title = e_window_get_title(window);
+
+        e_log_info("setted tiling of window, title: %s", window_title == NULL ? "no name" : window_title);
+    }
+    else 
+    {
+        e_log_info("failed to destroy focussed window");
+    }
 }
 
 static void e_commands_toggle_fullscreen_focussed_window(struct e_server* server)

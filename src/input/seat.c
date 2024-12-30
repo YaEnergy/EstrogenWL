@@ -7,6 +7,7 @@
 #include <wayland-util.h>
 
 #include <wlr/types/wlr_seat.h>
+#include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_data_device.h>
@@ -15,6 +16,7 @@
 #include "input/input_manager.h"
 #include "input/keyboard.h"
 #include "input/cursor.h"
+#include "desktop/windows/window.h"
 
 #include "util/log.h"
 
@@ -88,6 +90,11 @@ void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface)
         wlr_seat_keyboard_notify_enter(seat->wlr_seat, surface, wlr_keyboard->keycodes, wlr_keyboard->num_keycodes, &wlr_keyboard->modifiers);
     
     seat->focus_surface = surface;
+
+    struct e_window* window = e_window_from_surface(seat->input_manager->server, surface);
+    
+    if (window != NULL && window->scene_tree != NULL)
+        wlr_scene_node_raise_to_top(&window->scene_tree->node);
 
     e_log_info("seat focus");
 }

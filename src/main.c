@@ -46,6 +46,7 @@ int main()
     e_keybinding_bind(&server.input_manager->keybind_list, XKB_KEY_F3, WLR_MODIFIER_ALT, "exit");
     e_keybinding_bind(&server.input_manager->keybind_list, XKB_KEY_F4, WLR_MODIFIER_ALT, "kill");
     e_keybinding_bind(&server.input_manager->keybind_list, XKB_KEY_F5, WLR_MODIFIER_ALT, "toggle_fullscreen");
+    e_keybinding_bind(&server.input_manager->keybind_list, XKB_KEY_F6, WLR_MODIFIER_ALT, "toggle_tiling");
 
     e_server_run(&server);
 

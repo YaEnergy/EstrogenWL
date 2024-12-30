@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include <wayland-util.h>
 
@@ -35,6 +36,8 @@ struct e_window
 
     struct wlr_scene_tree* scene_tree;
 
+    bool tiled;
+
     //to link to linked lists
     struct wl_list link;
 };
@@ -51,6 +54,8 @@ char* e_window_get_title(struct e_window* window);
 void e_window_set_position(struct e_window* window, int x, int y);
 
 void e_window_set_size(struct e_window* window, int32_t x, int32_t y);
+
+void e_window_set_tiled(struct e_window* window, bool tiled);
 
 //display window
 void e_window_map(struct e_window* window);

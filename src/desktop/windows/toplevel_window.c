@@ -1,6 +1,7 @@
 #include "desktop/windows/toplevel_window.h"
 
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include <wayland-server-core.h>
 #include <wayland-util.h>
@@ -11,6 +12,15 @@
 #include "desktop/windows/window.h"
 #include "desktop/scene.h"
 #include "server.h"
+#include "util/log.h"
+#include "wm.h"
+
+#include <wlr/util/edges.h>
+
+static bool e_toplevel_window_wants_floating(struct e_toplevel_window* toplevel_window)
+{
+    return toplevel_window->xdg_toplevel->current.min_width > 5 || toplevel_window->xdg_toplevel->current.min_height > 5;
+}
 
 //surface is ready to be displayed
 static void e_toplevel_window_map(struct wl_listener* listener, void* data)
@@ -35,8 +45,18 @@ static void e_toplevel_window_commit(struct wl_listener* listener, void* data)
         
     if (toplevel_window->xdg_toplevel->base->initial_commit)
     {
-        //0x0 size to let windows configure their size themselves    
-        wlr_xdg_toplevel_set_size(toplevel_window->xdg_toplevel, 0, 0);
+        if (e_toplevel_window_wants_floating(toplevel_window))
+        {
+            //0x0 size to let windows configure their size themselves, instead of forcing min or max size
+            e_window_set_tiled(toplevel_window->base, false);
+            e_window_set_size(toplevel_window->base, 0, 0);
+            e_log_info("toplevel window wants floating");
+        }
+        else
+        {
+            e_window_set_tiled(toplevel_window->base, true);
+            e_tile_windows(toplevel_window->base->server);
+        }
     }
 }
 

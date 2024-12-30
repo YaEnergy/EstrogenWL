@@ -130,9 +130,6 @@ int e_server_init(struct e_server *server)
 
     server->scene = e_scene_create(server->display);
     
-    //init windows list
-    wl_list_init(&server->windows);
-    
     //xdg shell v6, protocol for application windows
     server->xdg_shell = e_xdg_shell_create(server);
 
