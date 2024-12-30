@@ -71,23 +71,21 @@ static void e_toplevel_window_request_move(struct wl_listener* listener, void* d
     struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, request_move);
     //struct wlr_xdg_toplevel_move_event* event = data;
 
-    //TODO: any client can request this
+    //TODO: any client can request this, verify button serials
     
     struct e_server* server = toplevel_window->base->server;
-    e_cursor_start_grab_window_mode(server->input_manager->cursor, toplevel_window->base, E_CURSOR_MODE_MOVE);
+    e_cursor_start_window_move(server->input_manager->cursor, toplevel_window->base);
 }
 
 static void e_toplevel_window_request_resize(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, request_resize);
-    //struct wlr_xdg_toplevel_resize_event* event = data;
+    struct wlr_xdg_toplevel_resize_event* event = data;
 
-    //TODO: any client can request this
+    //TODO: any client can request this, verify buttons serial
     
     struct e_server* server = toplevel_window->base->server;
-    e_cursor_start_grab_window_mode(server->input_manager->cursor, toplevel_window->base, E_CURSOR_MODE_RESIZE);
-
-    e_log_info("request resize");
+    e_cursor_start_window_resize(server->input_manager->cursor, toplevel_window->base, event->edges);
 }
 
 //xdg_toplevel got destroyed

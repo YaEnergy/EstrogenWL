@@ -7,6 +7,7 @@
 #include <wlr/types/wlr_xcursor_manager.h>
 
 #include <wlr/util/box.h>
+#include <wlr/util/edges.h>
 
 #include "input/input_manager.h"
 
@@ -15,8 +16,8 @@
 enum e_cursor_mode
 {
     E_CURSOR_MODE_DEFAULT,
-    E_CURSOR_MODE_MOVE,
-    E_CURSOR_MODE_RESIZE
+    E_CURSOR_MODE_RESIZE,
+    E_CURSOR_MODE_MOVE
 };
 
 //display of cursor image and management cursor
@@ -43,14 +44,20 @@ struct e_cursor
     double grab_wx;
     double grab_wy;
     struct wlr_box grab_start_wbox;
+    enum wlr_edges grab_edges;
 };
 
 struct e_cursor* e_cursor_create(struct e_input_manager* input_manager, struct wlr_output_layout* output_layout);
 
 void e_cursor_set_mode(struct e_cursor* cursor, enum e_cursor_mode mode);
+
+//lets go of a possibly grabbed window, & sets cursor mode to default
 void e_cursor_reset_mode(struct e_cursor* cursor);
 
-//start grabbing a window under the given mode, (should be RESIZE or MOVE)
-void e_cursor_start_grab_window_mode(struct e_cursor* cursor, struct e_window* window, enum e_cursor_mode mode);
+//starts grabbing a window under the resize mode, resizing along specified edges
+void e_cursor_start_window_resize(struct e_cursor* cursor, struct e_window* window, enum wlr_edges edges);
+
+//starts grabbing a window under the move mode
+void e_cursor_start_window_move(struct e_cursor* cursor, struct e_window* window);
 
 void e_cursor_destroy(struct e_cursor* cursor);
