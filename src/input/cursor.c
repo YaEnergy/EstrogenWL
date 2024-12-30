@@ -44,7 +44,7 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
     struct e_cursor* cursor = wl_container_of(listener, cursor, button);
     struct wlr_pointer_button_event* event = data;
 
-    if (event->button == E_POINTER_BUTTON_MIDDLE && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
+    if (event->button == E_POINTER_BUTTON_RIGHT && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
     {
         struct wlr_keyboard* keyboard = wlr_seat_get_keyboard(cursor->input_manager->seat->wlr_seat);
 
