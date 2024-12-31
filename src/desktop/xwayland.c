@@ -21,13 +21,13 @@ void e_xwayland_new_surface(struct wl_listener* listener, void* data)
     e_xwayland_window_create(xwayland->server, wlr_xwayland_surface);
 }
 
-struct e_xwayland* e_xwayland_create(struct e_server* server, struct wl_display* display, struct wlr_compositor* compositor)
+struct e_xwayland* e_xwayland_create(struct e_server* server, struct wl_display* display, struct wlr_compositor* compositor, struct wlr_seat* seat)
 {
     struct e_xwayland* xwayland = calloc(1, sizeof(struct e_xwayland));
     xwayland->server = server;
     xwayland->wlr_xwayland = wlr_xwayland_create(display, compositor, false);
 
-    wlr_xwayland_set_seat(xwayland->wlr_xwayland, server->input_manager->seat->wlr_seat);
+    wlr_xwayland_set_seat(xwayland->wlr_xwayland, seat);
 
     //events
 

@@ -54,7 +54,7 @@ struct e_window
 //I mean it would be a bit weird to even call this function somewhere else.
 struct e_window* e_window_create(struct e_server* server, enum e_window_type type);
 
-void e_window_init_xdg_scene_tree(struct e_window* window, struct wlr_scene_tree* parent, struct wlr_xdg_surface* xdg_surface);
+void e_window_create_scene_tree(struct e_window* window, struct wlr_scene_tree* parent);
 
 //returns pointer to window's title, NULL on fail
 char* e_window_get_title(struct e_window* window);

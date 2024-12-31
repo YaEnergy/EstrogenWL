@@ -112,7 +112,7 @@ bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface)
 
 void e_seat_clear_focus(struct e_seat *seat)
 {
-     struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
+    struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
 
     //if there is an active keyboard, clear its focus
     if (wlr_keyboard != NULL)

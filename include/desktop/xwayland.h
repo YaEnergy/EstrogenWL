@@ -3,6 +3,7 @@
 #include <wayland-server-core.h>
 
 #include <wlr/types/wlr_compositor.h>
+#include <wlr/types/wlr_seat.h>
 
 #include <wlr/xwayland.h>
 
@@ -18,6 +19,6 @@ struct e_xwayland
     struct wl_listener new_surface;
 };
 
-struct e_xwayland* e_xwayland_create(struct e_server* server, struct wl_display* display, struct wlr_compositor* compositor);
+struct e_xwayland* e_xwayland_create(struct e_server* server, struct wl_display* display, struct wlr_compositor* compositor, struct wlr_seat* seat);
 
 void e_xwayland_destroy(struct e_xwayland* xwayland);

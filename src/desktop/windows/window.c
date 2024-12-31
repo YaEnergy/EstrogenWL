@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 
+#include <time.h>
 #include <wayland-util.h>
 
 #include <wlr/types/wlr_scene.h>
@@ -38,14 +39,26 @@ struct e_window* e_window_create(struct e_server* server, enum e_window_type typ
     return window;
 }
 
-void e_window_init_xdg_scene_tree(struct e_window* window, struct wlr_scene_tree* parent, struct wlr_xdg_surface* xdg_surface)
+void e_window_create_scene_tree(struct e_window* window, struct wlr_scene_tree* parent)
 {
-    //create scene xdg surface for xdg toplevel and window, and set up window scene tree
-    window->scene_tree = wlr_scene_xdg_surface_create(parent, xdg_surface);
-    window->scene_tree->node.data = window;
+    switch(window->type)
+    {
+        case E_WINDOW_TOPLEVEL:
+            //create scene xdg surface for xdg toplevel and window, and set up window scene tree
+            window->scene_tree = wlr_scene_xdg_surface_create(parent, window->toplevel_window->xdg_toplevel->base);
+            break;
+        case E_WINDOW_XWAYLAND:
+            //add surface & subsurfaces to scene by creating a subsurface tree
+            window->scene_tree = wlr_scene_subsurface_tree_create(window->server->scene->layers.floating, window->xwayland_window->xwayland_surface->surface);
+            break;
+        default:
+            e_log_error("Can't add window to scene, window is an unsupported type!");
+            return;
+    }
 
-    //allows popup scene trees to add themselves to this window's scene tree
-    xdg_surface->data = window->scene_tree;
+    //allows retrieving of window data, neccessary for e_window_at
+    if (window->scene_tree != NULL)
+        window->scene_tree->node.data = window;
 }
 
 char* e_window_get_title(struct e_window* window)
@@ -54,6 +67,8 @@ char* e_window_get_title(struct e_window* window)
     {
         case E_WINDOW_TOPLEVEL:
             return window->toplevel_window->xdg_toplevel->title;
+        case E_WINDOW_XWAYLAND:
+            return window->xwayland_window->xwayland_surface->title;
         default:
             e_log_error("Can't get title of window, window is an unsupported type!");
             return NULL;
@@ -94,6 +109,10 @@ void e_window_get_size(struct e_window* window, int* x, int* y)
             *x = window->toplevel_window->xdg_toplevel->current.width;
             *y = window->toplevel_window->xdg_toplevel->current.height;
             break;
+        case E_WINDOW_XWAYLAND:
+            *x = (int)window->xwayland_window->xwayland_surface->width;
+            *y = (int)window->xwayland_window->xwayland_surface->height;
+            break;
         default:
             *x = -1;
             *y = -1;
@@ -108,6 +127,15 @@ struct wlr_box e_window_get_main_geometry(struct e_window* window)
     {
         case E_WINDOW_TOPLEVEL:
             return window->toplevel_window->xdg_toplevel->base->current.geometry;
+        case E_WINDOW_XWAYLAND:
+        {
+            struct wlr_box geobox = {0, 0, 0, 0};
+            geobox.x = window->xwayland_window->xwayland_surface->x;
+            geobox.y = window->xwayland_window->xwayland_surface->y;
+            geobox.width = window->xwayland_window->xwayland_surface->width;
+            geobox.height = window->xwayland_window->xwayland_surface->height;
+            return geobox;
+        }
         default:
             e_log_error("Can't get size of window, window is an unsupported type!");
             return (struct wlr_box){0, 0, 0, 0}; //return empty box
@@ -136,6 +164,13 @@ void e_window_set_size(struct e_window* window, int32_t x, int32_t y)
 
             wlr_xdg_toplevel_set_size(window->toplevel_window->xdg_toplevel, x, y);
             break;
+        case E_WINDOW_XWAYLAND:
+            //don't resize the toplevel to the same size
+            if (window->xwayland_window->xwayland_surface->width == (uint16_t)x && window->xwayland_window->xwayland_surface->height == (uint16_t)y)
+                return;
+            
+            wlr_xwayland_surface_configure(window->xwayland_window->xwayland_surface, window->xwayland_window->xwayland_surface->x, window->xwayland_window->xwayland_surface->y, x, y);
+            break;
         default:
             e_log_error("Can't set size of window, window is an unsupported type!");
             break;
@@ -152,6 +187,16 @@ void e_window_set_bounds(struct e_window* window, int32_t x, int32_t y)
                 return;
 
             wlr_xdg_toplevel_set_bounds(window->toplevel_window->xdg_toplevel, x, y);
+            break;
+        case E_WINDOW_XWAYLAND:
+            if (window->xwayland_window->xwayland_surface->surface == NULL)
+                return;
+            
+            //don't resize the surface to the same size
+            if (window->xwayland_window->xwayland_surface->width == (uint16_t)x && window->xwayland_window->xwayland_surface->height == (uint16_t)y)
+                return;
+            
+            wlr_xwayland_surface_configure(window->xwayland_window->xwayland_surface, window->xwayland_window->xwayland_surface->x, window->xwayland_window->xwayland_surface->y, x, y);
             break;
         default:
             e_log_error("Can't set bounds of window, window is an unsupported type!");
@@ -178,6 +223,9 @@ void e_window_set_tiled(struct e_window* window, bool tiled)
     {
         case E_WINDOW_TOPLEVEL:
             wlr_xdg_toplevel_set_tiled(window->toplevel_window->xdg_toplevel, tiled ? WLR_EDGE_BOTTOM | WLR_EDGE_LEFT | WLR_EDGE_RIGHT | WLR_EDGE_TOP : WLR_EDGE_NONE);
+            break;
+        case E_WINDOW_XWAYLAND:
+            //do nothing
             break;
         default:
             e_log_error("Can't properly set tiled mode of window, window is an unsupported type!");
@@ -234,6 +282,9 @@ struct wlr_surface* e_window_get_surface(struct e_window* window)
     {
         case E_WINDOW_TOPLEVEL:
             return window->toplevel_window->xdg_toplevel->base->surface;
+        case E_WINDOW_XWAYLAND:
+            //I'm unsure if this just points to NULL if invalid...
+            return window->xwayland_window->xwayland_surface->surface;
         default:
             e_log_error("Can't get surface of window, window is an unsupported type!");
             return NULL;
@@ -290,6 +341,9 @@ void e_window_send_close(struct e_window *window)
     {
         case E_WINDOW_TOPLEVEL:
             wlr_xdg_toplevel_send_close(window->toplevel_window->xdg_toplevel);
+            break;
+        case E_WINDOW_XWAYLAND:
+            wlr_xwayland_surface_close(window->xwayland_window->xwayland_surface);
             break;
         default:
             e_log_error("Can't request to close window, window is an unsupported type!");

@@ -22,12 +22,13 @@ This already has been quite the adventure...
   - Single seat
   - Windows
     - Tiling (very basic)
+    - Floating (movement, resizing)
   - Gamma control
 - Plans to support
   - Security context protocol
   - Shells
-    - wlr\_layer\_shell\_unstable\_v1 (right now very basic)
-  - xwayland
+    - wlr\_layer\_shell\_unstable\_v1 (WIP)
+  - xwayland (WIP)
   - Configuration
     - Keybinding
     - Compositor
@@ -35,9 +36,8 @@ This already has been quite the adventure...
     - Fullscreen
     - Maximalization
     - Minimalization
-    - Focus
-    - Resizing
-    - Movement & reordering
+    - Resizing (tiled)
+    - Movement (tiled) & reordering
     - Borders
   - Desktop extension file for login managers
   - …

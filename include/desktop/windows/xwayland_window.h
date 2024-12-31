@@ -25,13 +25,14 @@ struct e_xwayland_window
     //surface becomes invalid
     struct wl_listener dissociate;
 
-    /*//surface is ready to be displayed
+    //surface is ready to be displayed
     struct wl_listener map;
     //surface no longer wants to be displayed
     struct wl_listener unmap;
     //new surface state got committed
-    struct wl_listener commit;*/
+    struct wl_listener commit;
 
+    struct wl_listener request_configure;
     struct wl_listener request_move;
     struct wl_listener request_resize;
 

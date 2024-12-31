@@ -131,6 +131,14 @@ static void e_toplevel_window_destroy(struct wl_listener* listener, void* data)
     free(toplevel_window);
 }
 
+static void e_toplevel_window_init_xdg_scene_tree(struct e_toplevel_window* toplevel_window)
+{
+    e_window_create_scene_tree(toplevel_window->base, toplevel_window->base->server->scene->pending);
+
+    //allows popup scene trees to add themselves to this window's scene tree
+    toplevel_window->xdg_toplevel->base->data = toplevel_window->base->scene_tree;
+}
+
 struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, struct wlr_xdg_toplevel* xdg_toplevel)
 {
     struct e_toplevel_window* toplevel_window = calloc(1, sizeof(struct e_toplevel_window));
@@ -142,7 +150,7 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
     window->toplevel_window = toplevel_window;
     toplevel_window->base = window;
 
-    e_window_init_xdg_scene_tree(window, server->scene->layers.tiling, xdg_toplevel->base);
+    e_toplevel_window_init_xdg_scene_tree(toplevel_window);
 
     // events
 

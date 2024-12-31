@@ -14,10 +14,38 @@
 #include "desktop/xwayland.h"
 #include "input/cursor.h"
 #include "server.h"
+
 #include "util/log.h"
-#include "wm.h"
 
 #include <wlr/util/edges.h>
+
+static void e_xwayland_window_map(struct wl_listener* listener, void* data)
+{
+    struct e_xwayland_window* xwayland_window = wl_container_of(listener, xwayland_window, map);
+
+    e_window_set_tiled(xwayland_window->base, !xwayland_window->xwayland_surface->override_redirect);
+    e_window_map(xwayland_window->base);
+}
+
+static void e_xwayland_window_unmap(struct wl_listener* listener, void* data)
+{
+    struct e_xwayland_window* xwayland_window = wl_container_of(listener, xwayland_window, unmap);
+
+    e_window_unmap(xwayland_window->base);
+}
+
+static void e_xwayland_window_request_configure(struct wl_listener* listener, void* data)
+{
+    struct e_xwayland_window* xwayland_window = wl_container_of(listener, xwayland_window, request_configure);
+    struct wlr_xwayland_surface_configure_event* event = data;
+    
+    if (!xwayland_window->base->tiled)
+    {
+        e_window_set_position(xwayland_window->base, event->x, event->y);
+        e_window_set_size(xwayland_window->base, event->width, event->height);
+    }
+}
+
 
 static void e_xwayland_window_request_move(struct wl_listener* listener, void* data)
 {
@@ -47,7 +75,16 @@ static void e_xwayland_window_associate(struct wl_listener* listener, void* data
     //TODO: set up xwayland surface listeners
     // events
 
+    xwayland_window->map.notify = e_xwayland_window_map;
+    wl_signal_add(&xwayland_window->xwayland_surface->surface->events.map, &xwayland_window->map);
+
+    xwayland_window->unmap.notify = e_xwayland_window_unmap;
+    wl_signal_add(&xwayland_window->xwayland_surface->surface->events.unmap, &xwayland_window->unmap);
+
     // requests
+
+    xwayland_window->request_configure.notify = e_xwayland_window_request_configure;
+    wl_signal_add(&xwayland_window->xwayland_surface->events.request_configure, &xwayland_window->request_configure);
 
     xwayland_window->request_move.notify = e_xwayland_window_request_move;
     wl_signal_add(&xwayland_window->xwayland_surface->events.request_move, &xwayland_window->request_move);
@@ -56,8 +93,8 @@ static void e_xwayland_window_associate(struct wl_listener* listener, void* data
     wl_signal_add(&xwayland_window->xwayland_surface->events.request_resize, &xwayland_window->request_resize);
 
     //add surface & subsurfaces to scene
-    struct e_scene* scene = xwayland_window->base->server->scene; //one of these is null...
-    xwayland_window->base->scene_tree = wlr_scene_subsurface_tree_create(scene->layers.floating, xwayland_window->xwayland_surface->surface);
+    struct e_scene* scene = xwayland_window->base->server->scene;
+    e_window_create_scene_tree(xwayland_window->base, scene->pending);
 }
 
 //surface becomes invalid
@@ -69,12 +106,16 @@ static void e_xwayland_window_dissociate(struct wl_listener* listener, void* dat
     struct e_xwayland_window* xwayland_window = wl_container_of(listener, xwayland_window, dissociate);
 
     //TODO: remove xwayland surface listener lists
+    wl_list_remove(&xwayland_window->map.link);
+    wl_list_remove(&xwayland_window->unmap.link);
 
+    wl_list_remove(&xwayland_window->request_configure.link);
     wl_list_remove(&xwayland_window->request_move.link);
     wl_list_remove(&xwayland_window->request_resize.link);
 
     //remove from scene
     wlr_scene_node_destroy(&xwayland_window->base->scene_tree->node);
+    xwayland_window->base->scene_tree = NULL;
 }
 
 //destruction...

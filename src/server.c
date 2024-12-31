@@ -142,7 +142,7 @@ int e_server_init(struct e_server *server)
     e_gamma_control_manager_create(server->display);
 
     //create & start xwayland server
-    server->xwayland = e_xwayland_create(server, server->display, server->compositor);
+    server->xwayland = e_xwayland_create(server, server->display, server->compositor, server->input_manager->seat->wlr_seat);
 
     return 0;
 }

@@ -42,6 +42,9 @@ struct e_scene
         struct wlr_scene_tree* overlay;
     } layers;
 
+    //nodes that are waiting to be reparented
+    struct wlr_scene_tree* pending;
+
     struct wl_list windows; //struct e_window
 };
 

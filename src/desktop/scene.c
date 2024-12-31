@@ -31,6 +31,9 @@ struct e_scene* e_scene_create(struct wl_display* display)
     scene->layers.top = wlr_scene_tree_create(&scene->wlr_scene->tree);
     scene->layers.overlay = wlr_scene_tree_create(&scene->wlr_scene->tree);
 
+    scene->pending = wlr_scene_tree_create(&scene->wlr_scene->tree);
+    wlr_scene_node_set_enabled(&scene->pending->node, false);
+
     wl_list_init(&scene->outputs);
 
     wl_list_init(&scene->windows);
