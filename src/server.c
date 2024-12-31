@@ -122,7 +122,7 @@ int e_server_init(struct e_server *server)
     //compositor, subcompositor and data device manager can handle everything we need them to do on their own
 
     //required for clients to allocate surfaces
-    wlr_compositor_create(server->display, 5, server->renderer);
+    server->compositor = wlr_compositor_create(server->display, 5, server->renderer);
     //allows roles of subsurfaces to surfaces
     wlr_subcompositor_create(server->display);
     //handles clipboard
@@ -141,6 +141,9 @@ int e_server_init(struct e_server *server)
     //gamma control manager for output, does everything it needs to on its own
     e_gamma_control_manager_create(server->display);
 
+    //create & start xwayland server
+    server->xwayland = e_xwayland_create(server, server->display, server->compositor);
+
     return 0;
 }
 
@@ -158,6 +161,10 @@ bool e_server_run(struct e_server *server)
 
     //set WAYLAND_DISPLAY env var
     setenv("WAYLAND_DISPLAY", socket, true);
+
+    //set DISPLAY env var for xwayland server
+    if (server->xwayland != NULL)
+        setenv("DISPLAY", server->xwayland->wlr_xwayland->display_name, true);
 
     //running
     e_log_info("starting backend");
@@ -179,6 +186,7 @@ void e_server_destroy(struct e_server* server)
 {
     wl_display_destroy_clients(server->display);
 
+    e_xwayland_destroy(server->xwayland);
     e_input_manager_destroy(server->input_manager);
     e_scene_destroy(server->scene);
 

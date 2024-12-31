@@ -11,6 +11,7 @@
 #include <wlr/util/box.h>
 
 #include "desktop/windows/toplevel_window.h"
+#include "desktop/windows/xwayland_window.h"
 
 #include "server.h"
 
@@ -21,11 +22,11 @@
 //type of an e_window
 enum e_window_type
 {
-    E_WINDOW_TOPLEVEL
-    //E_WINDOW_XWAYLAND
+    E_WINDOW_TOPLEVEL,
+    E_WINDOW_XWAYLAND
 };
 
-//a window: xdg toplevel or (currently unimplemented) xwayland window
+//a window: xdg toplevel or xwayland window
 struct e_window
 {
     struct e_server* server;
@@ -33,8 +34,13 @@ struct e_window
     //Determines what type of window this is: see e_window_type
     enum e_window_type type;
     
-    //Only a valid pointer if type == E_WINDOW_TOPLEVEL
-    struct e_toplevel_window* toplevel_window;
+    union
+    {
+        //Only a valid pointer if type == E_WINDOW_TOPLEVEL
+        struct e_toplevel_window* toplevel_window;
+        //Only a valid pointer if type == E_WINDOW_XWAYLAND
+        struct e_xwayland_window* xwayland_window;
+    };
 
     struct wlr_scene_tree* scene_tree;
 
@@ -53,7 +59,7 @@ void e_window_init_xdg_scene_tree(struct e_window* window, struct wlr_scene_tree
 //returns pointer to window's title, NULL on fail
 char* e_window_get_title(struct e_window* window);
 
-//outs top left x and y of window, pointers are set to -1 on fail
+//outs top left x and y of window
 void e_window_get_position(struct e_window* window, int* x, int* y);
 
 //outs width (x) and height (y) of window, pointers are set to -1 on fail

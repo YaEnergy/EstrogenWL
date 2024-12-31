@@ -12,6 +12,7 @@
 
 #include "desktop/layer_shell.h"
 #include "desktop/xdg_shell.h"
+#include "desktop/xwayland.h"
 #include "input/input_manager.h"
 
 struct e_server
@@ -27,6 +28,8 @@ struct e_server
     struct wlr_allocator* allocator;
     //renderer handles rendering, used by scene
     struct wlr_renderer* renderer;
+    //used by clients to create surfaces & regions
+    struct wlr_compositor* compositor;
 
     //root scene tree for all layers, and further down windows and layer surfaces
     struct e_scene* scene;
@@ -41,6 +44,9 @@ struct e_server
 
     //collection & management of input devices: keyboard, mouse, ...
     struct e_input_manager* input_manager;
+
+    //xwayland
+    struct e_xwayland* xwayland;
 };
 
 int e_server_init(struct e_server* server);

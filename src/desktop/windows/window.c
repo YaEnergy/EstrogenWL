@@ -60,7 +60,7 @@ char* e_window_get_title(struct e_window* window)
     }
 }
 
-//outs top left x and y of window, pointers are set to -1 on fail
+//outs top left x and y of window
 void e_window_get_position(struct e_window* window, int* x, int* y)
 {
     if (x == NULL || y == NULL)
@@ -75,18 +75,8 @@ void e_window_get_position(struct e_window* window, int* x, int* y)
         abort();
     }
 
-    switch(window->type)
-    {
-        case E_WINDOW_TOPLEVEL:
-            *x = window->scene_tree->node.x;
-            *y = window->scene_tree->node.y;
-            break;
-        default:
-            *x = -1;
-            *y = -1;
-            e_log_error("Can't get size of window, window is an unsupported type!");
-            break;
-    }
+    *x = window->scene_tree->node.x;
+    *y = window->scene_tree->node.y;
 }
 
 //outs width (x) and height (y) of window, x and y are set to -1 on fail
