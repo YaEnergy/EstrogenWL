@@ -4,10 +4,16 @@
 
 #include <wayland-util.h>
 
+#include <wlr/types/wlr_scene.h>
+#include <wlr/types/wlr_xdg_shell.h>
+#include <wlr/types/wlr_compositor.h>
+
 #include <wlr/util/edges.h>
+#include <wlr/util/box.h>
 
 #include "desktop/scene.h"
 #include "desktop/windows/toplevel_window.h"
+#include "input/input_manager.h"
 #include "input/seat.h"
 #include "input/cursor.h"
 #include "server.h"
@@ -106,6 +112,18 @@ void e_window_get_size(struct e_window* window, int* x, int* y)
     }
 }
 
+struct wlr_box e_window_get_main_geometry(struct e_window* window)
+{
+    switch(window->type)
+    {
+        case E_WINDOW_TOPLEVEL:
+            return window->toplevel_window->xdg_toplevel->base->current.geometry;
+        default:
+            e_log_error("Can't get size of window, window is an unsupported type!");
+            return (struct wlr_box){0, 0, 0, 0}; //return empty box
+    }
+}
+
 void e_window_set_position(struct e_window* window, int x, int y)
 {
     if (window->scene_tree == NULL)
@@ -130,6 +148,23 @@ void e_window_set_size(struct e_window* window, int32_t x, int32_t y)
             break;
         default:
             e_log_error("Can't set size of window, window is an unsupported type!");
+            break;
+    }
+}
+
+void e_window_set_bounds(struct e_window* window, int32_t x, int32_t y)
+{
+    switch(window->type)
+    {
+        case E_WINDOW_TOPLEVEL:
+            //don't resize the base surface to the same size
+            if (window->toplevel_window->xdg_toplevel->base->current.geometry.width == x && window->toplevel_window->xdg_toplevel->base->current.geometry.height == y)
+                return;
+
+            wlr_xdg_toplevel_set_bounds(window->toplevel_window->xdg_toplevel, x, y);
+            break;
+        default:
+            e_log_error("Can't set bounds of window, window is an unsupported type!");
             break;
     }
 }
@@ -187,16 +222,20 @@ void e_window_unmap(struct e_window* window)
 
     if (window->tiled)
         e_tile_windows(window->server);
+    
+    struct e_input_manager* input_manager = window->server->input_manager;
 
     struct wlr_surface* window_surface = e_window_get_surface(window);
 
     //if this window's surface had focus, clear it
-    if (window_surface != NULL && e_seat_has_focus(window->server->input_manager->seat, window_surface))
-        e_seat_clear_focus(window->server->input_manager->seat);
+    if (window_surface != NULL && e_seat_has_focus(input_manager->seat, window_surface))
+        e_seat_clear_focus(input_manager->seat);
 
     //if this window was grabbed by the cursor make it let go
-    if (window->server->input_manager->cursor->grab_window == window)
-        e_cursor_reset_mode(window->server->input_manager->cursor);
+    if (input_manager->cursor->grab_window == window)
+        e_cursor_reset_mode(input_manager->cursor);
+        
+    e_cursor_update_focus(input_manager->cursor);
 }
 
 struct wlr_surface* e_window_get_surface(struct e_window* window)

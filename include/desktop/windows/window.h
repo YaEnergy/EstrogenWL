@@ -8,6 +8,8 @@
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_scene.h>
 
+#include <wlr/util/box.h>
+
 #include "desktop/windows/toplevel_window.h"
 
 #include "server.h"
@@ -57,9 +59,16 @@ void e_window_get_position(struct e_window* window, int* x, int* y);
 //outs width (x) and height (y) of window, pointers are set to -1 on fail
 void e_window_get_size(struct e_window* window, int* x, int* y);
 
+//returns the window's main surface geometry
+struct wlr_box e_window_get_main_geometry(struct e_window* window);
+
 void e_window_set_position(struct e_window* window, int x, int y);
 
+//includes decoration in x & y
 void e_window_set_size(struct e_window* window, int32_t x, int32_t y);
+
+//does not include decoration in x & y, only client geometry
+void e_window_set_bounds(struct e_window* window, int32_t x, int32_t y);
 
 void e_window_set_tiled(struct e_window* window, bool tiled);
 

@@ -60,4 +60,6 @@ void e_cursor_start_window_resize(struct e_cursor* cursor, struct e_window* wind
 //starts grabbing a window under the move mode
 void e_cursor_start_window_move(struct e_cursor* cursor, struct e_window* window);
 
+void e_cursor_update_focus(struct e_cursor* cursor);
+
 void e_cursor_destroy(struct e_cursor* cursor);
