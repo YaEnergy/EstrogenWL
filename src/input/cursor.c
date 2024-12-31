@@ -44,6 +44,8 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
     struct e_cursor* cursor = wl_container_of(listener, cursor, button);
     struct wlr_pointer_button_event* event = data;
 
+    bool handled = false;
+
     if (event->button == E_POINTER_BUTTON_RIGHT && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
     {
         struct wlr_keyboard* keyboard = wlr_seat_get_keyboard(cursor->input_manager->seat->wlr_seat);
@@ -54,14 +56,20 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
             struct e_window* focussed_window = e_window_from_surface(cursor->input_manager->server, cursor->input_manager->seat->focus_surface);
 
             e_cursor_start_window_resize(cursor, focussed_window, WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT);
+            handled = true;
         }
     }
 
-    if (event->state == WL_POINTER_BUTTON_STATE_RELEASED)
+    //reset cursor mode to default on button release
+    if (event->state == WL_POINTER_BUTTON_STATE_RELEASED && cursor->mode != E_CURSOR_MODE_DEFAULT)
+    {
         e_cursor_reset_mode(cursor);
+        handled = true;
+    }
 
-    //send to clients
-    wlr_seat_pointer_notify_button(cursor->input_manager->seat->wlr_seat, event->time_msec, event->button, event->state);
+    //send to clients if button hasn't been handled
+    if (!handled)
+        wlr_seat_pointer_notify_button(cursor->input_manager->seat->wlr_seat, event->time_msec, event->button, event->state);
 }
 
 static void e_cursor_handle_mode_move(struct e_cursor* cursor)
@@ -107,14 +115,14 @@ static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
 
         if (cursor->grab_edges & WLR_EDGE_LEFT)
         {
-            left = left + grow_x;
+            left += grow_x;
 
             if (left > right - 1)
                 left = right - 1;
         }
         else if (cursor->grab_edges & WLR_EDGE_RIGHT)
         {
-            right = right + grow_x;
+            right += grow_x;
 
             if (right < left + 1)
                 right = left + 1;
@@ -122,14 +130,14 @@ static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
 
         if (cursor->grab_edges & WLR_EDGE_TOP)
         {
-            top = top + grow_y < bottom;
+            top += grow_y;
 
             if (top > bottom - 1)
                 top = bottom - 1;
         }
         else if (cursor->grab_edges & WLR_EDGE_BOTTOM)
         {
-            bottom = bottom + grow_y;
+            bottom += grow_y;
 
             if (bottom < top + 1)
                 bottom = top + 1;

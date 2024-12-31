@@ -66,6 +66,28 @@ static void e_toplevel_window_commit(struct wl_listener* listener, void* data)
     //TODO: handle toplevel_window->xdg_toplevel->requested if surface is mapped
 }
 
+static void e_toplevel_window_request_fullscreen(struct wl_listener* listener, void* data)
+{
+    struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, request_fullscreen);
+
+    //TODO: implement fullscreen
+
+    //send empty configure to conform to xdg shell protocol if xdg surface is init
+    if (toplevel_window->xdg_toplevel->base->initialized)
+        wlr_xdg_surface_schedule_configure(toplevel_window->xdg_toplevel->base);
+}
+
+static void e_toplevel_window_request_maximize(struct wl_listener* listener, void* data)
+{
+    struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, request_maximize);
+
+    //TODO: implement maximalization
+
+    //send empty configure to conform to xdg shell protocol if xdg surface is init
+    if (toplevel_window->xdg_toplevel->base->initialized)
+        wlr_xdg_surface_schedule_configure(toplevel_window->xdg_toplevel->base);
+}
+
 static void e_toplevel_window_request_move(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, request_move);
@@ -97,6 +119,8 @@ static void e_toplevel_window_destroy(struct wl_listener* listener, void* data)
     wl_list_remove(&toplevel_window->unmap.link);
     wl_list_remove(&toplevel_window->commit.link);
 
+    wl_list_remove(&toplevel_window->request_fullscreen.link);
+    wl_list_remove(&toplevel_window->request_maximize.link);
     wl_list_remove(&toplevel_window->request_move.link);
     wl_list_remove(&toplevel_window->request_resize.link);
 
@@ -134,6 +158,12 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
     wl_signal_add(&xdg_toplevel->base->surface->events.commit, &toplevel_window->commit);
 
     // xdg toplevel events
+
+    toplevel_window->request_fullscreen.notify = e_toplevel_window_request_fullscreen;
+    wl_signal_add(&xdg_toplevel->events.request_fullscreen, &toplevel_window->request_fullscreen);
+
+    toplevel_window->request_maximize.notify = e_toplevel_window_request_maximize;
+    wl_signal_add(&xdg_toplevel->events.request_maximize, &toplevel_window->request_maximize);
 
     toplevel_window->request_move.notify = e_toplevel_window_request_move;
     wl_signal_add(&xdg_toplevel->events.request_move, &toplevel_window->request_move);
