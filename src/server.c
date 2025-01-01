@@ -16,6 +16,7 @@
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_seat.h>
+#include <wlr/types/wlr_screencopy_v1.h>
 
 #include "desktop/scene.h"
 #include "util/log.h"
@@ -65,7 +66,7 @@ static void e_server_backend_destroy(struct wl_listener* listener, void* data)
     wl_list_remove(&server->backend_destroy.link);
 }
 
-int e_server_init(struct e_server *server)
+int e_server_init(struct e_server* server)
 {
     //handles accepting clients from Unix socket, managing wl globals, ...
     e_log_info("creating display...");
@@ -127,6 +128,8 @@ int e_server_init(struct e_server *server)
     wlr_subcompositor_create(server->display);
     //handles clipboard
     wlr_data_device_manager_create(server->display);
+    //allows clients to ask to copy part of the screen content to a client buffer, seems to be fully implemented by wlroots already
+    wlr_screencopy_manager_v1_create(server->display);
 
     server->scene = e_scene_create(server->display);
     
@@ -147,7 +150,7 @@ int e_server_init(struct e_server *server)
     return 0;
 }
 
-bool e_server_run(struct e_server *server)
+bool e_server_run(struct e_server* server)
 {
     // add unix socket to wl display
     const char* socket = wl_display_add_socket_auto(server->display);
