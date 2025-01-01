@@ -48,17 +48,26 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
 
     bool handled = false;
 
-    if (event->button == E_POINTER_BUTTON_RIGHT && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
-    {
-        struct wlr_keyboard* keyboard = wlr_seat_get_keyboard(cursor->input_manager->seat->wlr_seat);
+    struct wlr_keyboard* keyboard = wlr_seat_get_keyboard(cursor->input_manager->seat->wlr_seat);
 
-        //if ALT modifier is pressed on keyboard & right click is held, start resizing the focussed window (right & bottom edge)
-        if (keyboard != NULL && (wlr_keyboard_get_modifiers(keyboard) & WLR_MODIFIER_ALT))
+    //is ALT modifier is pressed on keyboard? (for both cases within here, cursor mode should be in default mode)
+    if (keyboard != NULL && (wlr_keyboard_get_modifiers(keyboard) & WLR_MODIFIER_ALT) && cursor->mode == E_CURSOR_MODE_DEFAULT)
+    {
+        //right click is held, start resizing the focussed window (right & bottom edge)
+        if (event->button == E_POINTER_BUTTON_RIGHT && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
         {
             struct e_window* focussed_window = e_window_from_surface(cursor->input_manager->server, cursor->input_manager->seat->focus_surface);
 
             e_cursor_start_window_resize(cursor, focussed_window, WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT);
             wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "se-resize");
+            handled = true;
+        }
+        //middle click is held, start moving the focussed window
+        else if (event->button == E_POINTER_BUTTON_MIDDLE && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
+        {
+            struct e_window* focussed_window = e_window_from_surface(cursor->input_manager->server, cursor->input_manager->seat->focus_surface);
+
+            e_cursor_start_window_move(cursor, focussed_window);
             handled = true;
         }
     }
