@@ -17,6 +17,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_screencopy_v1.h>
+#include <wlr/types/wlr_xdg_output_v1.h>
 
 #include "desktop/scene.h"
 #include "util/log.h"
@@ -132,6 +133,9 @@ int e_server_init(struct e_server* server)
     wlr_screencopy_manager_v1_create(server->display);
 
     server->scene = e_scene_create(server->display);
+
+    //protocol to describe output regions, seems to be fully implemented by wlroots already
+    wlr_xdg_output_manager_v1_create(server->display, server->scene->output_layout);
     
     //xdg shell v6, protocol for application windows
     server->xdg_shell = e_xdg_shell_create(server);
