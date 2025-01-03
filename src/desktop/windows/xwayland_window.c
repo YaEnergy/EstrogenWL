@@ -34,6 +34,13 @@ static void e_xwayland_window_unmap(struct wl_listener* listener, void* data)
     e_window_unmap(xwayland_window->base);
 }
 
+static void e_xwayland_window_commit(struct wl_listener* listener, void* data)
+{
+    struct e_xwayland_window* xwayland_window = wl_container_of(listener, xwayland_window, commit);
+
+    //TODO: implement e_xwayland_window_commit
+}
+
 static void e_xwayland_window_request_configure(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_window* xwayland_window = wl_container_of(listener, xwayland_window, request_configure);
@@ -45,7 +52,6 @@ static void e_xwayland_window_request_configure(struct wl_listener* listener, vo
         e_window_set_size(xwayland_window->base, event->width, event->height);
     }
 }
-
 
 static void e_xwayland_window_request_move(struct wl_listener* listener, void* data)
 {
@@ -81,6 +87,9 @@ static void e_xwayland_window_associate(struct wl_listener* listener, void* data
     xwayland_window->unmap.notify = e_xwayland_window_unmap;
     wl_signal_add(&xwayland_window->xwayland_surface->surface->events.unmap, &xwayland_window->unmap);
 
+    xwayland_window->commit.notify = e_xwayland_window_commit;
+    wl_signal_add(&xwayland_window->xwayland_surface->surface->events.commit, &xwayland_window->commit);
+
     // requests
 
     xwayland_window->request_configure.notify = e_xwayland_window_request_configure;
@@ -108,6 +117,7 @@ static void e_xwayland_window_dissociate(struct wl_listener* listener, void* dat
     //TODO: remove xwayland surface listener lists
     wl_list_remove(&xwayland_window->map.link);
     wl_list_remove(&xwayland_window->unmap.link);
+    wl_list_remove(&xwayland_window->commit.link);
 
     wl_list_remove(&xwayland_window->request_configure.link);
     wl_list_remove(&xwayland_window->request_move.link);

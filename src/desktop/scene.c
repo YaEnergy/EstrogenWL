@@ -9,6 +9,8 @@
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_compositor.h>
 
+#include "util/log.h"
+
 struct e_scene* e_scene_create(struct wl_display* display)
 {
     struct e_scene* scene = calloc(1, sizeof(struct e_scene));
@@ -98,6 +100,12 @@ void e_scene_add_output(struct e_scene *scene, struct e_output *output)
 
 struct wlr_surface* e_scene_wlr_surface_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_scene_node** snode, double* sx, double* sy)
 {
+    if (node == NULL || snode == NULL || sx == NULL || sy == NULL)
+    {
+        e_log_error("e_window_at: *node, **snode, *sx, or *sy is NULL");
+        abort();
+    }
+
     *snode = wlr_scene_node_at(node, lx, ly, sx, sy);
 
     if (*snode == NULL || (*snode)->type != WLR_SCENE_NODE_BUFFER)

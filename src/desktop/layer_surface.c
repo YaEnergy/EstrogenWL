@@ -1,5 +1,6 @@
 #include "desktop/layer_surface.h"
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <assert.h>
 
@@ -10,13 +11,19 @@
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/util/box.h>
 
+
 #include "wlr-layer-shell-unstable-v1-protocol.h"
+
+#include "input/seat.h"
 
 #include "desktop/layer_shell.h"
 #include "desktop/scene.h"
 #include "server.h"
 
 //TODO: keyboard focus
+
+//TODO: focus for lower level layer surfaces after higher level layer surfaces
+//TODO: pointer focus everywhere for exclusive focused layer surfaces
 
 //adds this layer surface to the layer surface it wants
 static void e_layer_surface_add_to_desired_layer(struct e_scene* scene, struct e_layer_surface* layer_surface, struct wlr_layer_surface_v1* wlr_layer_surface_v1)
@@ -38,6 +45,23 @@ static void e_layer_surface_add_to_desired_layer(struct e_scene* scene, struct e
     }
 
     layer_surface->scene_tree = layer_surface->scene_layer_surface_v1->tree;
+    layer_surface->scene_tree->node.data = layer_surface;
+}
+
+//if this layer surface requests exclusive focus, and is on a higher layer than or a layer equal to the current focused layer surface
+static bool e_layer_surface_should_get_exclusive_focus(struct e_layer_surface* layer_surface)
+{
+    struct e_seat* seat = layer_surface->server->input_manager->seat;
+
+    struct wlr_layer_surface_v1* wlr_layer_surface_v1 = layer_surface->scene_layer_surface_v1->layer_surface;
+
+    //can't get exclusive focus if it doesn't request exclusive focus, duh
+    if (wlr_layer_surface_v1->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE)
+        return false;
+
+    struct wlr_layer_surface_v1* focused_layer_surface_v1 = wlr_layer_surface_v1_try_from_wlr_surface(seat->focus_surface);
+
+    return (focused_layer_surface_v1 == NULL || wlr_layer_surface_v1->current.layer >= focused_layer_surface_v1->current.layer);
 }
 
 static void e_layer_surface_commit(struct wl_listener* listener, void* data)
@@ -50,6 +74,10 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
     {
         wl_list_insert(&layer_surface->server->layer_shell->layer_surfaces, &layer_surface->link);  
         e_layer_shell_arrange_layer(layer_surface->server->layer_shell, e_layer_surface_get_wlr_output(layer_surface), e_layer_surface_get_layer(layer_surface)); 
+
+        //give exclusive focus is requested and allowed
+        if (e_layer_surface_should_get_exclusive_focus(layer_surface))
+            e_seat_set_focus(layer_surface->server->input_manager->seat, wlr_layer_surface_v1->surface);
     }
 }
 

@@ -46,6 +46,12 @@ struct e_window
 
     bool tiled;
 
+    int32_t pending_width;
+    int32_t pending_height;
+    bool pending_resize;
+
+    bool committing;
+
     //to link to linked lists
     struct wl_list link;
 };
@@ -84,6 +90,8 @@ void e_window_map(struct e_window* window);
 //stop displaying window
 void e_window_unmap(struct e_window* window);
 
+void e_window_commit(struct e_window* window);
+
 //gets the window's main surface
 struct wlr_surface* e_window_get_surface(struct e_window* window);
 
@@ -93,7 +101,7 @@ struct e_window* e_window_from_surface(struct e_server* server, struct wlr_surfa
 //Searches for a window at the specified layout coords in the given scene graph
 //Outs found surface and translated from layout to surface coords.
 //If nothing is found returns NULL, but surface may not always be NULL.
-struct e_window* e_window_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy);
+struct e_window* e_window_at(struct e_server* server, struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy);
 
 //Requests that this window uses its method of closing
 void e_window_send_close(struct e_window* window);

@@ -189,7 +189,7 @@ static void e_cursor_handle_move(struct e_cursor* cursor, uint32_t time_msec)
 
     double sx, sy;
     struct wlr_surface* hover_surface;
-    struct e_window* window = e_window_at(&server->scene->wlr_scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_surface, &sx, &sy);
+    struct e_window* window = e_window_at(server, &server->scene->wlr_scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_surface, &sx, &sy);
 
     //display default cursor when not hovering any windows
     if (window == NULL)
@@ -341,7 +341,7 @@ void e_cursor_update_focus(struct e_cursor *cursor)
 
     double sx, sy;
     struct wlr_surface* hover_surface;
-    struct e_window* window = e_window_at(&server->scene->wlr_scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_surface, &sx, &sy);
+    struct e_window* window = e_window_at(server, &server->scene->wlr_scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_surface, &sx, &sy);
 
     //display default cursor when not hovering any windows
     if (window == NULL)

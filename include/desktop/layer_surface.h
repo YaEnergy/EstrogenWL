@@ -3,6 +3,7 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
+#include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output.h>
@@ -10,6 +11,8 @@
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #include "server.h"
+
+struct e_scene;
 
 struct e_layer_surface
 {
@@ -43,3 +46,5 @@ enum zwlr_layer_shell_v1_layer e_layer_surface_get_layer(struct e_layer_surface*
 
 //returns this layer surface's wlr output
 struct wlr_output* e_layer_surface_get_wlr_output(struct e_layer_surface* layer_surface);
+
+struct e_layer_surface* e_layer_surface_from_surface(struct wlr_surface* surface);

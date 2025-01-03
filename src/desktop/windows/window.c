@@ -14,6 +14,7 @@
 
 #include "desktop/scene.h"
 #include "desktop/windows/toplevel_window.h"
+#include "desktop/xwayland.h"
 #include "input/input_manager.h"
 #include "input/seat.h"
 #include "input/cursor.h"
@@ -151,6 +152,16 @@ void e_window_set_position(struct e_window* window, int x, int y)
     }
 
     wlr_scene_node_set_position(&window->scene_tree->node, x, y);
+
+    switch(window->type)
+    {
+        case E_WINDOW_TOPLEVEL:
+            //do nothing
+            break;
+        case E_WINDOW_XWAYLAND:
+            wlr_xwayland_surface_configure(window->xwayland_window->xwayland_surface, x, y, window->xwayland_window->xwayland_surface->width, window->xwayland_window->xwayland_surface->height);
+            break;
+    }
 }
 
 void e_window_set_size(struct e_window* window, int32_t x, int32_t y)
@@ -314,25 +325,20 @@ struct e_window* e_window_from_surface(struct e_server* server, struct wlr_surfa
     return NULL; 
 }
 
-struct e_window* e_window_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy)
+struct e_window* e_window_at(struct e_server* server, struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy)
 {
+    if (node == NULL || surface == NULL || sx == NULL || sy == NULL)
+    {
+        e_log_error("e_window_at: *node, **surface, *sx, or *sy is NULL");
+        abort();
+    }
+
     struct wlr_scene_node* snode;
     *surface = e_scene_wlr_surface_at(node, lx, ly, &snode, sx, sy);
 
-    if (snode == NULL || *surface == NULL)
-        return NULL;
-        
-    //keep going up the tree, until our parent is one of the layers of the tree (2 ancenstors), 
-    //which means we'll have found the top window
-    while (snode != NULL && snode->parent != NULL && snode->parent->node.parent != NULL && snode->parent->node.parent->node.parent != NULL)
-        snode = &snode->parent->node;
+    struct wlr_surface* root_surface = wlr_surface_get_root_surface(*surface);
 
-    if (snode == NULL)
-        return NULL;
-
-    //TODO: currently always a e_window, but soon could also be something related to a layer shell surface. This function will need to account for that!
-    //We could get the root surface of the found surface and try getting the window from that surface?
-    return snode->data; //struct e_window*
+    return e_window_from_surface(server, root_surface);
 }
 
 void e_window_send_close(struct e_window *window)
