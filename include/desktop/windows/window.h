@@ -46,12 +46,6 @@ struct e_window
 
     bool tiled;
 
-    int32_t pending_width;
-    int32_t pending_height;
-    bool pending_resize;
-
-    bool committing;
-
     //to link to linked lists
     struct wl_list link;
 };
@@ -89,8 +83,6 @@ void e_window_map(struct e_window* window);
 
 //stop displaying window
 void e_window_unmap(struct e_window* window);
-
-void e_window_commit(struct e_window* window);
 
 //gets the window's main surface
 struct wlr_surface* e_window_get_surface(struct e_window* window);
