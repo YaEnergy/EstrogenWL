@@ -18,6 +18,7 @@
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
+#include <wlr/types/wlr_viewporter.h>
 
 #include "desktop/scene.h"
 #include "util/log.h"
@@ -136,6 +137,9 @@ int e_server_init(struct e_server* server)
 
     //protocol to describe output regions, seems to be fully implemented by wlroots already
     wlr_xdg_output_manager_v1_create(server->display, server->scene->output_layout);
+
+    //enable viewporter => the size of the surface texture may not match the surface size anymore, only use surface size
+    wlr_viewporter_create(server->display);
     
     //xdg shell v6, protocol for application windows
     server->xdg_shell = e_xdg_shell_create(server);

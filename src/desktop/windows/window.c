@@ -336,8 +336,11 @@ struct e_window* e_window_at(struct e_server* server, struct wlr_scene_node* nod
     struct wlr_scene_node* snode;
     *surface = e_scene_wlr_surface_at(node, lx, ly, &snode, sx, sy);
 
-    struct wlr_surface* root_surface = wlr_surface_get_root_surface(*surface);
+    if (snode == NULL || *surface == NULL)
+        return NULL;
 
+    struct wlr_surface* root_surface = wlr_surface_get_root_surface(*surface);
+    
     return e_window_from_surface(server, root_surface);
 }
 
