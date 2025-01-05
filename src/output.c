@@ -83,5 +83,7 @@ struct e_output* e_output_create(struct e_server* server, struct wlr_output* wlr
     output->destroy.notify = e_output_destroy;
     wl_signal_add(&wlr_output->events.destroy, &output->destroy);
 
+    wlr_output->data = output;
+
     return output;
 }

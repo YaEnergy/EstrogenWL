@@ -95,3 +95,30 @@ void e_layer_shell_arrange_all_layers(struct e_layer_shell* layer_shell, struct 
     e_layer_shell_arrange_layer(layer_shell, wlr_output, ZWLR_LAYER_SHELL_V1_LAYER_TOP);
     e_layer_shell_arrange_layer(layer_shell, wlr_output, ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY);
 }
+
+//get topmost layer surface that requests exclusive focus, may be NULL
+struct e_layer_surface* e_layer_shell_get_exclusive_topmost_layer_surface(struct e_layer_shell* layer_shell)
+{
+    if (wl_list_empty(&layer_shell->layer_surfaces))
+        return NULL;
+
+    struct e_layer_surface* topmost_layer_surface = NULL;
+    struct e_layer_surface* layer_surface;
+
+    wl_list_for_each(layer_surface, &layer_shell->layer_surfaces, link)
+    {
+        struct wlr_layer_surface_v1* wlr_layer_surface_v1 = layer_surface->scene_layer_surface_v1->layer_surface;
+
+        //must request exclusive focus
+        if (wlr_layer_surface_v1->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE)
+            continue;
+
+        //highest layer lives
+        if (topmost_layer_surface == NULL)
+            topmost_layer_surface = layer_surface;
+        else if (wlr_layer_surface_v1->current.layer > e_layer_surface_get_layer(topmost_layer_surface))
+            topmost_layer_surface = layer_surface;
+    }
+
+    return topmost_layer_surface;
+}

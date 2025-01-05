@@ -94,12 +94,12 @@ static bool e_seat_has_exclusive_layer_focus(struct e_seat* seat)
     return (layer_surface_v1 != NULL && layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE);
 }
 
-void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface)
+void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface, bool override_exclusive)
 {
     struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
 
-    //Don't override focus of layer surfaces that request exclusive focus
-    if (e_seat_has_exclusive_layer_focus(seat))
+    //Don't override focus of layer surfaces that request exclusive focus, unless requested
+    if (!override_exclusive && e_seat_has_exclusive_layer_focus(seat))
         return;
 
     //set active keyboard focus to surface
@@ -172,7 +172,7 @@ void e_seat_add_keyboard(struct e_seat* seat, struct wlr_input_device* input)
     wlr_seat_set_keyboard(seat->wlr_seat, keyboard->wlr_keyboard);
     
     if (seat->focus_surface != NULL)
-        e_seat_set_focus(seat, seat->focus_surface);
+        e_seat_set_focus(seat, seat->focus_surface, true);
 
     e_seat_update_capabilities(seat);
 }

@@ -206,7 +206,7 @@ static void e_cursor_handle_move(struct e_cursor* cursor, uint32_t time_msec)
             struct wlr_surface* window_surface = e_window_get_surface(window);
 
             if (!e_seat_has_focus(seat, window_surface))
-                e_seat_set_focus(seat, window_surface);
+                e_seat_set_focus(seat, window_surface, false);
         }
     }
     else 
@@ -357,7 +357,7 @@ void e_cursor_update_focus(struct e_cursor *cursor)
             struct wlr_surface* window_surface = e_window_get_surface(window);
 
             if (!e_seat_has_focus(seat, window_surface))
-                e_seat_set_focus(seat, window_surface);
+                e_seat_set_focus(seat, window_surface, false);
         }
     }
     else 

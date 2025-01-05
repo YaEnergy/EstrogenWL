@@ -262,7 +262,7 @@ void e_window_map(struct e_window* window)
 
     //set focus to this window's main surface
     if (window_surface != NULL)
-        e_seat_set_focus(window->server->input_manager->seat, window_surface);
+        e_seat_set_focus(window->server->input_manager->seat, window_surface, false);
 }
 
 void e_window_unmap(struct e_window* window)

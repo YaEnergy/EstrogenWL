@@ -35,7 +35,7 @@ struct e_seat
 struct e_seat* e_seat_create(struct e_input_manager* input_manager, const char* name);
 
 // only sets keyboard (if active) focus, pointer focus is only on hover
-void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface);
+void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface, bool override_exclusive);
 
 //returns true if seat has focus on this surface
 bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface);

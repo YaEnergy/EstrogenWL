@@ -27,6 +27,8 @@ struct e_layer_surface
     //new surface state got committed
     struct wl_listener commit;
 
+    struct wl_listener unmap;
+
     struct wl_listener destroy;
 
     struct wl_list link;

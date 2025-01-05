@@ -22,9 +22,6 @@
 #include "desktop/scene.h"
 #include "server.h"
 
-//TODO: keyboard focus
-
-//TODO: focus for lower level layer surfaces after higher level layer surfaces
 //TODO: pointer focus everywhere for exclusive focused layer surfaces
 
 //new xdg_popup
@@ -89,17 +86,33 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
 
         //give exclusive focus is requested and allowed
         if (e_layer_surface_should_get_exclusive_focus(layer_surface))
-            e_seat_set_focus(layer_surface->server->input_manager->seat, wlr_layer_surface_v1->surface);
+            e_seat_set_focus(layer_surface->server->input_manager->seat, wlr_layer_surface_v1->surface, true);
     }
+}
+
+static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
+{
+    struct e_layer_surface* unmapped_layer_surface = wl_container_of(listener, unmapped_layer_surface, unmap);
+    struct e_layer_shell* layer_shell = unmapped_layer_surface->server->layer_shell;
+
+    wl_list_remove(&unmapped_layer_surface->link);
+    e_layer_shell_arrange_layer(layer_shell, e_layer_surface_get_wlr_output(unmapped_layer_surface), e_layer_surface_get_layer(unmapped_layer_surface));
+
+    //get next topmost layer surface that requests exclusive focus, and focus on it
+
+    struct e_layer_surface* next_layer_surface = e_layer_shell_get_exclusive_topmost_layer_surface(layer_shell);
+
+    if (next_layer_surface != NULL)
+        e_seat_set_focus(next_layer_surface->server->input_manager->seat, next_layer_surface->scene_layer_surface_v1->layer_surface->surface, true);
 }
 
 static void e_layer_surface_destroy(struct wl_listener* listener, void* data)
 {
     struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, destroy);
 
-    wl_list_remove(&layer_surface->link);
     wl_list_remove(&layer_surface->new_popup.link);
     wl_list_remove(&layer_surface->commit.link);
+    wl_list_remove(&layer_surface->unmap.link);
     wl_list_remove(&layer_surface->destroy.link);
 
     free(layer_surface);
@@ -124,6 +137,9 @@ struct e_layer_surface* e_layer_surface_create(struct e_server* server, struct w
 
     layer_surface->commit.notify = e_layer_surface_commit;
     wl_signal_add(&wlr_layer_surface_v1->surface->events.commit, &layer_surface->commit);
+
+    layer_surface->unmap.notify = e_layer_surface_unmap;
+    wl_signal_add(&wlr_layer_surface_v1->surface->events.unmap, &layer_surface->unmap);
 
     layer_surface->destroy.notify = e_layer_surface_destroy;
     wl_signal_add(&wlr_layer_surface_v1->events.destroy, &layer_surface->destroy);
