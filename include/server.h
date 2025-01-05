@@ -10,7 +10,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output_layout.h>
 
-#include "desktop/layer_shell.h"
+#include "desktop/layers/layer_shell.h"
 #include "desktop/xdg_shell.h"
 #include "desktop/xwayland.h"
 #include "input/input_manager.h"

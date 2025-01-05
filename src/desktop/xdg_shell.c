@@ -8,7 +8,6 @@
 #include "util/log.h"
 #include "server.h"
 #include "desktop/xdg_shell.h"
-#include "desktop/popup.h"
 #include "desktop/windows/toplevel_window.h"
 
 static void e_xdg_shell_new_toplevel_window(struct wl_listener* listener, void* data)
@@ -23,23 +22,11 @@ static void e_xdg_shell_new_toplevel_window(struct wl_listener* listener, void* 
     e_toplevel_window_create(shell->server, xdg_toplevel);
 }
 
-static void e_xdg_shell_new_popup(struct wl_listener* listener, void* data)
-{
-    struct e_xdg_shell* shell = wl_container_of(listener, shell, new_popup);
-    struct wlr_xdg_popup* xdg_popup = data;
-
-    e_log_info("New popup");
-
-    //creates a popup, will destroy itself when done
-    e_popup_create(xdg_popup);
-}
-
 static void e_xdg_shell_destroy(struct wl_listener* listener, void* data)
 {
     struct e_xdg_shell* shell = wl_container_of(listener, shell, destroy);
     
     wl_list_remove(&shell->new_toplevel_window.link);
-    wl_list_remove(&shell->new_popup.link);
     wl_list_remove(&shell->destroy.link);
 
     free(shell);
@@ -60,10 +47,6 @@ struct e_xdg_shell* e_xdg_shell_create(struct e_server* server)
     //listen for new top level windows
     shell->new_toplevel_window.notify = e_xdg_shell_new_toplevel_window;
     wl_signal_add(&shell->xdg_shell->events.new_toplevel, &shell->new_toplevel_window);
-
-    //listen for new pop ups
-    shell->new_popup.notify = e_xdg_shell_new_popup;
-    wl_signal_add(&shell->xdg_shell->events.new_popup, &shell->new_popup);
 
     shell->destroy.notify = e_xdg_shell_destroy;
     wl_signal_add(&shell->xdg_shell->events.destroy, &shell->destroy);

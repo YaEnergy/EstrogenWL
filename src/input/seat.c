@@ -15,7 +15,7 @@
 
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
-#include "desktop/layer_shell.h"
+#include "desktop/layers/layer_shell.h"
 #include "server.h"
 #include "input/input_manager.h"
 #include "input/keyboard.h"

@@ -1,4 +1,4 @@
-#include "desktop/layer_surface.h"
+#include "desktop/layers/layer_surface.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -11,12 +11,14 @@
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/util/box.h>
 
-
+#include "desktop/layers/layer_popup.h"
+#include "desktop/xdg_shell.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #include "input/seat.h"
 
-#include "desktop/layer_shell.h"
+#include "desktop/layers/layer_shell.h"
+#include "desktop/layers/layer_popup.h"
 #include "desktop/scene.h"
 #include "server.h"
 
@@ -24,6 +26,16 @@
 
 //TODO: focus for lower level layer surfaces after higher level layer surfaces
 //TODO: pointer focus everywhere for exclusive focused layer surfaces
+
+//new xdg_popup
+static void e_layer_surface_new_popup(struct wl_listener* listener, void* data)
+{
+    struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, commit);
+    struct wlr_layer_surface_v1* wlr_layer_surface_v1 = layer_surface->scene_layer_surface_v1->layer_surface;
+    struct wlr_xdg_popup* xdg_popup = data;
+
+    e_layer_popup_create(xdg_popup, wlr_layer_surface_v1);   
+}
 
 //adds this layer surface to the layer surface it wants
 static void e_layer_surface_add_to_desired_layer(struct e_scene* scene, struct e_layer_surface* layer_surface, struct wlr_layer_surface_v1* wlr_layer_surface_v1)
@@ -86,6 +98,7 @@ static void e_layer_surface_destroy(struct wl_listener* listener, void* data)
     struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, destroy);
 
     wl_list_remove(&layer_surface->link);
+    wl_list_remove(&layer_surface->new_popup.link);
     wl_list_remove(&layer_surface->commit.link);
     wl_list_remove(&layer_surface->destroy.link);
 
@@ -106,6 +119,9 @@ struct e_layer_surface* e_layer_surface_create(struct e_server* server, struct w
 
     //events
 
+    layer_surface->new_popup.notify = e_layer_surface_new_popup;
+    wl_signal_add(&wlr_layer_surface_v1->events.new_popup, &layer_surface->new_popup);
+
     layer_surface->commit.notify = e_layer_surface_commit;
     wl_signal_add(&wlr_layer_surface_v1->surface->events.commit, &layer_surface->commit);
 
@@ -118,41 +134,9 @@ struct e_layer_surface* e_layer_surface_create(struct e_server* server, struct w
 //configures an e_layer_surface's layout, updates remaining area
 void e_layer_surface_configure(struct e_layer_surface* layer_surface, struct wlr_box* full_area, struct wlr_box* remaining_area)
 {
-    struct wlr_layer_surface_v1* wlr_layer_surface_v1 = layer_surface->scene_layer_surface_v1->layer_surface;
+    //struct wlr_layer_surface_v1* wlr_layer_surface_v1 = layer_surface->scene_layer_surface_v1->layer_surface;
 
     //TODO: account for committed changes
-    //enum wlr_layer_surface_v1_state_field
-
-    //desired size committed?
-    if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_DESIRED_SIZE)
-    {
-
-    }
-
-    if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_ANCHOR)
-    {
-        
-    }
-
-    if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_EXCLUSIVE_ZONE)
-    {
-        
-    }
-
-    if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_MARGIN)
-    {
-        
-    }
-
-    if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_KEYBOARD_INTERACTIVITY)
-    {
-        
-    }
-
-    if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_LAYER)
-    {
-        
-    }
 
     //updates remaining area
     wlr_scene_layer_surface_v1_configure(layer_surface->scene_layer_surface_v1, full_area, remaining_area);

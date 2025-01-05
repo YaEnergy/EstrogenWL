@@ -8,11 +8,10 @@
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output.h>
 
+#include "desktop/xdg_shell.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #include "server.h"
-
-struct e_scene;
 
 struct e_layer_surface
 {
@@ -22,9 +21,8 @@ struct e_layer_surface
 
     struct wlr_scene_tree* scene_tree;
     
-    //TODO: implement layer surface popups
     //new xdg popup
-    //struct wl_listener new_popup;
+    struct wl_listener new_popup;
 
     //new surface state got committed
     struct wl_listener commit;

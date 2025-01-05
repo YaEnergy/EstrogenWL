@@ -12,7 +12,7 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/backend.h>
 
-#include "desktop/layer_shell.h"
+#include "desktop/layers/layer_shell.h"
 #include "desktop/scene.h"
 
 #include "server.h"

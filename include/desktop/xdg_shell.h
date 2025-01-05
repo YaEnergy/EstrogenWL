@@ -14,9 +14,6 @@ struct e_xdg_shell
     //clients create new top level window
     struct wl_listener new_toplevel_window;
 
-    //clients create new popup
-    struct wl_listener new_popup;
-
     struct wl_listener destroy;
 };
 

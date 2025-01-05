@@ -1,4 +1,4 @@
-#include "desktop/layer_shell.h"
+#include "desktop/layers/layer_shell.h"
 
 #include <stdlib.h>
 
@@ -7,7 +7,7 @@
 
 #include <wlr/types/wlr_layer_shell_v1.h>
 
-#include "desktop/layer_surface.h"
+#include "desktop/layers/layer_surface.h"
 #include "util/log.h"
 
 #include "desktop/scene.h"

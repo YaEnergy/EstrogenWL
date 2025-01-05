@@ -26,7 +26,7 @@
 #include "output.h"
 #include "desktop/xdg_shell.h"
 #include "desktop/gamma_control_manager.h"
-#include "desktop/layer_shell.h"
+#include "desktop/layers/layer_shell.h"
 #include "desktop/scene.h"
 #include "input/input_manager.h"
 

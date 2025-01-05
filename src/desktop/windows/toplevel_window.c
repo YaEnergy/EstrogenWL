@@ -10,6 +10,7 @@
 #include <wlr/types/wlr_scene.h>
 
 #include "desktop/windows/window.h"
+#include "desktop/xdg_popup.h"
 #include "desktop/scene.h"
 #include "input/cursor.h"
 #include "server.h"
@@ -66,6 +67,17 @@ static void e_toplevel_window_commit(struct wl_listener* listener, void* data)
     //TODO: handle toplevel_window->xdg_toplevel->requested if surface is mapped
 }
 
+//new wlr_xdg_popup by toplevel window
+static void e_toplevel_window_new_popup(struct wl_listener* listener, void* data)
+{
+    struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, new_popup);
+    struct wlr_xdg_popup* xdg_popup = data;
+
+    e_log_info("new popup by toplevel window: %s", toplevel_window->xdg_toplevel->title);
+
+    e_xdg_popup_create(xdg_popup, toplevel_window->xdg_toplevel->base);
+}
+
 static void e_toplevel_window_request_fullscreen(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, request_fullscreen);
@@ -119,6 +131,8 @@ static void e_toplevel_window_destroy(struct wl_listener* listener, void* data)
     wl_list_remove(&toplevel_window->unmap.link);
     wl_list_remove(&toplevel_window->commit.link);
 
+    wl_list_remove(&toplevel_window->new_popup.link);
+
     wl_list_remove(&toplevel_window->request_fullscreen.link);
     wl_list_remove(&toplevel_window->request_maximize.link);
     wl_list_remove(&toplevel_window->request_move.link);
@@ -164,6 +178,11 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
 
     toplevel_window->commit.notify = e_toplevel_window_commit;
     wl_signal_add(&xdg_toplevel->base->surface->events.commit, &toplevel_window->commit);
+
+    // xdg surface events
+
+    toplevel_window->new_popup.notify = e_toplevel_window_new_popup;
+    wl_signal_add(&xdg_toplevel->base->events.new_popup, &toplevel_window->new_popup);
 
     // xdg toplevel events
 
