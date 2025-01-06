@@ -13,16 +13,20 @@
 
 #include "desktop/layers/layer_popup.h"
 #include "desktop/xdg_shell.h"
+#include "output.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #include "input/seat.h"
 
 #include "desktop/layers/layer_shell.h"
 #include "desktop/layers/layer_popup.h"
-#include "desktop/scene.h"
+#include "output.h"
 #include "server.h"
 
+#include "util/log.h"
+
 //TODO: pointer focus everywhere for exclusive focused layer surfaces
+//TODO: implement ON DEMAND keyboard interactivity
 
 //new xdg_popup
 static void e_layer_surface_new_popup(struct wl_listener* listener, void* data)
@@ -34,24 +38,36 @@ static void e_layer_surface_new_popup(struct wl_listener* listener, void* data)
     e_layer_popup_create(xdg_popup, wlr_layer_surface_v1);   
 }
 
-//adds this layer surface to the layer surface it wants
-static void e_layer_surface_add_to_desired_layer(struct e_scene* scene, struct e_layer_surface* layer_surface, struct wlr_layer_surface_v1* wlr_layer_surface_v1)
+static struct wlr_scene_tree* e_output_get_layer_tree(struct e_output* output, enum zwlr_layer_shell_v1_layer layer)
 {
-    switch (wlr_layer_surface_v1->current.layer) 
+    switch(layer)
     {
         case ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND:
-            layer_surface->scene_layer_surface_v1 = wlr_scene_layer_surface_v1_create(scene->layers.background, wlr_layer_surface_v1);
-            break;
+            return output->layers.background;
         case ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM:
-            layer_surface->scene_layer_surface_v1 = wlr_scene_layer_surface_v1_create(scene->layers.bottom, wlr_layer_surface_v1);
-            break;
+            return output->layers.bottom;
         case ZWLR_LAYER_SHELL_V1_LAYER_TOP:
-            layer_surface->scene_layer_surface_v1 = wlr_scene_layer_surface_v1_create(scene->layers.top, wlr_layer_surface_v1);
-            break;
+            return output->layers.top;
         case ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY:
-            layer_surface->scene_layer_surface_v1 = wlr_scene_layer_surface_v1_create(scene->layers.overlay, wlr_layer_surface_v1);
-            break;
+            return output->layers.overlay;
+        default:
+            e_log_error("no layer tree for layer");
+            return NULL;
     }
+}
+
+//adds this layer surface to the layer surface it wants
+static void e_layer_surface_add_to_desired_layer(struct e_layer_surface* layer_surface, struct wlr_layer_surface_v1* wlr_layer_surface_v1)
+{
+    struct wlr_scene_tree* layer_tree = e_output_get_layer_tree(layer_surface->output, wlr_layer_surface_v1->current.layer);
+
+    if (layer_tree == NULL)
+    {
+        e_log_error("no layer tree for layer");
+        abort();
+    }
+
+    layer_surface->scene_layer_surface_v1 = wlr_scene_layer_surface_v1_create(layer_tree, wlr_layer_surface_v1);
 
     layer_surface->scene_tree = layer_surface->scene_layer_surface_v1->tree;
     layer_surface->scene_tree->node.data = layer_surface;
@@ -78,16 +94,69 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
     struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, commit);
     struct wlr_layer_surface_v1* wlr_layer_surface_v1 = layer_surface->scene_layer_surface_v1->layer_surface;
 
+    bool update_arrangement = false;
+
     //configure on initial commit
     if (wlr_layer_surface_v1->initial_commit)
     {
-        wl_list_insert(&layer_surface->server->layer_shell->layer_surfaces, &layer_surface->link);  
-        e_layer_shell_arrange_layer(layer_surface->server->layer_shell, e_layer_surface_get_wlr_output(layer_surface), e_layer_surface_get_layer(layer_surface)); 
+        wl_list_insert(&layer_surface->server->layer_shell->layer_surfaces, &layer_surface->link);
 
-        //give exclusive focus is requested and allowed
-        if (e_layer_surface_should_get_exclusive_focus(layer_surface))
-            e_seat_set_focus(layer_surface->server->input_manager->seat, wlr_layer_surface_v1->surface, true);
+        update_arrangement = true;
     }
+
+    //committed layer
+    if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_LAYER)
+    {
+        struct wlr_scene_tree* layer_tree = e_output_get_layer_tree(layer_surface->output, wlr_layer_surface_v1->current.layer);
+
+        if (layer_tree != NULL)
+            wlr_scene_node_reparent(&layer_surface->scene_tree->node, layer_tree);
+
+        e_log_info("layer surface committed layer");
+        update_arrangement = true;
+    }
+
+    //committed keyboard interactivity
+    if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_KEYBOARD_INTERACTIVITY)
+    {
+        struct e_seat* seat = layer_surface->server->input_manager->seat;
+
+        //give exclusive focus if requested and allowed and doesn't have focus
+        if (e_layer_surface_should_get_exclusive_focus(layer_surface) && !e_seat_has_focus(seat, wlr_layer_surface_v1->surface))
+            e_seat_set_focus(seat, wlr_layer_surface_v1->surface, true);
+        //clear focus if layer surface no longer wants focus and has focus
+        else if (wlr_layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE && e_seat_has_focus(seat, wlr_layer_surface_v1->surface))
+            e_seat_clear_focus(seat);
+
+        e_log_info("layer surface committed keyboard interactivity");
+    }
+
+    if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_DESIRED_SIZE)
+    {
+        e_log_info("layer surface committed desired size");
+        update_arrangement = true;
+    }
+
+    if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_ANCHOR)
+    {
+        e_log_info("layer surface committed anchor");
+        update_arrangement = true;
+    }
+
+    if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_EXCLUSIVE_ZONE)
+    {
+        e_log_info("layer surface committed exclusive zone");
+        update_arrangement = true;
+    }
+
+    if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_MARGIN)
+    {
+        e_log_info("layer surface committed margin");
+        update_arrangement = true;
+    }
+
+    if (update_arrangement)
+        e_layer_shell_arrange_layer(layer_surface->server->layer_shell, layer_surface->output->wlr_output, e_layer_surface_get_layer(layer_surface));
 }
 
 static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
@@ -120,12 +189,16 @@ static void e_layer_surface_destroy(struct wl_listener* listener, void* data)
 
 struct e_layer_surface* e_layer_surface_create(struct e_server* server, struct wlr_layer_surface_v1* wlr_layer_surface_v1)
 {
+    assert(server && wlr_layer_surface_v1 && wlr_layer_surface_v1->output);
+
     struct e_layer_surface* layer_surface = calloc(1, sizeof(struct e_layer_surface));
     layer_surface->server = server;
+
+    layer_surface->output = wlr_layer_surface_v1->output->data;
     
     wl_list_init(&layer_surface->link);
 
-    e_layer_surface_add_to_desired_layer(server->scene, layer_surface, wlr_layer_surface_v1);
+    e_layer_surface_add_to_desired_layer(layer_surface, wlr_layer_surface_v1);
     
     //allows popups to attach themselves this layer surface's scene tree
     wlr_layer_surface_v1->data = layer_surface->scene_tree;
@@ -150,10 +223,6 @@ struct e_layer_surface* e_layer_surface_create(struct e_server* server, struct w
 //configures an e_layer_surface's layout, updates remaining area
 void e_layer_surface_configure(struct e_layer_surface* layer_surface, struct wlr_box* full_area, struct wlr_box* remaining_area)
 {
-    //struct wlr_layer_surface_v1* wlr_layer_surface_v1 = layer_surface->scene_layer_surface_v1->layer_surface;
-
-    //TODO: account for committed changes
-
     //updates remaining area
     wlr_scene_layer_surface_v1_configure(layer_surface->scene_layer_surface_v1, full_area, remaining_area);
 }

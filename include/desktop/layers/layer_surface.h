@@ -9,6 +9,7 @@
 #include <wlr/types/wlr_output.h>
 
 #include "desktop/xdg_shell.h"
+#include "output.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #include "server.h"
@@ -16,6 +17,8 @@
 struct e_layer_surface
 {
     struct e_server* server;
+
+    struct e_output* output;
 
     struct wlr_scene_layer_surface_v1* scene_layer_surface_v1;
 
