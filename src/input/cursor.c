@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
@@ -10,11 +11,16 @@
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_pointer.h>
+#include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xcursor_manager.h>
+#include <wlr/types/wlr_layer_shell_v1.h>
 
 #include <wlr/util/box.h>
 #include <wlr/util/edges.h>
 
+#include "wlr-layer-shell-unstable-v1-protocol.h"
+
+#include "desktop/layers/layer_shell.h"
 #include "desktop/xdg_shell.h"
 #include "input/input_manager.h"
 
@@ -32,6 +38,43 @@
 #define E_POINTER_BUTTON_MIDDLE 274
 #define E_POINTER_BUTTON_RIGHT 273
 #define E_POINTER_BUTTON_LEFT 272
+
+//checks whether this surface should be focussed on by the seat, and sets the seat focus if necessary
+static void e_cursor_update_seat_focus(struct e_cursor* cursor, struct wlr_surface* surface)
+{
+    assert(cursor && surface);
+
+    struct e_server* server = cursor->input_manager->server;
+    struct e_seat* seat = cursor->input_manager->seat;
+
+    //focus on windows
+
+    struct wlr_surface* root_surface = wlr_surface_get_root_surface(surface);
+    struct e_window* window = e_window_from_surface(server, root_surface);
+
+    if (window != NULL)
+    {
+        struct wlr_surface* window_surface = e_window_get_surface(window);
+
+        if (!e_seat_has_focus(seat, window_surface))
+            e_seat_set_focus(seat, window_surface, false);
+
+        return;
+    }
+
+    //focus on layer surfaces that request on demand interactivity
+
+    struct wlr_layer_surface_v1* hover_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(surface);
+
+    //is layer surface that requests on demand focus?
+    if (hover_layer_surface != NULL && hover_layer_surface->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_ON_DEMAND)
+    {
+        if (!e_seat_has_focus(seat, hover_layer_surface->surface))
+            e_seat_set_focus(seat, hover_layer_surface->surface, false);    
+
+        return;  
+    }
+}
 
 static void e_cursor_frame(struct wl_listener* listener, void* data)
 {
@@ -188,31 +231,28 @@ static void e_cursor_handle_move(struct e_cursor* cursor, uint32_t time_msec)
     struct e_seat* seat = cursor->input_manager->seat;
 
     double sx, sy;
-    struct wlr_surface* hover_surface;
-    struct e_window* window = e_window_at(server, &server->scene->wlr_scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_surface, &sx, &sy);
-
-    //display default cursor when not hovering any windows
-    if (window == NULL)
-        wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
+    struct wlr_scene_node* hover_node;
+    struct wlr_surface* hover_surface = e_scene_wlr_surface_at(&server->scene->wlr_scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_node, &sx, &sy);
+    struct e_window* window = NULL;
 
     if (hover_surface != NULL)
     {
+        window = e_window_from_surface(server, wlr_surface_get_root_surface(hover_surface));
+
         wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface, sx, sy); //is only sent once
         wlr_seat_pointer_notify_motion(seat->wlr_seat, time_msec, sx, sy);
 
-        //sloppy focus on windows
-        if (window != NULL)
-        {
-            struct wlr_surface* window_surface = e_window_get_surface(window);
-
-            if (!e_seat_has_focus(seat, window_surface))
-                e_seat_set_focus(seat, window_surface, false);
-        }
+        //sloppy focus
+        e_cursor_update_seat_focus(cursor, hover_surface);
     }
     else 
     {
         wlr_seat_pointer_notify_clear_focus(seat->wlr_seat);
     }
+
+    //display default cursor when not hovering any WINDOWS (not just any surface)
+    if (window == NULL)
+        wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
 }
 
 static void e_cursor_motion(struct wl_listener* listener, void* data)
@@ -340,30 +380,27 @@ void e_cursor_update_focus(struct e_cursor *cursor)
     struct e_seat* seat = cursor->input_manager->seat;
 
     double sx, sy;
-    struct wlr_surface* hover_surface;
-    struct e_window* window = e_window_at(server, &server->scene->wlr_scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_surface, &sx, &sy);
-
-    //display default cursor when not hovering any windows
-    if (window == NULL)
-        wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
+    struct wlr_scene_node* hover_node;
+    struct wlr_surface* hover_surface = e_scene_wlr_surface_at(&server->scene->wlr_scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_node, &sx, &sy);
+    struct e_window* window = NULL;
 
     if (hover_surface != NULL)
     {
+        window = e_window_from_surface(server, wlr_surface_get_root_surface(hover_surface));
+
         wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface, sx, sy); //is only sent once
 
-        //sloppy focus on windows
-        if (window != NULL)
-        {
-            struct wlr_surface* window_surface = e_window_get_surface(window);
-
-            if (!e_seat_has_focus(seat, window_surface))
-                e_seat_set_focus(seat, window_surface, false);
-        }
+        //sloppy focus
+        e_cursor_update_seat_focus(cursor, hover_surface);
     }
     else 
     {
         wlr_seat_pointer_notify_clear_focus(seat->wlr_seat);
     }
+
+    //display default cursor when not hovering any WINDOWS (not just any surface)
+    if (window == NULL)
+        wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
 }
 
 void e_cursor_destroy(struct e_cursor* cursor)
