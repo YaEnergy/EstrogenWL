@@ -73,9 +73,6 @@ void e_window_set_position(struct e_window* window, int x, int y);
 //includes decoration in x & y
 void e_window_set_size(struct e_window* window, int32_t x, int32_t y);
 
-//does not include decoration in x & y, only client geometry
-void e_window_set_bounds(struct e_window* window, int32_t x, int32_t y);
-
 void e_window_set_tiled(struct e_window* window, bool tiled);
 
 //display window

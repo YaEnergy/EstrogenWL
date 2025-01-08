@@ -84,16 +84,6 @@ struct e_seat* e_seat_create(struct e_input_manager* input_manager, const char* 
 
 // focus
 
-static bool e_seat_has_exclusive_layer_focus(struct e_seat* seat)
-{
-    if (seat->focus_surface == NULL)
-        return false;
-
-    struct wlr_layer_surface_v1* layer_surface_v1 = wlr_layer_surface_v1_try_from_wlr_surface(seat->focus_surface);
-
-    return (layer_surface_v1 != NULL && layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE);
-}
-
 void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface, bool override_exclusive)
 {
     struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
@@ -132,6 +122,16 @@ bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface)
     struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
 
     return (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface == surface);
+}
+
+bool e_seat_has_exclusive_layer_focus(struct e_seat* seat)
+{
+    if (seat->focus_surface == NULL)
+        return false;
+
+    struct wlr_layer_surface_v1* layer_surface_v1 = wlr_layer_surface_v1_try_from_wlr_surface(seat->focus_surface);
+
+    return (layer_surface_v1 != NULL && layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE);
 }
 
 void e_seat_clear_focus(struct e_seat *seat)

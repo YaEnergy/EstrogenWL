@@ -188,33 +188,6 @@ void e_window_set_size(struct e_window* window, int32_t x, int32_t y)
     }
 }
 
-void e_window_set_bounds(struct e_window* window, int32_t x, int32_t y)
-{
-    switch(window->type)
-    {
-        case E_WINDOW_TOPLEVEL:
-            //don't resize the base surface to the same size
-            if (window->toplevel_window->xdg_toplevel->base->current.geometry.width == x && window->toplevel_window->xdg_toplevel->base->current.geometry.height == y)
-                return;
-
-            wlr_xdg_toplevel_set_bounds(window->toplevel_window->xdg_toplevel, x, y);
-            break;
-        case E_WINDOW_XWAYLAND:
-            if (window->xwayland_window->xwayland_surface->surface == NULL)
-                return;
-            
-            //don't resize the surface to the same size
-            if (window->xwayland_window->xwayland_surface->width == (uint16_t)x && window->xwayland_window->xwayland_surface->height == (uint16_t)y)
-                return;
-            
-            wlr_xwayland_surface_configure(window->xwayland_window->xwayland_surface, window->xwayland_window->xwayland_surface->x, window->xwayland_window->xwayland_surface->y, x, y);
-            break;
-        default:
-            e_log_error("Can't set bounds of window, window is an unsupported type!");
-            break;
-    }
-}
-
 void e_window_set_tiled(struct e_window* window, bool tiled)
 {
     e_log_info("setting tiling mode of window to %B...", tiled);

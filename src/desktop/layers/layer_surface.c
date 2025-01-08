@@ -25,8 +25,6 @@
 
 #include "util/log.h"
 
-//TODO: pointer focus everywhere for exclusive focused layer surfaces
-
 //new xdg_popup
 static void e_layer_surface_new_popup(struct wl_listener* listener, void* data)
 {

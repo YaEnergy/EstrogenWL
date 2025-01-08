@@ -40,6 +40,9 @@ void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface, bool ove
 //returns true if seat has focus on this surface
 bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface);
 
+//returns true if seat has focus on a layer surface with exclusive interactivity
+bool e_seat_has_exclusive_layer_focus(struct e_seat* seat);
+
 void e_seat_clear_focus(struct e_seat* seat);
 
 void e_seat_add_keyboard(struct e_seat* seat, struct wlr_input_device* input);
