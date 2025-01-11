@@ -8,6 +8,7 @@
 
 #include <wlr/types/wlr_layer_shell_v1.h>
 
+#include "desktop/tree/node.h"
 #include "desktop/xdg_popup.h"
 
 //another xdg_popup? oh woaw
@@ -55,7 +56,7 @@ struct e_layer_popup* e_layer_popup_create(struct wlr_xdg_popup* xdg_popup, stru
     struct wlr_scene_tree* parent_tree = layer_surface_v1->data;
 
     popup->scene_tree = wlr_scene_xdg_surface_create(parent_tree, xdg_popup->base);
-    popup->scene_tree->node.data = popup;
+    e_node_desc_create(&popup->scene_tree->node, E_NODE_DESC_LAYER_POPUP, popup);
 
     //allows further popup window scene trees to add themselves to this popup window's scene tree
     xdg_popup->base->data = popup->scene_tree;

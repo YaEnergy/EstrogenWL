@@ -18,6 +18,7 @@
 #include "input/input_manager.h"
 #include "input/seat.h"
 #include "input/cursor.h"
+#include "desktop/tree/node.h"
 #include "server.h"
 #include "util/log.h"
 
@@ -59,7 +60,7 @@ void e_window_create_scene_tree(struct e_window* window, struct wlr_scene_tree* 
 
     //allows retrieving of window data, neccessary for e_window_at
     if (window->scene_tree != NULL)
-        window->scene_tree->node.data = window;
+        e_node_desc_create(&window->scene_tree->node, E_NODE_DESC_WINDOW, window);
 }
 
 char* e_window_get_title(struct e_window* window)
@@ -298,7 +299,7 @@ struct e_window* e_window_from_surface(struct e_server* server, struct wlr_surfa
     return NULL; 
 }
 
-struct e_window* e_window_at(struct e_server* server, struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy)
+struct e_window* e_window_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy)
 {
     if (node == NULL || surface == NULL || sx == NULL || sy == NULL)
     {
@@ -312,9 +313,23 @@ struct e_window* e_window_at(struct e_server* server, struct wlr_scene_node* nod
     if (snode == NULL || *surface == NULL)
         return NULL;
 
-    struct wlr_surface* root_surface = wlr_surface_get_root_surface(*surface);
-    
-    return e_window_from_surface(server, root_surface);
+    //keep going upwards in the tree until we find a window (in which case we return it), or reach the root of the tree (no parent)
+    while (snode->parent != NULL)
+    {
+        //data is either NULL or e_node_desc
+        if (snode->data != NULL)
+        {
+            struct e_node_desc* node_desc = snode->data;
+
+            if (node_desc->type == E_NODE_DESC_WINDOW)
+                return node_desc->data;
+        }
+
+        //go to parent node
+        snode = &snode->parent->node;
+    }
+
+    return NULL;
 }
 
 void e_window_send_close(struct e_window *window)

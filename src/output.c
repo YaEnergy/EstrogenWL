@@ -45,12 +45,16 @@ static void e_output_request_state(struct wl_listener* listener, void* data)
     struct e_output* output = wl_container_of(listener, output, request_state);
     struct wlr_output_event_request_state* event = data;
 
-    if (!wlr_output_commit_state(output->wlr_output, event->state))
+    if (wlr_output_commit_state(output->wlr_output, event->state))
+    {
+        //update layers & windows to arrange & retile them according to the new output buffer
+        e_tile_windows(output->server);
+        e_layer_shell_arrange_all_layers(output->server->layer_shell, output->wlr_output);
+    }
+    else 
+    {
         e_log_error("Failed to commit output request state");
-    
-    //update layers & windows to arrange & retile them according to the new output size
-    e_tile_windows(output->server);
-    e_layer_shell_arrange_all_layers(output->server->layer_shell, output->wlr_output);
+    }
 }
 
 static void e_output_destroy(struct wl_listener* listener, void* data)

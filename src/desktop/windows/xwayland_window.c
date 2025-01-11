@@ -78,7 +78,6 @@ static void e_xwayland_window_associate(struct wl_listener* listener, void* data
 
     struct e_xwayland_window* xwayland_window = wl_container_of(listener, xwayland_window, associate);
 
-    //TODO: set up xwayland surface listeners
     // events
 
     xwayland_window->map.notify = e_xwayland_window_map;
@@ -114,7 +113,6 @@ static void e_xwayland_window_dissociate(struct wl_listener* listener, void* dat
 
     struct e_xwayland_window* xwayland_window = wl_container_of(listener, xwayland_window, dissociate);
 
-    //TODO: remove xwayland surface listener lists
     wl_list_remove(&xwayland_window->map.link);
     wl_list_remove(&xwayland_window->unmap.link);
     wl_list_remove(&xwayland_window->commit.link);

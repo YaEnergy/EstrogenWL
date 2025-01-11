@@ -12,6 +12,7 @@
 #include <wlr/util/box.h>
 
 #include "desktop/layers/layer_popup.h"
+#include "desktop/tree/node.h"
 #include "desktop/xdg_shell.h"
 #include "output.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
@@ -67,7 +68,7 @@ static void e_layer_surface_add_to_desired_layer(struct e_layer_surface* layer_s
     layer_surface->scene_layer_surface_v1 = wlr_scene_layer_surface_v1_create(layer_tree, wlr_layer_surface_v1);
 
     layer_surface->scene_tree = layer_surface->scene_layer_surface_v1->tree;
-    layer_surface->scene_tree->node.data = layer_surface;
+    e_node_desc_create(&layer_surface->scene_tree->node, E_NODE_DESC_LAYER_SURFACE, layer_surface);
 }
 
 //if this layer surface requests exclusive focus, and is on a higher layer than or a layer equal to the current focused layer surface
