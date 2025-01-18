@@ -62,22 +62,6 @@ struct e_output* e_scene_get_output(struct e_scene* scene, int index)
     return NULL;
 }
 
-//get output from given wlr_output, returns NULL if failed
-struct e_output* e_scene_output_from_wlr(struct e_scene* scene, struct wlr_output* wlr_output)
-{
-    if (wl_list_empty(&scene->outputs))
-        return NULL;
-
-    struct e_output* output;
-    wl_list_for_each(output, &scene->outputs, link)
-    {
-        if (output->wlr_output == wlr_output)
-            return output;
-    }
-
-    return NULL;
-}
-
 void e_scene_add_output(struct e_scene *scene, struct e_output *output)
 {
     wl_list_insert(&scene->outputs, &output->link);
@@ -102,7 +86,7 @@ struct wlr_surface* e_scene_wlr_surface_at(struct wlr_scene_node* node, double l
 {
     if (node == NULL || snode == NULL || sx == NULL || sy == NULL)
     {
-        e_log_error("e_window_at: *node, **snode, *sx, or *sy is NULL");
+        e_log_error("e_scene_wlr_surface_at: *node, **snode, *sx, or *sy is NULL");
         abort();
     }
 

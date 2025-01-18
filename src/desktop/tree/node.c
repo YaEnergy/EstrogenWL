@@ -1,6 +1,7 @@
 #include "desktop/tree/node.h"
 
 #include <stdlib.h>
+#include <assert.h>
 
 #include <wayland-server-core.h>
 #include <wayland-util.h>
@@ -30,17 +31,21 @@ struct e_node_desc* e_node_desc_create(struct wlr_scene_node* node, enum e_node_
 }
 
 //may return NULL
-struct e_window* e_window_try_from_e_node_desc(struct e_node_desc *node_desc) 
+struct e_window* e_window_try_from_e_node_desc(struct e_node_desc* node_desc) 
 {
+    assert(node_desc);
+
     if (node_desc->type != E_NODE_DESC_WINDOW)
         return NULL;
 
-    return (struct e_window *)node_desc->data;
+    return (struct e_window*)node_desc->data;
 }
 
 //may return NULL
 struct e_xdg_popup* e_xdg_popup_try_from_e_node_desc(struct e_node_desc* node_desc)
 {
+    assert(node_desc);
+
     if (node_desc->type != E_NODE_DESC_XDG_POPUP)
         return NULL;
 
@@ -50,6 +55,8 @@ struct e_xdg_popup* e_xdg_popup_try_from_e_node_desc(struct e_node_desc* node_de
 //may return NULL
 struct e_layer_surface* e_layer_surface_try_from_e_node_desc(struct e_node_desc* node_desc)
 {
+    assert(node_desc);
+
     if (node_desc->type != E_NODE_DESC_LAYER_SURFACE)
         return NULL;
 
@@ -59,6 +66,8 @@ struct e_layer_surface* e_layer_surface_try_from_e_node_desc(struct e_node_desc*
 //may return NULL
 struct e_layer_popup* e_layer_popup_try_from_e_node_desc(struct e_node_desc* node_desc)
 {
+    assert(node_desc);
+
     if (node_desc->type != E_NODE_DESC_LAYER_POPUP)
         return NULL;
 

@@ -299,6 +299,31 @@ struct e_window* e_window_from_surface(struct e_server* server, struct wlr_surfa
     return NULL; 
 }
 
+//may return NULL
+struct e_window* e_window_try_from_node_ancestors(struct wlr_scene_node* node)
+{
+    if (node == NULL)
+        return NULL;
+
+    //keep going upwards in the tree until we find a window (in which case we return it), or reach the root of the tree (no parent)
+    while (node->parent != NULL)
+    {
+        //data is either NULL or e_node_desc
+        if (node->data != NULL)
+        {
+            struct e_node_desc* node_desc = node->data;
+
+            if (node_desc->type == E_NODE_DESC_WINDOW)
+                return node_desc->data;
+        }
+
+        //go to parent node
+        node = &node->parent->node;
+    }
+
+    return NULL;
+}
+
 struct e_window* e_window_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy)
 {
     if (node == NULL || surface == NULL || sx == NULL || sy == NULL)
@@ -313,23 +338,7 @@ struct e_window* e_window_at(struct wlr_scene_node* node, double lx, double ly, 
     if (snode == NULL || *surface == NULL)
         return NULL;
 
-    //keep going upwards in the tree until we find a window (in which case we return it), or reach the root of the tree (no parent)
-    while (snode->parent != NULL)
-    {
-        //data is either NULL or e_node_desc
-        if (snode->data != NULL)
-        {
-            struct e_node_desc* node_desc = snode->data;
-
-            if (node_desc->type == E_NODE_DESC_WINDOW)
-                return node_desc->data;
-        }
-
-        //go to parent node
-        snode = &snode->parent->node;
-    }
-
-    return NULL;
+    return e_window_try_from_node_ancestors(snode);
 }
 
 void e_window_send_close(struct e_window *window)

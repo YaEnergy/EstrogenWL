@@ -87,6 +87,9 @@ struct wlr_surface* e_window_get_surface(struct e_window* window);
 //finds the window which has this surface as its main surface, NULL if not found
 struct e_window* e_window_from_surface(struct e_server* server, struct wlr_surface* surface);
 
+//Returns NULL on fail.
+struct e_window* e_window_try_from_node_ancestors(struct wlr_scene_node* node);
+
 //Searches for a window at the specified layout coords in the given scene graph
 //Outs found surface and translated from layout to surface coords.
 //If nothing is found returns NULL, but surface may not always be NULL.

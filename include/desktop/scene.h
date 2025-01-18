@@ -53,9 +53,6 @@ struct e_scene* e_scene_create(struct wl_display* display);
 //get output at specified index, returns NULL if failed
 struct e_output* e_scene_get_output(struct e_scene* scene, int index);
 
-//get output from given wlr_output, returns NULL if failed
-struct e_output* e_scene_output_from_wlr(struct e_scene* scene, struct wlr_output* wlr_output);
-
 //returns a wlr_surface pointer at the specified layout coords, 
 //also outs the surface's node, and translates the layout coords to the surface coords
 struct wlr_surface* e_scene_wlr_surface_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_scene_node** snode, double* sx, double* sy);
