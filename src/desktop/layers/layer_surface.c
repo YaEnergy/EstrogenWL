@@ -71,7 +71,7 @@ static void e_layer_surface_add_to_desired_layer(struct e_layer_surface* layer_s
     e_node_desc_create(&layer_surface->scene_tree->node, E_NODE_DESC_LAYER_SURFACE, layer_surface);
 }
 
-//if this layer surface requests exclusive focus, and is on a higher layer than or a layer equal to the current focused layer surface
+//if this layer surface requests exclusive focus, and is on a higher layer than or a layer equal to the current focused exclusive layer surface
 static bool e_layer_surface_should_get_exclusive_focus(struct e_layer_surface* layer_surface)
 {
     struct e_seat* seat = layer_surface->server->input_manager->seat;
@@ -82,9 +82,13 @@ static bool e_layer_surface_should_get_exclusive_focus(struct e_layer_surface* l
     if (wlr_layer_surface_v1->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE)
         return false;
 
+    if (seat->focus_surface == NULL)
+        return true;
+
     struct wlr_layer_surface_v1* focused_layer_surface_v1 = wlr_layer_surface_v1_try_from_wlr_surface(seat->focus_surface);
 
-    return (focused_layer_surface_v1 == NULL || wlr_layer_surface_v1->current.layer >= focused_layer_surface_v1->current.layer);
+    //Should get exclusive focus, current focused surface is not a layer surface, or on lower layer, or doesn't request exclusive focus
+    return (focused_layer_surface_v1 == NULL || wlr_layer_surface_v1->current.layer >= focused_layer_surface_v1->current.layer || focused_layer_surface_v1->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE);
 }
 
 static void e_layer_surface_commit(struct wl_listener* listener, void* data)

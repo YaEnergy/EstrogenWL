@@ -240,12 +240,7 @@ void e_window_map(struct e_window* window)
 }
 
 void e_window_unmap(struct e_window* window)
-{
-    wl_list_remove(&window->link);
-
-    if (window->tiled)
-        e_tile_windows(window->server);
-    
+{   
     struct e_input_manager* input_manager = window->server->input_manager;
 
     struct wlr_surface* window_surface = e_window_get_surface(window);
@@ -257,6 +252,11 @@ void e_window_unmap(struct e_window* window)
     //if this window was grabbed by the cursor make it let go
     if (input_manager->cursor->grab_window == window)
         e_cursor_reset_mode(input_manager->cursor);
+
+    wl_list_remove(&window->link);
+
+    if (window->tiled)
+        e_tile_windows(window->server);
         
     e_cursor_update_focus(input_manager->cursor);
 }

@@ -233,12 +233,10 @@ static void e_cursor_handle_move(struct e_cursor* cursor, uint32_t time_msec)
     double sx, sy;
     struct wlr_scene_node* hover_node;
     struct wlr_surface* hover_surface = e_scene_wlr_surface_at(&server->scene->wlr_scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_node, &sx, &sy);
-    struct e_window* window = NULL;
+    struct e_window* window = (hover_node == NULL) ? NULL : e_window_try_from_node_ancestors(hover_node);
 
     if (hover_surface != NULL)
     {
-        window = e_window_from_surface(server, wlr_surface_get_root_surface(hover_surface));
-
         wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface, sx, sy); //is only sent once
         wlr_seat_pointer_notify_motion(seat->wlr_seat, time_msec, sx, sy);
 
@@ -382,12 +380,10 @@ void e_cursor_update_focus(struct e_cursor *cursor)
     double sx, sy;
     struct wlr_scene_node* hover_node;
     struct wlr_surface* hover_surface = e_scene_wlr_surface_at(&server->scene->wlr_scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_node, &sx, &sy);
-    struct e_window* window = NULL;
+    struct e_window* window = (hover_node == NULL) ? NULL : e_window_try_from_node_ancestors(hover_node);
 
     if (hover_surface != NULL)
     {
-        window = e_window_from_surface(server, wlr_surface_get_root_surface(hover_surface));
-
         wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface, sx, sy); //is only sent once
 
         //sloppy focus

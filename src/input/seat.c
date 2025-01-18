@@ -134,7 +134,7 @@ bool e_seat_has_exclusive_layer_focus(struct e_seat* seat)
     return (layer_surface_v1 != NULL && layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE);
 }
 
-void e_seat_clear_focus(struct e_seat *seat)
+void e_seat_clear_focus(struct e_seat* seat)
 {
     struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
 
