@@ -66,6 +66,7 @@ struct e_seat* e_seat_create(struct e_input_manager* input_manager, const char* 
     seat->wlr_seat = wlr_seat;
     seat->input_manager = input_manager;
     seat->focus_surface = NULL;
+    seat->previous_focus_surface = NULL;
 
     wl_list_init(&seat->keyboards);
 
@@ -103,6 +104,7 @@ void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface, bool ove
         wlr_seat_keyboard_notify_enter(seat->wlr_seat, surface, wlr_keyboard->keycodes, wlr_keyboard->num_keycodes, &wlr_keyboard->modifiers);
     }
     
+    seat->previous_focus_surface = seat->focus_surface;
     seat->focus_surface = surface;
 
     struct e_window* window = e_window_from_surface(seat->input_manager->server, surface);
