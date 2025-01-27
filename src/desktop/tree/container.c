@@ -41,6 +41,7 @@ struct e_container* e_container_create(struct wlr_scene_tree* parent, enum e_til
         abort();
     }
 
+    container->parent = NULL;
     container->tree = wlr_scene_tree_create(parent);
     container->tree->node.data = e_node_desc_create(&container->tree->node, E_NODE_DESC_CONTAINER, container);
     container->tiling_mode = tiling_mode;
@@ -121,18 +122,18 @@ bool e_container_contains_window(struct e_container* container)
     return (container->window != NULL);
 }
 
-static void e_container_arrange_containers(struct e_container* container, struct wlr_box useable_area)
+static void e_container_arrange_containers(struct e_container* container, int useable_width, int useable_height)
 {
-    wlr_scene_node_set_position(&container->tree->node, useable_area.x, useable_area.y);
+    if (container->tiling_mode == E_TILING_MODE_NONE)
+        return;
 
-    //arrange containers
     int x = 0;
     int y = 0;
 
     struct e_container* child_container;
     wl_list_for_each(child_container, &container->containers, link)
     {
-        struct wlr_box child_container_useable_area = { x, y, useable_area.width, useable_area.height};
+        struct wlr_box child_container_useable_area = {x, y, useable_width, useable_height};
 
         switch (container->tiling_mode)
         {
@@ -144,9 +145,6 @@ static void e_container_arrange_containers(struct e_container* container, struct
                 child_container_useable_area.height *= child_container->percentage;
                 y += child_container_useable_area.height;
                 break;
-            case E_TILING_MODE_NONE:
-                e_log_error("tiling mode none can not arrange containers!");
-                abort();
             default:
                 e_log_error("Unknown container tiling mode!");
                 abort();
@@ -165,16 +163,18 @@ void e_container_arrange(struct e_container* container, struct wlr_box useable_a
 
     e_log_info("%i, %i", useable_area.width, useable_area.height);
 
+    wlr_scene_node_set_position(&container->tree->node, useable_area.x, useable_area.y);
+
     if (e_container_contains_window(container))
     {
         e_log_info("arranging window container...");
-        e_window_set_position(container->window, useable_area.x, useable_area.y);
+        e_window_set_position(container->window, 0, 0);
         e_window_set_size(container->window, useable_area.width, useable_area.height);
     }
     else if (!wl_list_empty(&container->containers))
     {
         e_log_info("arranging container container");
-        e_container_arrange_containers(container, useable_area);
+        e_container_arrange_containers(container, useable_area.width, useable_area.height);
     }
 }
 

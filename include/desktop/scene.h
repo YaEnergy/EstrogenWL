@@ -45,7 +45,7 @@ struct e_scene
     //nodes that are waiting to be reparented
     struct wlr_scene_tree* pending;
 
-    struct wl_list windows; //struct e_window
+    struct wl_list windows; //struct e_window*
 };
 
 struct e_scene* e_scene_create(struct wl_display* display);

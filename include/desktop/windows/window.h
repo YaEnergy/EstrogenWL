@@ -17,13 +17,14 @@
 
 // 2024-12-26 23:13:08 unsure why I made these comments so much more detailed than others, I should do that more often
 
-//TODO: xwayland support
+struct e_toplevel_window;
+struct e_xwayland_window;
 
 //type of an e_window
 enum e_window_type
 {
-    E_WINDOW_TOPLEVEL = 1,
-    E_WINDOW_XWAYLAND = 2
+    E_WINDOW_TOPLEVEL = 1, //e_toplevel_window
+    E_WINDOW_XWAYLAND = 2 //e_xwayland_window
 };
 
 //a window: xdg toplevel or xwayland window
@@ -42,6 +43,7 @@ struct e_window
         struct e_xwayland_window* xwayland_window;
     };
 
+    //May be NULL, if not created
     struct wlr_scene_tree* scene_tree;
 
     bool tiled;
