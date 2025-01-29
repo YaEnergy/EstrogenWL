@@ -1,6 +1,7 @@
 #include "desktop/scene.h"
 
 #include <stdlib.h>
+#include <assert.h>
 
 #include <wayland-server-core.h>
 #include <wayland-util.h>
@@ -8,6 +9,10 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_compositor.h>
+
+#include "desktop/tree/container.h"
+
+#include "output.h"
 
 #include "util/log.h"
 
@@ -62,7 +67,29 @@ struct e_output* e_scene_get_output(struct e_scene* scene, int index)
     return NULL;
 }
 
-void e_scene_add_output(struct e_scene *scene, struct e_output *output)
+static void e_scene_init_output(struct e_scene* scene, struct e_output* output)
+{
+    assert(scene && output && output->layout);
+
+    //give output some pointers to the scene's layers
+    output->layers.background = scene->layers.background;
+    output->layers.bottom = scene->layers.bottom;
+    output->layers.tiling = scene->layers.tiling;
+    output->layers.floating = scene->layers.floating;
+    output->layers.top = scene->layers.top;
+    output->layers.overlay = scene->layers.overlay;
+
+    //create output's root container
+    if (output->root_tiling_container == NULL)
+        output->root_tiling_container = e_container_create(output->layers.tiling, E_TILING_MODE_HORIZONTAL);
+
+    if (output->root_floating_container == NULL)
+        output->root_floating_container = e_container_create(output->layers.floating, E_TILING_MODE_NONE);
+
+    e_output_arrange(output);
+}
+
+void e_scene_add_output(struct e_scene* scene, struct e_output* output)
 {
     wl_list_insert(&scene->outputs, &output->link);
 
@@ -72,14 +99,9 @@ void e_scene_add_output(struct e_scene *scene, struct e_output *output)
     struct wlr_output_layout_output* layout_output = wlr_output_layout_add_auto(scene->output_layout, output->wlr_output);
     struct wlr_scene_output* scene_output = wlr_scene_output_create(scene->wlr_scene, output->wlr_output);
     wlr_scene_output_layout_add_output(scene->scene_layout, layout_output, scene_output);
+    output->layout = scene->output_layout;
 
-    //give output some pointers to the scene's layers
-    output->layers.background = scene->layers.background;
-    output->layers.bottom = scene->layers.bottom;
-    output->layers.tiling = scene->layers.tiling;
-    output->layers.floating = scene->layers.floating;
-    output->layers.top = scene->layers.top;
-    output->layers.overlay = scene->layers.overlay;
+    e_scene_init_output(scene, output);
 }
 
 struct wlr_surface* e_scene_wlr_surface_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_scene_node** snode, double* sx, double* sy)

@@ -21,6 +21,9 @@ static void e_container_destroy_node(struct wl_listener* listener, void* data)
 {
     struct e_container* container = wl_container_of(listener, container, destroy);
 
+    if (container->parent != NULL)
+        e_container_remove_container(container->parent, container);
+
     wl_list_init(&container->link); //just in case container->link wasn't init
     wl_list_remove(&container->link);
 
@@ -46,6 +49,7 @@ struct e_container* e_container_create(struct wlr_scene_tree* parent, enum e_til
     container->tree->node.data = e_node_desc_create(&container->tree->node, E_NODE_DESC_CONTAINER, container);
     container->tiling_mode = tiling_mode;
 
+    wl_list_init(&container->link);
     wl_list_init(&container->containers);
 
     //events
@@ -111,10 +115,32 @@ void e_container_set_parent(struct e_container* container, struct e_container* p
 {
     assert(container && parent);
 
+    //don't set to same parent
+    if (container->parent == parent)
+        return;
+
     if (container->parent != NULL)
         e_container_remove_container(container->parent, container);
 
     e_container_add_container(parent, container);
+}
+
+struct e_container* e_container_window_create(struct wlr_scene_tree* parent, struct e_window* window)
+{
+    assert(parent && window && window->scene_tree);
+
+    struct e_container* container = e_container_create(parent, E_TILING_MODE_NONE);
+
+    if (container == NULL)
+    {
+        e_log_error("Failed to allocate e_container");
+        abort();
+    }
+
+    container->window = window;
+    wlr_scene_node_reparent(&window->scene_tree->node, container->tree);
+
+    return container;
 }
 
 bool e_container_contains_window(struct e_container* container)
@@ -161,19 +187,15 @@ void e_container_arrange(struct e_container* container, struct wlr_box useable_a
     
     container->area = useable_area;
 
-    e_log_info("%i, %i", useable_area.width, useable_area.height);
-
     wlr_scene_node_set_position(&container->tree->node, useable_area.x, useable_area.y);
 
     if (e_container_contains_window(container))
     {
-        e_log_info("arranging window container...");
         e_window_set_position(container->window, 0, 0);
         e_window_set_size(container->window, useable_area.width, useable_area.height);
     }
     else if (!wl_list_empty(&container->containers))
     {
-        e_log_info("arranging container container");
         e_container_arrange_containers(container, useable_area.width, useable_area.height);
     }
 }

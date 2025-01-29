@@ -9,15 +9,16 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_scene.h>
 
-#include "desktop/windows/window.h"
 #include "desktop/xdg_popup.h"
 #include "desktop/scene.h"
-#include "input/cursor.h"
-#include "server.h"
-#include "util/log.h"
-#include "wm.h"
 
-#include <wlr/util/edges.h>
+#include "desktop/windows/window.h"
+
+#include "input/cursor.h"
+
+#include "util/log.h"
+
+#include "server.h"
 
 static bool e_toplevel_window_wants_floating(struct e_toplevel_window* toplevel_window)
 {
@@ -60,7 +61,6 @@ static void e_toplevel_window_commit(struct wl_listener* listener, void* data)
         else
         {
             e_window_set_tiled(toplevel_window->base, true);
-            e_tile_windows(toplevel_window->base->server);
         }
     }
 
@@ -147,7 +147,7 @@ static void e_toplevel_window_destroy(struct wl_listener* listener, void* data)
 
 static void e_toplevel_window_init_xdg_scene_tree(struct e_toplevel_window* toplevel_window)
 {
-    e_window_create_scene_tree(toplevel_window->base, toplevel_window->base->server->scene->pending);
+    e_window_create_container_tree(toplevel_window->base, toplevel_window->base->server->scene->pending);
 
     //allows popup scene trees to add themselves to this window's scene tree
     toplevel_window->xdg_toplevel->base->data = toplevel_window->base->scene_tree;

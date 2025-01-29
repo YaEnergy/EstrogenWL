@@ -143,7 +143,8 @@ void e_seat_clear_focus(struct e_seat* seat)
     //if there is an active keyboard, clear its focus
     if (wlr_keyboard != NULL)
         wlr_seat_keyboard_notify_clear_focus(seat->wlr_seat);
-
+    
+    seat->previous_focus_surface = seat->focus_surface;
     seat->focus_surface = NULL;
 }
 

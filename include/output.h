@@ -3,13 +3,23 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
-#include "server.h"
+#include <wlr/types/wlr_output.h>
+#include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_scene.h>
+
+#include <wlr/util/box.h>
+
+#include "desktop/tree/container.h"
+
+struct e_server;
 
 struct e_output
 {
     struct wl_list link;
     struct e_server* server;
     struct wlr_output* wlr_output;
+
+    struct wlr_output_layout* layout;
 
     //see: wlr-layer-shell-unstable-v1-protocol.h @ enum zwlr_layer_shell_v1_layer
     struct
@@ -28,6 +38,12 @@ struct e_output
         struct wlr_scene_tree* overlay;
     } layers;
 
+    //container for tiled containers
+    struct e_container* root_tiling_container;
+
+    //container for floating containers
+    struct e_container* root_floating_container;
+
     //output has a new frame ready
     struct wl_listener frame;
 
@@ -38,3 +54,5 @@ struct e_output
 };
 
 struct e_output* e_output_create(struct e_server* server, struct wlr_output* wlr_output);
+
+void e_output_arrange(struct e_output* output);

@@ -61,6 +61,9 @@ void e_container_remove_container(struct e_container* container, struct e_contai
 //Sets the parent of a container
 void e_container_set_parent(struct e_container* container, struct e_container* parent);
 
+//Creates a container for a window
+struct e_container* e_container_window_create(struct wlr_scene_tree* parent, struct e_window* window);
+
 bool e_container_contains_window(struct e_container* container);
 
 //Arranges a containter's children (window or other containers) to fit within the useable area

@@ -102,7 +102,7 @@ static void e_xwayland_window_associate(struct wl_listener* listener, void* data
 
     //add surface & subsurfaces to scene
     struct e_scene* scene = xwayland_window->base->server->scene;
-    e_window_create_scene_tree(xwayland_window->base, scene->pending);
+    e_window_create_container_tree(xwayland_window->base, scene->pending);
 }
 
 //surface becomes invalid
@@ -122,8 +122,7 @@ static void e_xwayland_window_dissociate(struct wl_listener* listener, void* dat
     wl_list_remove(&xwayland_window->request_resize.link);
 
     //remove from scene
-    wlr_scene_node_destroy(&xwayland_window->base->scene_tree->node);
-    xwayland_window->base->scene_tree = NULL;
+    e_window_destroy_container_tree(xwayland_window->base);
 }
 
 //destruction...

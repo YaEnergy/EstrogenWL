@@ -1,8 +1,9 @@
 #include "desktop/windows/window.h"
 
 #include <stdlib.h>
+#include <assert.h>
 
-#include <time.h>
+#include <wayland-server-core.h>
 #include <wayland-util.h>
 
 #include <wlr/types/wlr_scene.h>
@@ -13,16 +14,22 @@
 #include <wlr/util/box.h>
 
 #include "desktop/scene.h"
-#include "desktop/windows/toplevel_window.h"
 #include "desktop/xwayland.h"
+
+#include "desktop/windows/toplevel_window.h"
+#include "desktop/windows/xwayland_window.h"
+
+#include "desktop/tree/container.h"
+#include "desktop/tree/node.h"
+
 #include "input/input_manager.h"
 #include "input/seat.h"
 #include "input/cursor.h"
-#include "desktop/tree/node.h"
-#include "server.h"
+
 #include "util/log.h"
 
-#include "wm.h"
+#include "output.h"
+#include "server.h"
 
 //this function should only be called by the implementations of each window type. 
 //I mean it would be a bit weird to even call this function somewhere else.
@@ -32,17 +39,18 @@ struct e_window* e_window_create(struct e_server* server, enum e_window_type typ
     window->server = server;
     window->type = type;
 
-    window->toplevel_window = NULL;
-
     window->scene_tree = NULL;
+    window->container = NULL;
 
     wl_list_init(&window->link);
 
     return window;
 }
 
-void e_window_create_scene_tree(struct e_window* window, struct wlr_scene_tree* parent)
+static void e_window_create_window_tree(struct e_window* window, struct wlr_scene_tree* parent)
 {
+    assert(window && parent && window->scene_tree == NULL);
+
     switch(window->type)
     {
         case E_WINDOW_TOPLEVEL:
@@ -51,16 +59,56 @@ void e_window_create_scene_tree(struct e_window* window, struct wlr_scene_tree* 
             break;
         case E_WINDOW_XWAYLAND:
             //add surface & subsurfaces to scene by creating a subsurface tree
-            window->scene_tree = wlr_scene_subsurface_tree_create(window->server->scene->layers.floating, window->xwayland_window->xwayland_surface->surface);
+            window->scene_tree = wlr_scene_subsurface_tree_create(parent, window->xwayland_window->xwayland_surface->surface);
             break;
         default:
             e_log_error("Can't add window to scene, window is an unsupported type!");
             return;
     }
 
-    //allows retrieving of window data, neccessary for e_window_at
     if (window->scene_tree != NULL)
+    {
+        //allows retrieving of window data from the tree, neccessary for e_window_at
         e_node_desc_create(&window->scene_tree->node, E_NODE_DESC_WINDOW, window);
+    }
+}
+
+void e_window_create_container_tree(struct e_window* window, struct wlr_scene_tree* parent)
+{
+    assert(window && parent && window->container == NULL);
+
+    e_window_create_window_tree(window, parent);
+
+    //create container for window
+    window->container = e_container_window_create(parent, window);
+
+    if (parent->node.data != NULL) //struct e_node_desc*
+    {
+        struct e_container* parent_container = e_container_try_from_e_node_desc(parent->node.data);
+
+        if (parent_container != NULL)
+        {
+            e_container_set_parent(window->container, parent_container);
+            e_container_rearrange(parent_container);
+        }
+    }
+}
+
+void e_window_destroy_container_tree(struct e_window* window)
+{
+    assert(window);
+
+    if (window->scene_tree != NULL)
+    {
+        wlr_scene_node_destroy(&window->scene_tree->node);
+        window->scene_tree = NULL;
+    }
+    
+    if (window->container != NULL)
+    {
+        wlr_scene_node_destroy(&window->container->tree->node);
+        window->container = NULL;
+    }
 }
 
 char* e_window_get_title(struct e_window* window)
@@ -144,6 +192,7 @@ struct wlr_box e_window_get_main_geometry(struct e_window* window)
     }
 }
 
+//TODO: move container's node instead
 void e_window_set_position(struct e_window* window, int x, int y)
 {
     if (window->scene_tree == NULL)
@@ -189,8 +238,143 @@ void e_window_set_size(struct e_window* window, int32_t x, int32_t y)
     }
 }
 
+static void e_window_set_parent_container(struct e_window* window, struct e_container* parent)
+{
+    assert(window && parent);
+
+    struct e_container* previous_parent = window->container->parent;
+
+    //parent container remains unchanged
+    if (parent == previous_parent)
+    {
+        e_log_info("parent container remains unchanged");
+        return;
+    }
+
+    //remove from & rearrange previous container
+    if (previous_parent != NULL)
+    {
+        e_container_remove_container(previous_parent, window->container);
+        e_container_rearrange(previous_parent);
+    }
+
+    e_container_set_parent(window->container, parent);
+    e_container_rearrange(parent);
+}
+
+static void e_window_tile_container(struct e_window* window)
+{
+    assert(window && window->container);
+
+    //if not focused, find current TILED focused window's parent container
+    // else if focused or if none, find previous TILED focused's parent container
+    //if none, then output 0's root tiling container
+    //add to container if found
+    //else give up
+
+    struct e_server* server = window->server;
+    struct e_seat* seat = server->input_manager->seat;
+
+    struct wlr_surface* window_surface = e_window_get_surface(window);
+
+    struct e_container* parent_container = NULL;
+
+    if (window_surface != NULL)
+    {
+        //if not focused, find current TILED focused window's parent container
+        if (!e_seat_has_focus(seat, window_surface) && seat->focus_surface != NULL)
+        {
+            struct e_window* focus_window = e_window_from_surface(server, seat->focus_surface);
+
+            if (focus_window != NULL && focus_window->tiled && focus_window->container != NULL)
+                parent_container = focus_window->container->parent;
+        }
+
+        //if focused or none, find previous TILED focused's parent container
+        if ((parent_container == NULL || e_seat_has_focus(seat, window_surface)) && seat->previous_focus_surface != NULL)
+        {
+            struct e_window* previous_focus_window = e_window_from_surface(server, seat->previous_focus_surface);
+
+            if (previous_focus_window != NULL && previous_focus_window->tiled && previous_focus_window->container != NULL)
+                parent_container = previous_focus_window->container->parent;
+        }
+    }
+    
+    //if still none, then output 0's root tiling container
+    if (parent_container == NULL)
+    {
+        //Set to output 0's container
+        struct e_output* output = e_scene_get_output(window->server->scene, 0);
+
+        if (output != NULL && output->root_tiling_container != NULL)
+            parent_container = output->root_tiling_container;
+    }
+
+    if (parent_container == NULL)
+    {
+        e_log_error("Failed to set window container's parent to a tiled container");
+        return;
+    }
+    
+    e_window_set_parent_container(window, parent_container);
+}
+
+static void e_window_float_container(struct e_window* window)
+{
+    assert(window && window->container);
+
+    //find first of current outputs root floating container
+    //if none, then output 0's root floating container
+    //add to container if found
+    //else give up
+
+    struct wlr_surface* window_surface = e_window_get_surface(window);
+
+    struct e_container* parent_container = NULL;
+
+    if (window_surface != NULL)
+    {
+        //loop over surface outputs until output is found with a root floating container
+        struct wlr_surface_output* wlr_surface_output;
+        wl_list_for_each(wlr_surface_output, &window_surface->current_outputs, link)
+        {
+            //attempt to acquire output from it
+            if (wlr_surface_output->output != NULL && wlr_surface_output->output->data != NULL)
+            {
+                struct e_output* output = wlr_surface_output->output->data;
+
+                if (output->root_floating_container != NULL)
+                {
+                    parent_container = output->root_floating_container;
+                    e_log_info("output found!");
+                    break;
+                }
+            }
+        }
+    }
+
+    if (parent_container == NULL)
+    {
+        //Set to output 0's container
+        struct e_output* output = e_scene_get_output(window->server->scene, 0);
+
+        if (output != NULL && output->root_floating_container != NULL)
+            parent_container = output->root_floating_container;
+    }
+
+    if (parent_container == NULL)
+    {
+        e_log_error("Failed to set window container's parent to a floating container");
+        return;
+    }
+
+    e_window_set_parent_container(window, parent_container);
+}
+
 void e_window_set_tiled(struct e_window* window, bool tiled)
 {
+    assert(window);
+
     e_log_info("setting tiling mode of window to %B...", tiled);
 
     if (window->tiled == tiled)
@@ -198,11 +382,14 @@ void e_window_set_tiled(struct e_window* window, bool tiled)
 
     window->tiled = tiled;
 
-    if (window->scene_tree != NULL)
+    if (window->container != NULL)
     {
-        wlr_scene_node_reparent(&window->scene_tree->node, tiled ? window->server->scene->layers.tiling : window->server->scene->layers.floating);
-        wlr_scene_node_raise_to_top(&window->scene_tree->node);
-    }  
+        //Reparent to current focused container
+        if (window->tiled)
+            e_window_tile_container(window);
+        else //floating
+            e_window_float_container(window);
+    }
 
     switch(window->type)
     {
@@ -216,11 +403,6 @@ void e_window_set_tiled(struct e_window* window, bool tiled)
             e_log_error("Can't properly set tiled mode of window, window is an unsupported type!");
             break;
     }
-
-    //retile all windows, if this window is mapped
-    struct wlr_surface* window_surface = e_window_get_surface(window);
-    if (window_surface != NULL && window_surface->mapped)
-        e_tile_windows(window->server);
 }
 
 void e_window_map(struct e_window* window)
@@ -229,8 +411,13 @@ void e_window_map(struct e_window* window)
 
     wl_list_insert(&window->server->scene->windows, &window->link);
 
-    if (window->tiled)
-        e_tile_windows(window->server);
+    if (window->container->parent == NULL)
+    {
+        if (window->tiled)
+            e_window_tile_container(window);
+        else //floating
+            e_window_float_container(window);
+    }
 
     struct wlr_surface* window_surface = e_window_get_surface(window);
 
@@ -253,10 +440,14 @@ void e_window_unmap(struct e_window* window)
     if (input_manager->cursor->grab_window == window)
         e_cursor_reset_mode(input_manager->cursor);
 
-    wl_list_remove(&window->link);
+    struct e_container* parent_container = window->container->parent;
+    if (parent_container != NULL)
+    {
+        e_container_remove_container(parent_container, window->container);
+        e_container_rearrange(parent_container);
+    }
 
-    if (window->tiled)
-        e_tile_windows(window->server);
+    wl_list_remove(&window->link);
         
     e_cursor_update_focus(input_manager->cursor);
 }
@@ -359,8 +550,7 @@ void e_window_send_close(struct e_window *window)
 
 void e_window_destroy(struct e_window *window)
 {
-    if (window->scene_tree != NULL)
-        wlr_scene_node_destroy(&window->scene_tree->node);
+    e_window_destroy_container_tree(window);
 
     free(window);
 }

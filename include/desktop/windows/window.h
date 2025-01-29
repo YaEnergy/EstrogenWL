@@ -10,8 +10,7 @@
 
 #include <wlr/util/box.h>
 
-#include "desktop/windows/toplevel_window.h"
-#include "desktop/windows/xwayland_window.h"
+#include "desktop/tree/container.h"
 
 #include "server.h"
 
@@ -48,6 +47,9 @@ struct e_window
 
     bool tiled;
 
+    //May be NULL, if not created
+    struct e_container* container;
+
     //to link to linked lists
     struct wl_list link;
 };
@@ -56,7 +58,9 @@ struct e_window
 //I mean it would be a bit weird to even call this function somewhere else.
 struct e_window* e_window_create(struct e_server* server, enum e_window_type type);
 
-void e_window_create_scene_tree(struct e_window* window, struct wlr_scene_tree* parent);
+void e_window_create_container_tree(struct e_window* window, struct wlr_scene_tree* parent);
+
+void e_window_destroy_container_tree(struct e_window* window);
 
 //returns pointer to window's title, NULL on fail
 char* e_window_get_title(struct e_window* window);

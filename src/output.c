@@ -2,6 +2,7 @@
 
 #include <bits/time.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include <time.h>
 #include <wayland-server-core.h>
@@ -15,10 +16,10 @@
 #include "desktop/layers/layer_shell.h"
 #include "desktop/scene.h"
 
+#include "desktop/tree/container.h"
 #include "server.h"
 
 #include "util/log.h"
-#include "wm.h"
 
 static void e_output_frame(struct wl_listener* listener, void* data)
 {
@@ -38,6 +39,16 @@ static void e_output_frame(struct wl_listener* listener, void* data)
     wlr_scene_output_send_frame_done(scene_output, &now);
 }
 
+//TODO: account for output's useable area after layer shell arrangement
+static void e_output_arrange_container(struct e_output* output, struct e_container* container)
+{
+    assert(output && output->layout && container);
+
+    struct wlr_box useable_area = (struct wlr_box){0, 0, 0, 0};
+    wlr_output_layout_get_box(output->layout, output->wlr_output, &useable_area);
+    e_container_arrange(container, useable_area);
+}
+
 static void e_output_request_state(struct wl_listener* listener, void* data)
 {
     //just commit new state, so the x11 or wayland backend window resizes properly
@@ -48,7 +59,10 @@ static void e_output_request_state(struct wl_listener* listener, void* data)
     if (wlr_output_commit_state(output->wlr_output, event->state))
     {
         //update layers & windows to arrange & retile them according to the new output buffer
-        e_tile_windows(output->server);
+        
+        if (output->root_tiling_container != NULL)
+            e_output_arrange_container(output, output->root_tiling_container);
+
         e_layer_shell_arrange_all_layers(output->server->layer_shell, output->wlr_output);
     }
     else 
@@ -74,6 +88,8 @@ struct e_output* e_output_create(struct e_server* server, struct wlr_output* wlr
     struct e_output* output = calloc(1, sizeof(*output));
     output->wlr_output = wlr_output;
     output->server = server;
+    output->root_tiling_container = NULL;
+    output->root_floating_container = NULL;
 
     //add signals
     wl_list_init(&output->link);
@@ -90,4 +106,16 @@ struct e_output* e_output_create(struct e_server* server, struct wlr_output* wlr
     wlr_output->data = output;
 
     return output;
+}
+
+//TODO: account for output's useable area after layer shell arrangement
+void e_output_arrange(struct e_output* output)
+{
+    assert(output && output->root_tiling_container && output->root_floating_container);
+    
+    e_output_arrange_container(output, output->root_tiling_container);
+    e_output_arrange_container(output, output->root_floating_container);
+
+    if (output->server->layer_shell != NULL)
+        e_layer_shell_arrange_all_layers(output->server->layer_shell, output->wlr_output);
 }
