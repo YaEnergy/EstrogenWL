@@ -41,6 +41,15 @@ static void e_xwayland_window_commit(struct wl_listener* listener, void* data)
     //TODO: implement e_xwayland_window_commit
 }
 
+static void e_xwayland_window_request_maximize(struct wl_listener* listener, void* data)
+{
+    struct e_xwayland_window* xwayland_window = wl_container_of(listener, xwayland_window, request_configure);
+    
+    //only maximize floating windows
+    if (!xwayland_window->base->tiled)
+        e_window_maximize(xwayland_window->base);
+}
+
 static void e_xwayland_window_request_configure(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_window* xwayland_window = wl_container_of(listener, xwayland_window, request_configure);
@@ -91,6 +100,9 @@ static void e_xwayland_window_associate(struct wl_listener* listener, void* data
 
     // requests
 
+    xwayland_window->request_maximize.notify = e_xwayland_window_request_maximize;
+    wl_signal_add(&xwayland_window->xwayland_surface->events.request_maximize, &xwayland_window->request_maximize);
+
     xwayland_window->request_configure.notify = e_xwayland_window_request_configure;
     wl_signal_add(&xwayland_window->xwayland_surface->events.request_configure, &xwayland_window->request_configure);
 
@@ -117,6 +129,7 @@ static void e_xwayland_window_dissociate(struct wl_listener* listener, void* dat
     wl_list_remove(&xwayland_window->unmap.link);
     wl_list_remove(&xwayland_window->commit.link);
 
+    wl_list_remove(&xwayland_window->request_maximize.link);
     wl_list_remove(&xwayland_window->request_configure.link);
     wl_list_remove(&xwayland_window->request_move.link);
     wl_list_remove(&xwayland_window->request_resize.link);

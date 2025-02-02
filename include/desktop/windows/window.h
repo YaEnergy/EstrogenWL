@@ -82,6 +82,8 @@ void e_window_set_tiled(struct e_window* window, bool tiled);
 //Returns configure serial, returns 0 if no serial is given
 uint32_t e_window_configure(struct e_window* window, int lx, int ly, int width, int height);
 
+//maximizes window to fit within parent container, must be floating
+void e_window_maximize(struct e_window* window);
 
 //display window
 void e_window_map(struct e_window* window);

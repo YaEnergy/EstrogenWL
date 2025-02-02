@@ -212,10 +212,10 @@ void e_window_set_size(struct e_window* window, int32_t x, int32_t y)
     switch(window->type)
     {
         case E_WINDOW_TOPLEVEL:
-                        wlr_xdg_toplevel_set_size(window->toplevel_window->xdg_toplevel, x, y);
+            wlr_xdg_toplevel_set_size(window->toplevel_window->xdg_toplevel, x, y);
             break;
         case E_WINDOW_XWAYLAND:
-                        wlr_xwayland_surface_configure(window->xwayland_window->xwayland_surface, window->xwayland_window->xwayland_surface->x, window->xwayland_window->xwayland_surface->y, x, y);
+            wlr_xwayland_surface_configure(window->xwayland_window->xwayland_surface, window->xwayland_window->xwayland_surface->x, window->xwayland_window->xwayland_surface->y, x, y);
             break;
         default:
             e_log_error("Can't set size of window, window is an unsupported type!");
@@ -407,6 +407,17 @@ uint32_t e_window_configure(struct e_window* window, int lx, int ly, int width, 
             e_log_error("Can't set size of window, window is an unsupported type!");
             return 0;
     }
+}
+
+void e_window_maximize(struct e_window* window)
+{
+    assert(window && window->container);
+
+    //can't maximize tiled windows or window containers with no parent
+    if (window->tiled || window->container->parent == NULL)
+        return;
+
+    e_container_configure(window->container, 0, 0, window->container->parent->area.width, window->container->parent->area.height);
 }
 
 void e_window_map(struct e_window* window)

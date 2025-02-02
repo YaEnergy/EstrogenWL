@@ -93,11 +93,14 @@ static void e_toplevel_window_request_maximize(struct wl_listener* listener, voi
 {
     struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, request_maximize);
 
-    //TODO: implement maximalization
+    if (!toplevel_window->xdg_toplevel->base->initialized)
+        return;
 
-    //send empty configure to conform to xdg shell protocol if xdg surface is init
-    if (toplevel_window->xdg_toplevel->base->initialized)
+    //must always send empty configure to conform to xdg shell protocol if xdg surface is init, even if we don't do anything
+    if (toplevel_window->base->tiled)
         wlr_xdg_surface_schedule_configure(toplevel_window->xdg_toplevel->base);
+    else
+        e_window_maximize(toplevel_window->base);
 }
 
 static void e_toplevel_window_request_move(struct wl_listener* listener, void* data)

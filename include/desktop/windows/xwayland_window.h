@@ -32,6 +32,7 @@ struct e_xwayland_window
     //new surface state got committed
     struct wl_listener commit;
 
+    struct wl_listener request_maximize;
     struct wl_listener request_configure;
     struct wl_listener request_move;
     struct wl_listener request_resize;
