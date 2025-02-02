@@ -1,6 +1,7 @@
 #include "input/cursor.h"
 
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 
@@ -18,6 +19,7 @@
 #include <wlr/util/box.h>
 #include <wlr/util/edges.h>
 
+#include "desktop/tree/container.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #include "desktop/layers/layer_shell.h"
@@ -102,7 +104,6 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
             struct e_window* focussed_window = e_window_from_surface(cursor->input_manager->server, cursor->input_manager->seat->focus_surface);
 
             e_cursor_start_window_resize(cursor, focussed_window, WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT);
-            wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "se-resize");
             handled = true;
         }
         //middle click is held, start moving the focussed window
@@ -129,7 +130,7 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
 
 static void e_cursor_handle_mode_move(struct e_cursor* cursor)
 {
-    if (cursor->grab_window == NULL || cursor->grab_window->scene_tree == NULL)
+    if (cursor->grab_window == NULL || cursor->grab_window->scene_tree == NULL || cursor->grab_window->container == NULL)
     {
         e_log_error("Cursor move mode: window/window's scene tree grabbed by cursor is NULL");
         e_cursor_reset_mode(cursor);
@@ -144,15 +145,15 @@ static void e_cursor_handle_mode_move(struct e_cursor* cursor)
     else //floating
     {
         wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "all-scroll");
-        e_window_set_position(cursor->grab_window, cursor->wlr_cursor->x - cursor->grab_wx, cursor->wlr_cursor->y - cursor->grab_wy);
+        e_container_set_position(cursor->grab_window->container, cursor->wlr_cursor->x - cursor->grab_wcx, cursor->wlr_cursor->y - cursor->grab_wcy);
     }
 }
 
 static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
 {   
-    if (cursor->grab_window == NULL || cursor->grab_window->scene_tree == NULL)
+    if (cursor->grab_window == NULL || cursor->grab_window->container == NULL)
     {
-        e_log_error("Cursor resize mode: window/window's scene tree grabbed by cursor is NULL");
+        e_log_error("Cursor resize mode: window/window's container grabbed by cursor is NULL");
         e_cursor_reset_mode(cursor);
         return;
     }
@@ -167,14 +168,14 @@ static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
     }
     else //floating
     {
-        int left = cursor->grab_start_wbox.x;
-        int right = cursor->grab_start_wbox.x + cursor->grab_start_wbox.width;
-        int top = cursor->grab_start_wbox.y;
-        int bottom = cursor->grab_start_wbox.y + cursor->grab_start_wbox.height;
+        int left = cursor->grab_start_wcbox.x;
+        int right = cursor->grab_start_wcbox.x + cursor->grab_start_wcbox.width;
+        int top = cursor->grab_start_wcbox.y;
+        int bottom = cursor->grab_start_wcbox.y + cursor->grab_start_wcbox.height;
 
-        //delta x & delta y since start grab (pos x - (grab window pos x + grabbed window left border), y and top border for delta_y or grow_y)
-        int grow_x = cursor->wlr_cursor->x - cursor->grab_wx - left;
-        int grow_y = cursor->wlr_cursor->y - cursor->grab_wy - top;
+        //delta x & delta y since start grab (pos x - (grab window container pos x + grabbed window container left border), y and top border for delta_y or grow_y)
+        int grow_x = cursor->wlr_cursor->x - cursor->grab_wcx - left;
+        int grow_y = cursor->wlr_cursor->y - cursor->grab_wcy - top;
 
         //expand grabbed edges, while not letting them overlap the opposite edge, min 1 pixel
 
@@ -208,8 +209,8 @@ static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
                 bottom = top + 1;
         }
 
-        e_window_set_position(cursor->grab_window, left, top);
-        e_window_set_size(cursor->grab_window, right - left, bottom - top);
+        e_container_configure(cursor->grab_window->container, left, top, right - left, bottom - top);
+        e_container_arrange(cursor->grab_window->container);
     }
 }
 
@@ -296,8 +297,8 @@ struct e_cursor* e_cursor_create(struct e_input_manager* input_manager, struct w
     //boundaries and movement semantics of cursor
     wlr_cursor_attach_output_layout(cursor->wlr_cursor, output_layout);
 
-    //load "default" xcursor theme
-    cursor->xcursor_manager = wlr_xcursor_manager_create("default", 24);
+    //load xcursor theme
+    cursor->xcursor_manager = wlr_xcursor_manager_create(NULL, 24);
     wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
 
     // events
@@ -337,27 +338,101 @@ void e_cursor_reset_mode(struct e_cursor* cursor)
 //start grabbing a window under the given mode, (should be RESIZE or MOVE)
 static void e_cursor_start_grab_window_mode(struct e_cursor* cursor, struct e_window* window, enum e_cursor_mode mode)
 {
-    if (window == NULL || window->scene_tree == NULL)
+    if (window == NULL || window->container == NULL)
         return;
 
     e_cursor_set_mode(cursor, mode);
 
     cursor->grab_window = window;
-    cursor->grab_wx = cursor->wlr_cursor->x - window->scene_tree->node.x;
-    cursor->grab_wy = cursor->wlr_cursor->y - window->scene_tree->node.y;
+    cursor->grab_wcx = cursor->wlr_cursor->x - window->container->tree->node.x;
+    cursor->grab_wcy = cursor->wlr_cursor->y - window->container->tree->node.y;
+}
+
+static void e_cursor_set_xcursor_resize(struct e_cursor* cursor, enum wlr_edges edges)
+{
+    int direction_i = 0;
+    char* direction = calloc(5, sizeof(*direction));
+
+    //alloc fail
+    if (direction == NULL)
+    {
+        e_log_error("e_cursor_set_xcursor_resize: failed to alloc char* direction");
+        return;
+    }
+    
+    if (edges & WLR_EDGE_TOP)
+    {
+        direction[direction_i] = 'n';
+        direction_i++;
+    }
+        
+    if (edges & WLR_EDGE_BOTTOM)
+    {
+        direction[direction_i] = 's';
+        direction_i++;
+    }
+
+    if (edges & WLR_EDGE_RIGHT)
+    {
+        direction[direction_i] = 'e';
+        direction_i++;
+    }
+        
+    if (edges & WLR_EDGE_LEFT)
+    {
+        direction[direction_i] = 'w';
+        direction_i++;
+    }
+
+    direction[direction_i] = '\0'; //null terminator
+    direction_i++;
+    
+    //no edges can be resized or more than 2 directions
+    if (direction_i <= 1 || direction_i >= 4)
+    {
+        free(direction);
+        wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "not-allowed");
+        return;
+    }
+
+    const int MAX_NAME_LENGTH = 11; // 2 direction chars + "-resize" + '\0'
+
+    char* resize_cursor_name = calloc(MAX_NAME_LENGTH, sizeof(*resize_cursor_name));
+
+    //alloc fail
+    if (resize_cursor_name == NULL)
+    {
+        free(direction);
+        e_log_error("e_cursor_set_xcursor_resize: failed to alloc char* resize_cursor_name");
+        return;
+    }
+
+    int length = snprintf(resize_cursor_name, MAX_NAME_LENGTH, "%s-resize", direction);
+    
+    free(direction);
+
+    if (length > MAX_NAME_LENGTH)
+    {
+        free(resize_cursor_name);
+        return;
+    }
+
+    wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, resize_cursor_name);
+
+    free(resize_cursor_name);
 }
 
 void e_cursor_start_window_resize(struct e_cursor* cursor, struct e_window* window, enum wlr_edges edges)
 {
-    if (window == NULL || window->scene_tree == NULL)
+    if (window == NULL || window->container == NULL)
         return;
 
-    cursor->grab_start_wbox = (struct wlr_box){window->scene_tree->node.x, window->scene_tree->node.y, 0, 0};
-    e_window_get_size(window, &cursor->grab_start_wbox.width, &cursor->grab_start_wbox.height);
-
+    cursor->grab_start_wcbox = window->container->area;
     cursor->grab_edges = edges;
 
     e_cursor_start_grab_window_mode(cursor, window, E_CURSOR_MODE_RESIZE);
+
+    e_cursor_set_xcursor_resize(cursor, edges);
 }
 
 void e_cursor_start_window_move(struct e_cursor* cursor, struct e_window* window)

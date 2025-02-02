@@ -1,5 +1,6 @@
 #include "desktop/windows/window.h"
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
 
@@ -89,7 +90,7 @@ void e_window_create_container_tree(struct e_window* window, struct wlr_scene_tr
         if (parent_container != NULL)
         {
             e_container_set_parent(window->container, parent_container);
-            e_container_rearrange(parent_container);
+            e_container_arrange(parent_container);
         }
     }
 }
@@ -106,7 +107,7 @@ void e_window_destroy_container_tree(struct e_window* window)
     
     if (window->container != NULL)
     {
-        wlr_scene_node_destroy(&window->container->tree->node);
+        e_container_destroy(window->container);
         window->container = NULL;
     }
 }
@@ -125,10 +126,10 @@ char* e_window_get_title(struct e_window* window)
     }
 }
 
-//outs top left x and y of window
-void e_window_get_position(struct e_window* window, int* x, int* y)
+//outs top left x and y of window relative to parent node
+void e_window_get_position(struct e_window* window, int* lx, int* ly)
 {
-    if (x == NULL || y == NULL)
+    if (lx == NULL || ly == NULL)
     {
         e_log_error("e_window_get_position: please give valid pointers");
         abort();
@@ -140,8 +141,8 @@ void e_window_get_position(struct e_window* window, int* x, int* y)
         abort();
     }
 
-    *x = window->scene_tree->node.x;
-    *y = window->scene_tree->node.y;
+    *lx = window->scene_tree->node.x;
+    *ly = window->scene_tree->node.y;
 }
 
 //outs width (x) and height (y) of window, x and y are set to -1 on fail
@@ -171,29 +172,7 @@ void e_window_get_size(struct e_window* window, int* x, int* y)
     }
 }
 
-struct wlr_box e_window_get_main_geometry(struct e_window* window)
-{
-    switch(window->type)
-    {
-        case E_WINDOW_TOPLEVEL:
-            return window->toplevel_window->xdg_toplevel->base->current.geometry;
-        case E_WINDOW_XWAYLAND:
-        {
-            struct wlr_box geobox = {0, 0, 0, 0};
-            geobox.x = window->xwayland_window->xwayland_surface->x;
-            geobox.y = window->xwayland_window->xwayland_surface->y;
-            geobox.width = window->xwayland_window->xwayland_surface->width;
-            geobox.height = window->xwayland_window->xwayland_surface->height;
-            return geobox;
-        }
-        default:
-            e_log_error("Can't get size of window, window is an unsupported type!");
-            return (struct wlr_box){0, 0, 0, 0}; //return empty box
-    }
-}
-
-//TODO: move container's node instead
-void e_window_set_position(struct e_window* window, int x, int y)
+void e_window_set_position(struct e_window* window, int lx, int ly)
 {
     if (window->scene_tree == NULL)
     {
@@ -201,7 +180,7 @@ void e_window_set_position(struct e_window* window, int x, int y)
         return;
     }
 
-    wlr_scene_node_set_position(&window->scene_tree->node, x, y);
+    wlr_scene_node_set_position(&window->scene_tree->node, lx, ly);
 
     switch(window->type)
     {
@@ -209,8 +188,22 @@ void e_window_set_position(struct e_window* window, int x, int y)
             //do nothing
             break;
         case E_WINDOW_XWAYLAND:
+        {
+            //get position of this window's node relative to root node
+            int x = window->scene_tree->node.x;
+            int y = window->scene_tree->node.y;
+
+            struct wlr_scene_tree* tree = window->scene_tree;
+            while (tree->node.parent != NULL)
+            {
+                tree = tree->node.parent;
+                x += tree->node.x;
+                y += tree->node.y;
+            }
+
             wlr_xwayland_surface_configure(window->xwayland_window->xwayland_surface, x, y, window->xwayland_window->xwayland_surface->width, window->xwayland_window->xwayland_surface->height);
             break;
+        }
     }
 }
 
@@ -219,18 +212,10 @@ void e_window_set_size(struct e_window* window, int32_t x, int32_t y)
     switch(window->type)
     {
         case E_WINDOW_TOPLEVEL:
-            //don't resize the toplevel to the same size
-            if (window->toplevel_window->xdg_toplevel->current.width == x && window->toplevel_window->xdg_toplevel->current.height == y)
-                return;
-
-            wlr_xdg_toplevel_set_size(window->toplevel_window->xdg_toplevel, x, y);
+                        wlr_xdg_toplevel_set_size(window->toplevel_window->xdg_toplevel, x, y);
             break;
         case E_WINDOW_XWAYLAND:
-            //don't resize the toplevel to the same size
-            if (window->xwayland_window->xwayland_surface->width == (uint16_t)x && window->xwayland_window->xwayland_surface->height == (uint16_t)y)
-                return;
-            
-            wlr_xwayland_surface_configure(window->xwayland_window->xwayland_surface, window->xwayland_window->xwayland_surface->x, window->xwayland_window->xwayland_surface->y, x, y);
+                        wlr_xwayland_surface_configure(window->xwayland_window->xwayland_surface, window->xwayland_window->xwayland_surface->x, window->xwayland_window->xwayland_surface->y, x, y);
             break;
         default:
             e_log_error("Can't set size of window, window is an unsupported type!");
@@ -255,11 +240,11 @@ static void e_window_set_parent_container(struct e_window* window, struct e_cont
     if (previous_parent != NULL)
     {
         e_container_remove_container(previous_parent, window->container);
-        e_container_rearrange(previous_parent);
+        e_container_arrange(previous_parent);
     }
 
     e_container_set_parent(window->container, parent);
-    e_container_rearrange(parent);
+    e_container_arrange(parent);
 }
 
 static void e_window_tile_container(struct e_window* window)
@@ -405,6 +390,25 @@ void e_window_set_tiled(struct e_window* window, bool tiled)
     }
 }
 
+uint32_t e_window_configure(struct e_window* window, int lx, int ly, int width, int height)
+{
+    assert(window && window->scene_tree);
+
+    wlr_scene_node_set_position(&window->scene_tree->node, lx, ly);
+
+    switch(window->type)
+    {
+        case E_WINDOW_TOPLEVEL:
+            return wlr_xdg_toplevel_set_size(window->toplevel_window->xdg_toplevel, width, height);
+        case E_WINDOW_XWAYLAND:
+            wlr_xwayland_surface_configure(window->xwayland_window->xwayland_surface, lx, ly, (uint16_t)width, (uint16_t)height);
+            return 0;
+        default:
+            e_log_error("Can't set size of window, window is an unsupported type!");
+            return 0;
+    }
+}
+
 void e_window_map(struct e_window* window)
 {
     e_log_info("map");
@@ -444,7 +448,7 @@ void e_window_unmap(struct e_window* window)
     if (parent_container != NULL)
     {
         e_container_remove_container(parent_container, window->container);
-        e_container_rearrange(parent_container);
+        e_container_arrange(parent_container);
     }
 
     wl_list_remove(&window->link);

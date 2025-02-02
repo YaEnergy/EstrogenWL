@@ -47,6 +47,8 @@ struct e_container
 
     //tiling container node destroyed
     struct wl_listener destroy;
+
+    bool destroying;
 };
 
 //Creates a container
@@ -61,15 +63,17 @@ void e_container_remove_container(struct e_container* container, struct e_contai
 //Sets the parent of a container
 void e_container_set_parent(struct e_container* container, struct e_container* parent);
 
+//Sets the position of container relative to the parent node
+void e_container_set_position(struct e_container* container, int lx, int ly);
+
+void e_container_configure(struct e_container* container, int lx, int ly, int width, int height);
+
 //Creates a container for a window
 struct e_container* e_container_window_create(struct wlr_scene_tree* parent, struct e_window* window);
 
 bool e_container_contains_window(struct e_container* container);
 
-//Arranges a containter's children (window or other containers) to fit within the useable area
-void e_container_arrange(struct e_container* container, struct wlr_box useable_area);
-
-//Rearranges a container's children (window or other containers) to fit within the USED area
-void e_container_rearrange(struct e_container* container);
+//Arranges a containter's children (window or other containers) to fit within the container's area
+void e_container_arrange(struct e_container* container);
 
 void e_container_destroy(struct e_container* container);

@@ -65,21 +65,23 @@ void e_window_destroy_container_tree(struct e_window* window);
 //returns pointer to window's title, NULL on fail
 char* e_window_get_title(struct e_window* window);
 
-//outs top left x and y of window
-void e_window_get_position(struct e_window* window, int* x, int* y);
+//outs top left x and y of window relative to parent node
+void e_window_get_position(struct e_window* window, int* lx, int* ly);
 
 //outs width (x) and height (y) of window, pointers are set to -1 on fail
 void e_window_get_size(struct e_window* window, int* x, int* y);
 
-//returns the window's main surface geometry
-struct wlr_box e_window_get_main_geometry(struct e_window* window);
-
-void e_window_set_position(struct e_window* window, int x, int y);
+//set window's tree position, relative to container
+void e_window_set_position(struct e_window* window, int lx, int ly);
 
 //includes decoration in x & y
 void e_window_set_size(struct e_window* window, int32_t x, int32_t y);
 
 void e_window_set_tiled(struct e_window* window, bool tiled);
+
+//Returns configure serial, returns 0 if no serial is given
+uint32_t e_window_configure(struct e_window* window, int lx, int ly, int width, int height);
+
 
 //display window
 void e_window_map(struct e_window* window);

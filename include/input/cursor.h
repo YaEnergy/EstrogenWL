@@ -41,9 +41,9 @@ struct e_cursor
 
     //grabbed window
     struct e_window* grab_window;
-    double grab_wx;
-    double grab_wy;
-    struct wlr_box grab_start_wbox;
+    double grab_wcx;
+    double grab_wcy;
+    struct wlr_box grab_start_wcbox;
     enum wlr_edges grab_edges;
 };
 
