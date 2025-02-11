@@ -215,8 +215,6 @@ void e_container_arrange(struct e_container* container)
 
 void e_container_destroy(struct e_container* container)
 {
-    //TODO: possible memory leak here? container's destroy link is removed again after being removed
-
     assert(container);
 
     if (container->destroying)
@@ -231,7 +229,7 @@ void e_container_destroy(struct e_container* container)
         e_log_info("destroying ROOT container...");
     else
         e_log_info("destroying CONTAINER container...");
-    
+
     container->destroying = true;
 
     if (container->tree != NULL)

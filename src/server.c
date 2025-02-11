@@ -195,9 +195,10 @@ bool e_server_run(struct e_server* server)
 
 void e_server_destroy(struct e_server* server)
 {
+    e_xwayland_destroy(server->xwayland);
+    
     wl_display_destroy_clients(server->display);
 
-    e_xwayland_destroy(server->xwayland);
     e_input_manager_destroy(server->input_manager);
     e_scene_destroy(server->scene);
 
