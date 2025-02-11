@@ -47,7 +47,7 @@ struct e_container
 
     //tiling container node destroyed
     struct wl_listener destroy;
-
+    
     bool destroying;
 };
 

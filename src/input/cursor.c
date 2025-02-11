@@ -288,7 +288,7 @@ static void e_cursor_axis(struct wl_listener* listener, void* data)
 
 struct e_cursor* e_cursor_create(struct e_input_manager* input_manager, struct wlr_output_layout* output_layout)
 {
-    struct e_cursor* cursor = calloc(1, sizeof(struct e_cursor));
+    struct e_cursor* cursor = calloc(1, sizeof(*cursor));
     cursor->input_manager = input_manager;
     cursor->mode = E_CURSOR_MODE_DEFAULT;
 
@@ -484,4 +484,6 @@ void e_cursor_destroy(struct e_cursor* cursor)
 
     wlr_xcursor_manager_destroy(cursor->xcursor_manager);
     wlr_cursor_destroy(cursor->wlr_cursor);
+
+    free(cursor);
 }

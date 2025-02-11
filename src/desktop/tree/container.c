@@ -21,10 +21,22 @@ static void e_container_destroy_node(struct wl_listener* listener, void* data)
 {
     struct e_container* container = wl_container_of(listener, container, destroy);
 
+    if (container->parent != NULL)
+        e_container_remove_container(container->parent, container);
+
     container->tree = NULL;
 
-    if (!container->destroying)
-        e_container_destroy(container);
+    if (container->window != NULL)
+        container->window->container = NULL;
+
+    wl_list_init(&container->link); //just in case container->link wasn't init
+    wl_list_remove(&container->link);
+
+    wl_list_remove(&container->containers);
+
+    wl_list_remove(&container->destroy.link);
+    
+    free(container);
 }
 
 struct e_container* e_container_create(struct wlr_scene_tree* parent, enum e_tiling_mode tiling_mode)
@@ -203,6 +215,8 @@ void e_container_arrange(struct e_container* container)
 
 void e_container_destroy(struct e_container* container)
 {
+    //TODO: possible memory leak here? container's destroy link is removed again after being removed
+
     assert(container);
 
     if (container->destroying)
@@ -211,22 +225,15 @@ void e_container_destroy(struct e_container* container)
         return;
     }
 
-    e_log_info("destroying container...");
+    if (container->window != NULL)
+        e_log_info("destroying WINDOW container...");
+    else if (container->parent == NULL)
+        e_log_info("destroying ROOT container...");
+    else
+        e_log_info("destroying CONTAINER container...");
+    
     container->destroying = true;
 
     if (container->tree != NULL)
-    {
         wlr_scene_node_destroy(&container->tree->node);
-        container->tree = NULL;
-    }
-
-    if (container->parent != NULL)
-        e_container_remove_container(container->parent, container);
-
-    wl_list_init(&container->link); //just in case container->link wasn't init
-    wl_list_remove(&container->link);
-
-    wl_list_remove(&container->destroy.link);
-    
-    free(container);
 }

@@ -104,6 +104,34 @@ void e_scene_add_output(struct e_scene* scene, struct e_output* output)
     e_scene_init_output(scene, output);
 }
 
+static void e_scene_remove_output(struct e_scene* scene, struct e_output* output)
+{
+    assert(scene && output);
+
+    if (output->root_tiling_container != NULL)
+    {
+        e_container_destroy(output->root_tiling_container);
+        output->root_tiling_container = NULL;
+    }
+
+    if (output->root_floating_container != NULL)
+    {
+        e_container_destroy(output->root_floating_container);
+        output->root_floating_container = NULL;
+    }
+
+    output->layers.background = NULL;
+    output->layers.bottom = NULL;
+    output->layers.tiling = NULL;
+    output->layers.floating = NULL;
+    output->layers.top = NULL;
+    output->layers.overlay = NULL;
+
+    wlr_output_layout_remove(scene->output_layout, output->wlr_output);
+
+    wl_list_remove(&output->link);
+}
+
 struct wlr_surface* e_scene_wlr_surface_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_scene_node** snode, double* sx, double* sy)
 {
     if (node == NULL || snode == NULL || sx == NULL || sy == NULL)
@@ -126,9 +154,32 @@ struct wlr_surface* e_scene_wlr_surface_at(struct wlr_scene_node* node, double l
     return scene_surface->surface;
 }
 
-void e_scene_destroy(struct e_scene *scene)
+static void e_output_disable(struct e_output* output)
 {
-    //TODO: disable outputs
+    assert(output);
+
+    struct wlr_output_state state;
+    wlr_output_state_init(&state);
+
+    wlr_output_state_set_enabled(&state, false);
+
+    //apply new output state
+    wlr_output_commit_state(output->wlr_output, &state);
+    wlr_output_state_finish(&state);
+}
+
+void e_scene_destroy(struct e_scene* scene)
+{
+    //disable & then remove outputs
+    struct e_output* output;
+    struct e_output* tmp;
+
+    wl_list_for_each_safe(output, tmp, &scene->outputs, link)
+    {
+        e_output_disable(output);
+
+        e_scene_remove_output(scene, output);
+    }
     
     //destroy root node
     wlr_scene_node_destroy(&scene->wlr_scene->tree.node);

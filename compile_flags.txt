@@ -2,7 +2,6 @@
 -Wextra
 -Wno-unused-parameter
 -xc
--O3
 -Iinclude
 -Iprotocols/include
 -DWLR_USE_UNSTABLE

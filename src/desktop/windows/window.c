@@ -42,6 +42,7 @@ struct e_window* e_window_create(struct e_server* server, enum e_window_type typ
 
     window->scene_tree = NULL;
     window->container = NULL;
+    window->tiled = false;
 
     wl_list_init(&window->link);
 
@@ -360,7 +361,7 @@ void e_window_set_tiled(struct e_window* window, bool tiled)
 {
     assert(window);
 
-    e_log_info("setting tiling mode of window to %B...", tiled);
+    e_log_info("setting tiling mode of window to %d...", tiled);
 
     if (window->tiled == tiled)
         return;
@@ -565,7 +566,11 @@ void e_window_send_close(struct e_window *window)
 
 void e_window_destroy(struct e_window *window)
 {
-    e_window_destroy_container_tree(window);
+    if (window->container != NULL || window->scene_tree != NULL)
+        e_window_destroy_container_tree(window);
+
+    wl_list_init(&window->link);
+    wl_list_remove(&window->link);
 
     free(window);
 }

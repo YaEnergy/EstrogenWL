@@ -13,7 +13,10 @@ LIBRARIES!=$(PKG_CONFIG) --libs $(PACKAGES)
 
 # -Wno-unused-parameter is added to silence warnings for unused void* data args in wl listener notify callbacks,
 # as many are not useful
-COMPILER_FLAGS := -Wall -Wextra -Wno-unused-parameter -g -xc
+COMPILER_DEBUG_FLAGS := -Wall -Wextra -Wno-unused-parameter -g -xc -fsanitize=address
+COMPILER_RELEASE_FLAGS := -Wall -Wextra -Wno-unused-parameter -xc -O3
+
+DEFINES := -DWLR_USE_UNSTABLE
 
 INCLUDE_DIR := include
 PROTOCOL_DIR := protocols
@@ -52,7 +55,11 @@ gen-protocols: xdg-shell-protocol.h wlr-layer-shell-unstable-v1-protocol.h
 
 build: gen-protocols
 	if [ ! -d $(OUT_DIR) ]; then mkdir $(OUT_DIR); fi
-	cc $(COMPILER_FLAGS) -o $(OUT_DIR)/EstrogenWL -I$(INCLUDE_DIR) -I$(PROTOCOL_INCLUDE_DIR) $(SOURCE_FILES) -DWLR_USE_UNSTABLE $(LIBRARIES) $(CFLAGS)
+	cc $(COMPILER_RELEASE_FLAGS) -o $(OUT_DIR)/EstrogenWL -I$(INCLUDE_DIR) -I$(PROTOCOL_INCLUDE_DIR) $(SOURCE_FILES) $(DEFINES) $(LIBRARIES) $(CFLAGS)
+
+debug: gen-protocols
+	if [ ! -d $(OUT_DIR) ]; then mkdir $(OUT_DIR); fi
+	cc $(COMPILER_DEBUG_FLAGS) -o $(OUT_DIR)/EstrogenWL -I$(INCLUDE_DIR) -I$(PROTOCOL_INCLUDE_DIR) $(SOURCE_FILES) $(DEFINES) $(LIBRARIES) $(CFLAGS)
 
 clean:
 	rm -rf $(OUT_DIR)/*

@@ -1,5 +1,8 @@
 #include "desktop/xwayland.h"
 
+#include <stdlib.h>
+#include <assert.h>
+
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
@@ -11,7 +14,7 @@
 
 #include "util/log.h"
 
-void e_xwayland_new_surface(struct wl_listener* listener, void* data)
+static void e_xwayland_new_surface(struct wl_listener* listener, void* data)
 {
     struct e_xwayland* xwayland = wl_container_of(listener, xwayland, new_surface);
     struct wlr_xwayland_surface* wlr_xwayland_surface = data;
@@ -23,7 +26,7 @@ void e_xwayland_new_surface(struct wl_listener* listener, void* data)
 
 struct e_xwayland* e_xwayland_create(struct e_server* server, struct wl_display* display, struct wlr_compositor* compositor, struct wlr_seat* seat)
 {
-    struct e_xwayland* xwayland = calloc(1, sizeof(struct e_xwayland));
+    struct e_xwayland* xwayland = calloc(1, sizeof(*xwayland));
     xwayland->server = server;
     xwayland->wlr_xwayland = wlr_xwayland_create(display, compositor, false);
 
@@ -41,7 +44,11 @@ struct e_xwayland* e_xwayland_create(struct e_server* server, struct wl_display*
 
 void e_xwayland_destroy(struct e_xwayland* xwayland)
 {
+    assert(xwayland);
+
     wl_list_remove(&xwayland->new_surface.link);
 
     wlr_xwayland_destroy(xwayland->wlr_xwayland);
+
+    free(xwayland);
 }

@@ -46,21 +46,30 @@ static void e_output_request_state(struct wl_listener* listener, void* data)
     struct e_output* output = wl_container_of(listener, output, request_state);
     struct wlr_output_event_request_state* event = data;
 
+    //rearrange output accordingly to the new output buffer on commit success
     if (wlr_output_commit_state(output->wlr_output, event->state))
-    {
-        //rearrange output accordingly to the new output buffer
         e_output_arrange(output);
-    }
     else 
-    {
         e_log_error("Failed to commit output request state");
-    }
 }
 
 static void e_output_destroy(struct wl_listener* listener, void* data)
 {
     struct e_output* output = wl_container_of(listener, output, destroy);
 
+    if (output->root_tiling_container != NULL)
+    {
+        e_container_destroy(output->root_tiling_container);
+        output->root_tiling_container = NULL;
+    }
+
+    if (output->root_floating_container != NULL)
+    {
+        e_container_destroy(output->root_floating_container);
+        output->root_floating_container = NULL;
+    }
+
+    wl_list_init(&output->link);
     wl_list_remove(&output->link);
     wl_list_remove(&output->frame.link);
     wl_list_remove(&output->request_state.link);

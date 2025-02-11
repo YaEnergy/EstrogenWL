@@ -43,7 +43,7 @@ static void e_input_manager_new_input(struct wl_listener* listener, void* data)
 
 struct e_input_manager* e_input_manager_create(struct e_server* server)
 {
-    struct e_input_manager* input_manager = calloc(1, sizeof(struct e_input_manager));
+    struct e_input_manager* input_manager = calloc(1, sizeof(*input_manager));
 
     input_manager->server = server;
     

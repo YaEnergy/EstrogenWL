@@ -11,6 +11,8 @@
 static void e_node_desc_destroy(struct wl_listener* listener, void* data)
 {
     struct e_node_desc* node_desc = wl_container_of(listener, node_desc, destroy);
+
+    wl_list_remove(&node_desc->destroy.link);
     
     free(node_desc);
 }
