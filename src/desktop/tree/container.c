@@ -155,7 +155,7 @@ void e_container_configure(struct e_container* container, int lx, int ly, int wi
 
 struct e_container* e_container_window_create(struct wlr_scene_tree* parent, struct e_window* window)
 {
-    assert(parent && window && window->scene_tree);
+    assert(parent && window && window->tree);
 
     struct e_container* container = e_container_create(parent, E_TILING_MODE_NONE);
 
@@ -166,7 +166,7 @@ struct e_container* e_container_window_create(struct wlr_scene_tree* parent, str
     }
 
     container->window = window;
-    wlr_scene_node_reparent(&window->scene_tree->node, container->tree);
+    wlr_scene_node_reparent(&window->tree->node, container->tree);
 
     return container;
 }

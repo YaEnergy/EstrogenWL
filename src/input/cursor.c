@@ -54,13 +54,9 @@ static void e_cursor_update_seat_focus(struct e_cursor* cursor, struct wlr_surfa
     struct wlr_surface* root_surface = wlr_surface_get_root_surface(surface);
     struct e_window* window = e_window_from_surface(server, root_surface);
 
-    if (window != NULL)
+    if (window != NULL && !e_seat_has_focus(seat, window->surface))
     {
-        struct wlr_surface* window_surface = e_window_get_surface(window);
-
-        if (!e_seat_has_focus(seat, window_surface))
-            e_seat_set_focus(seat, window_surface, false);
-
+        e_seat_set_focus(seat, window->surface, false);
         return;
     }
 
@@ -130,7 +126,7 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
 
 static void e_cursor_handle_mode_move(struct e_cursor* cursor)
 {
-    if (cursor->grab_window == NULL || cursor->grab_window->scene_tree == NULL || cursor->grab_window->container == NULL)
+    if (cursor->grab_window == NULL || cursor->grab_window->tree == NULL || cursor->grab_window->container == NULL)
     {
         e_log_error("Cursor move mode: window/window's scene tree grabbed by cursor is NULL");
         e_cursor_reset_mode(cursor);
@@ -437,7 +433,7 @@ void e_cursor_start_window_resize(struct e_cursor* cursor, struct e_window* wind
 
 void e_cursor_start_window_move(struct e_cursor* cursor, struct e_window* window)
 {
-    if (window == NULL || window->scene_tree == NULL)
+    if (window == NULL || window->tree == NULL)
         return;
 
     e_cursor_start_grab_window_mode(cursor, window, E_CURSOR_MODE_MOVE);

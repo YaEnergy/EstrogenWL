@@ -26,6 +26,19 @@ enum e_window_type
     E_WINDOW_XWAYLAND = 2 //e_xwayland_window
 };
 
+// Implementation of window functions for different window types
+struct e_window_impl
+{
+    void (*set_tiled)(struct e_window* window, bool tiled);
+    
+    // Configure a window within given layout position and size
+    // Returns configure serial, returns 0 if no serial is given
+    uint32_t (*configure)(struct e_window* window, int lx, int ly, int width, int height);
+
+    // Request that this window closes
+    void (*send_close)(struct e_window* window);
+};
+
 //a window: xdg toplevel or xwayland window
 struct e_window
 {
@@ -42,16 +55,23 @@ struct e_window
         struct e_xwayland_window* xwayland_window;
     };
 
+    struct e_window_impl implementation;
+
     //May be NULL, if not created
-    struct wlr_scene_tree* scene_tree;
+    struct wlr_scene_tree* tree;
+
+    // Window's main surface, may be NULL.
+    struct wlr_surface* surface;
+    struct wlr_box current;
 
     bool tiled;
+
+    char* title;
 
     //May be NULL, if not created
     struct e_container* container;
 
-    //to link to linked lists
-    struct wl_list link;
+    struct wl_list link; //e_scene::windows
 };
 
 //this function should only be called by the implementations of each window type. 
@@ -62,15 +82,6 @@ void e_window_create_container_tree(struct e_window* window, struct wlr_scene_tr
 
 void e_window_destroy_container_tree(struct e_window* window);
 
-//returns pointer to window's title, NULL on fail
-char* e_window_get_title(struct e_window* window);
-
-//outs top left x and y of window relative to parent node
-void e_window_get_position(struct e_window* window, int* lx, int* ly);
-
-//outs width (x) and height (y) of window, pointers are set to -1 on fail
-void e_window_get_size(struct e_window* window, int* x, int* y);
-
 //set window's tree position, relative to container
 void e_window_set_position(struct e_window* window, int lx, int ly);
 
@@ -79,7 +90,10 @@ void e_window_set_size(struct e_window* window, int32_t x, int32_t y);
 
 void e_window_set_tiled(struct e_window* window, bool tiled);
 
-//Returns configure serial, returns 0 if no serial is given
+void e_window_base_set_tiled(struct e_window* window, bool tiled);
+
+// Configure a window within given layout position and size
+// Returns configure serial, returns 0 if no serial is given
 uint32_t e_window_configure(struct e_window* window, int lx, int ly, int width, int height);
 
 //maximizes window to fit within parent container, must be floating
@@ -90,9 +104,6 @@ void e_window_map(struct e_window* window);
 
 //stop displaying window
 void e_window_unmap(struct e_window* window);
-
-//gets the window's main surface
-struct wlr_surface* e_window_get_surface(struct e_window* window);
 
 //finds the window which has this surface as its main surface, NULL if not found
 struct e_window* e_window_from_surface(struct e_server* server, struct wlr_surface* surface);

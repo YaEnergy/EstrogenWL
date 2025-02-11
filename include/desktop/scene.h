@@ -23,7 +23,7 @@ struct e_scene
     //wlroots utility for working with arrangement of screens in a physical layout
     struct wlr_output_layout* output_layout;
 
-    struct wl_list outputs; //struct e_output
+    struct wl_list outputs; //struct e_output*
 
     //see: wlr-layer-shell-unstable-v1-protocol.h @ enum zwlr_layer_shell_v1_layer
     struct

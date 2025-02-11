@@ -31,9 +31,7 @@ static void e_commands_kill_focussed_window(struct e_server* server)
     {
         e_window_send_close(window);
 
-        char* window_title = e_window_get_title(window);
-
-        e_log_info("asked to close window, title: %s", window_title == NULL ? "no name" : window_title);
+        e_log_info("asked to close window, title: %s", window->title == NULL ? "no name" : window->title);
     }
     else 
     {
@@ -54,9 +52,7 @@ static void e_commands_toggle_tiling_focussed_window(struct e_server* server)
     {
         e_window_set_tiled(window, !window->tiled);
 
-        char* window_title = e_window_get_title(window);
-
-        e_log_info("setted tiling of window, title: %s", window_title == NULL ? "no name" : window_title);
+        e_log_info("setted tiling of window, title: %s", window->title == NULL ? "no name" : window->title);
     }
     else 
     {

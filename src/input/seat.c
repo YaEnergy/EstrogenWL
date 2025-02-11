@@ -109,8 +109,8 @@ void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface, bool ove
 
     struct e_window* window = e_window_from_surface(seat->input_manager->server, surface);
     
-    if (window != NULL && window->scene_tree != NULL)
-        wlr_scene_node_raise_to_top(&window->scene_tree->node);
+    if (window != NULL && window->tree != NULL)
+        wlr_scene_node_raise_to_top(&window->tree->node);
 
     e_log_info("seat focus");
 }

@@ -2,12 +2,15 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <assert.h>
 
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_scene.h>
+
+#include "desktop/tree/node.h"
 
 #include "desktop/xdg_popup.h"
 #include "desktop/scene.h"
@@ -63,6 +66,9 @@ static void e_toplevel_window_commit(struct wl_listener* listener, void* data)
             e_window_set_tiled(toplevel_window->base, true);
         }
     }
+
+    toplevel_window->base->current.width = toplevel_window->xdg_toplevel->current.width;
+    toplevel_window->base->current.height = toplevel_window->xdg_toplevel->current.height;
 
     //TODO: handle toplevel_window->xdg_toplevel->requested if surface is mapped
 }
@@ -150,15 +156,44 @@ static void e_toplevel_window_destroy(struct wl_listener* listener, void* data)
 
 static void e_toplevel_window_init_xdg_scene_tree(struct e_toplevel_window* toplevel_window)
 {
-    e_window_create_container_tree(toplevel_window->base, toplevel_window->base->server->scene->pending);
+    //create scene xdg surface for xdg toplevel and window, and set up window scene tree
+    struct e_scene* scene = toplevel_window->base->server->scene;
+    toplevel_window->base->tree = wlr_scene_xdg_surface_create(scene->pending, toplevel_window->xdg_toplevel->base);
+    e_node_desc_create(&toplevel_window->base->tree->node, E_NODE_DESC_WINDOW, toplevel_window->base);
+
+    e_window_create_container_tree(toplevel_window->base, scene->pending);
 
     //allows popup scene trees to add themselves to this window's scene tree
-    toplevel_window->xdg_toplevel->base->data = toplevel_window->base->scene_tree;
+    toplevel_window->xdg_toplevel->base->data = toplevel_window->base->tree;
+}
+
+static void e_window_toplevel_set_tiled(struct e_window *window, bool tiled)
+{
+    assert(window);
+
+    wlr_xdg_toplevel_set_tiled(window->toplevel_window->xdg_toplevel, tiled ? WLR_EDGE_BOTTOM | WLR_EDGE_LEFT | WLR_EDGE_RIGHT | WLR_EDGE_TOP : WLR_EDGE_NONE);
+
+    e_window_base_set_tiled(window, tiled);
+}
+
+static uint32_t e_window_toplevel_configure(struct e_window* window, int lx, int ly, int width, int height)
+{
+    assert(window && window->tree);
+
+    wlr_scene_node_set_position(&window->tree->node, lx, ly);
+    return wlr_xdg_toplevel_set_size(window->toplevel_window->xdg_toplevel, width, height);
+}
+
+static void e_window_toplevel_send_close(struct e_window* window)
+{
+    assert(window);
+
+    wlr_xdg_toplevel_send_close(window->toplevel_window->xdg_toplevel);
 }
 
 struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, struct wlr_xdg_toplevel* xdg_toplevel)
 {
-    struct e_toplevel_window* toplevel_window = calloc(1, sizeof(struct e_toplevel_window));
+    struct e_toplevel_window* toplevel_window = calloc(1, sizeof(*toplevel_window));
 
     //give pointer to xdg toplevel
     toplevel_window->xdg_toplevel = xdg_toplevel;
@@ -166,6 +201,13 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
     struct e_window* window = e_window_create(server, E_WINDOW_TOPLEVEL);
     window->toplevel_window = toplevel_window;
     toplevel_window->base = window;
+
+    window->title = xdg_toplevel->title;
+    window->surface = xdg_toplevel->base->surface;
+
+    window->implementation.set_tiled = e_window_toplevel_set_tiled;
+    window->implementation.configure = e_window_toplevel_configure;
+    window->implementation.send_close = e_window_toplevel_send_close;
 
     e_toplevel_window_init_xdg_scene_tree(toplevel_window);
 

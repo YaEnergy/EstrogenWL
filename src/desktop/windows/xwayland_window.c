@@ -2,12 +2,15 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <assert.h>
 
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
 #include <wlr/types/wlr_scene.h>
 #include <wlr/xwayland.h>
+
+#include "desktop/tree/node.h"
 
 #include "desktop/windows/window.h"
 #include "desktop/scene.h"
@@ -37,6 +40,9 @@ static void e_xwayland_window_unmap(struct wl_listener* listener, void* data)
 static void e_xwayland_window_commit(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_window* xwayland_window = wl_container_of(listener, xwayland_window, commit);
+
+    xwayland_window->base->current.width = xwayland_window->xwayland_surface->width;
+    xwayland_window->base->current.height = xwayland_window->xwayland_surface->height;
 
     //TODO: implement e_xwayland_window_commit
 }
@@ -87,6 +93,8 @@ static void e_xwayland_window_associate(struct wl_listener* listener, void* data
 
     struct e_xwayland_window* xwayland_window = wl_container_of(listener, xwayland_window, associate);
 
+    xwayland_window->base->surface = xwayland_window->xwayland_surface->surface;
+
     // events
 
     xwayland_window->map.notify = e_xwayland_window_map;
@@ -112,8 +120,11 @@ static void e_xwayland_window_associate(struct wl_listener* listener, void* data
     xwayland_window->request_resize.notify = e_xwayland_window_request_resize;
     wl_signal_add(&xwayland_window->xwayland_surface->events.request_resize, &xwayland_window->request_resize);
 
-    //add surface & subsurfaces to scene
+    //add surface & subsurfaces to scene by creating a subsurface tree
     struct e_scene* scene = xwayland_window->base->server->scene;
+    xwayland_window->base->tree = wlr_scene_subsurface_tree_create(scene->pending, xwayland_window->xwayland_surface->surface);
+    e_node_desc_create(&xwayland_window->base->tree->node, E_NODE_DESC_WINDOW, xwayland_window->base);
+
     e_window_create_container_tree(xwayland_window->base, scene->pending);
 }
 
@@ -124,6 +135,8 @@ static void e_xwayland_window_dissociate(struct wl_listener* listener, void* dat
     e_log_info("dissociate: xwayland window surface is now invalid");
 
     struct e_xwayland_window* xwayland_window = wl_container_of(listener, xwayland_window, dissociate);
+
+    xwayland_window->base->surface = NULL;
 
     wl_list_remove(&xwayland_window->map.link);
     wl_list_remove(&xwayland_window->unmap.link);
@@ -154,17 +167,39 @@ static void e_xwayland_window_destroy(struct wl_listener* listener, void* data)
     free(xwayland_window);
 }
 
+static uint32_t e_window_xwayland_configure(struct e_window* window, int lx, int ly, int width, int height)
+{
+    assert(window && window->tree);
+
+    wlr_scene_node_set_position(&window->tree->node, lx, ly);
+    wlr_xwayland_surface_configure(window->xwayland_window->xwayland_surface, lx, ly, (uint16_t)width, (uint16_t)height);
+    return 0;
+}
+
+static void e_window_xwayland_send_close(struct e_window* window)
+{
+    assert(window);
+
+    wlr_xwayland_surface_close(window->xwayland_window->xwayland_surface);
+}
+
 //creates new xwayland window inside server
 struct e_xwayland_window* e_xwayland_window_create(struct e_server* server, struct wlr_xwayland_surface* xwayland_surface)
 {
     e_log_info("new xwayland window");
 
-    struct e_xwayland_window* xwayland_window = calloc(1, sizeof(struct e_xwayland_window));
+    struct e_xwayland_window* xwayland_window = calloc(1, sizeof(*xwayland_window));
     xwayland_window->xwayland_surface = xwayland_surface;
 
     struct e_window* window = e_window_create(server, E_WINDOW_XWAYLAND);
     window->xwayland_window = xwayland_window;
     xwayland_window->base = window;
+
+    window->title = xwayland_surface->title;
+
+    window->implementation.set_tiled = e_window_base_set_tiled;
+    window->implementation.configure = e_window_xwayland_configure;
+    window->implementation.send_close = e_window_xwayland_send_close;
 
     // events
 
