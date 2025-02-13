@@ -37,6 +37,8 @@ struct e_xwayland_window
     struct wl_listener request_move;
     struct wl_listener request_resize;
 
+    struct wl_listener set_title;
+
     //xwayland_surface got destroyed
     struct wl_listener destroy;
 

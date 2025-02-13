@@ -85,6 +85,13 @@ static void e_xwayland_window_request_resize(struct wl_listener* listener, void*
     e_cursor_start_window_resize(server->input_manager->cursor, xwayland_window->base, event->edges);
 }
 
+static void e_xwayland_window_set_title(struct wl_listener* listener, void* data)
+{
+    struct e_xwayland_window* xwayland_window = wl_container_of(listener, xwayland_window, set_title);
+
+    xwayland_window->base->title = xwayland_window->xwayland_surface->title;
+}
+
 //surface becomes valid, like me!
 static void e_xwayland_window_associate(struct wl_listener* listener, void* data)
 {
@@ -120,6 +127,11 @@ static void e_xwayland_window_associate(struct wl_listener* listener, void* data
     xwayland_window->request_resize.notify = e_xwayland_window_request_resize;
     wl_signal_add(&xwayland_window->xwayland_surface->events.request_resize, &xwayland_window->request_resize);
 
+    // other events
+
+    xwayland_window->set_title.notify = e_xwayland_window_set_title;
+    wl_signal_add(&xwayland_window->xwayland_surface->events.set_title, &xwayland_window->set_title);
+
     //add surface & subsurfaces to scene by creating a subsurface tree
     struct e_scene* scene = xwayland_window->base->server->scene;
     xwayland_window->base->tree = wlr_scene_subsurface_tree_create(scene->pending, xwayland_window->xwayland_surface->surface);
@@ -146,6 +158,8 @@ static void e_xwayland_window_dissociate(struct wl_listener* listener, void* dat
     wl_list_remove(&xwayland_window->request_configure.link);
     wl_list_remove(&xwayland_window->request_move.link);
     wl_list_remove(&xwayland_window->request_resize.link);
+
+    wl_list_remove(&xwayland_window->set_title.link);
 
     //remove from scene
     e_window_destroy_container_tree(xwayland_window->base);

@@ -27,8 +27,6 @@
 #include "output.h"
 #include "server.h"
 
-//TODO: update title
-
 //this function should only be called by the implementations of each window type. 
 //I mean it would be a bit weird to even call this function somewhere else.
 struct e_window* e_window_create(struct e_server* server, enum e_window_type type)

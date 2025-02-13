@@ -33,6 +33,8 @@ struct e_toplevel_window
     struct wl_listener request_move;
     struct wl_listener request_resize;
 
+    struct wl_listener set_title;
+
     //xdg_toplevel got destroyed
     struct wl_listener destroy;
 

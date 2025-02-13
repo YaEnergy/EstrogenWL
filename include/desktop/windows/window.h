@@ -66,6 +66,7 @@ struct e_window
 
     bool tiled;
 
+    //May be NULL, if not set
     char* title;
 
     //May be NULL, if not created

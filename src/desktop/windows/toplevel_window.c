@@ -131,6 +131,13 @@ static void e_toplevel_window_request_resize(struct wl_listener* listener, void*
     e_cursor_start_window_resize(server->input_manager->cursor, toplevel_window->base, event->edges);
 }
 
+static void e_toplevel_window_set_title(struct wl_listener* listener, void* data)
+{
+    struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, set_title);
+
+    toplevel_window->base->title = toplevel_window->xdg_toplevel->title;
+}
+
 //xdg_toplevel got destroyed
 static void e_toplevel_window_destroy(struct wl_listener* listener, void* data)
 {
@@ -146,6 +153,8 @@ static void e_toplevel_window_destroy(struct wl_listener* listener, void* data)
     wl_list_remove(&toplevel_window->request_maximize.link);
     wl_list_remove(&toplevel_window->request_move.link);
     wl_list_remove(&toplevel_window->request_resize.link);
+    
+    wl_list_remove(&toplevel_window->set_title.link);
 
     wl_list_remove(&toplevel_window->destroy.link);
 
@@ -242,6 +251,9 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
 
     toplevel_window->request_resize.notify = e_toplevel_window_request_resize;
     wl_signal_add(&xdg_toplevel->events.request_resize, &toplevel_window->request_resize);
+
+    toplevel_window->set_title.notify = e_toplevel_window_set_title;
+    wl_signal_add(&xdg_toplevel->events.set_title, &toplevel_window->set_title);
 
     //window destroy event
     toplevel_window->destroy.notify = e_toplevel_window_destroy;
