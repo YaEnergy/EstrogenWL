@@ -211,7 +211,6 @@ struct e_xwayland_window* e_xwayland_window_create(struct e_server* server, stru
 
     window->title = xwayland_surface->title;
 
-    window->implementation.set_tiled = e_window_base_set_tiled;
     window->implementation.configure = e_window_xwayland_configure;
     window->implementation.send_close = e_window_xwayland_send_close;
 

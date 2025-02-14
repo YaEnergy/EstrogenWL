@@ -29,7 +29,7 @@ enum e_window_type
 // Implementation of window functions for different window types
 struct e_window_impl
 {
-    void (*set_tiled)(struct e_window* window, bool tiled);
+    void (*changed_tiled)(struct e_window* window, bool tiled);
     
     // Configure a window within given layout position and size
     // Returns configure serial, returns 0 if no serial is given
@@ -86,14 +86,15 @@ void e_window_destroy_container_tree(struct e_window* window);
 //set window's tree position, relative to container
 void e_window_set_position(struct e_window* window, int lx, int ly);
 
-//includes decoration in x & y
-void e_window_set_size(struct e_window* window, int32_t x, int32_t y);
+// Configures a window with the given size
+// Returns configure serial, returns 0 if no serial is given
+uint32_t e_window_set_size(struct e_window* window, int width, int height);
 
 void e_window_set_tiled(struct e_window* window, bool tiled);
 
 void e_window_base_set_tiled(struct e_window* window, bool tiled);
 
-// Configure a window within given layout position and size
+// Configures a window within given layout position and size
 // Returns configure serial, returns 0 if no serial is given
 uint32_t e_window_configure(struct e_window* window, int lx, int ly, int width, int height);
 

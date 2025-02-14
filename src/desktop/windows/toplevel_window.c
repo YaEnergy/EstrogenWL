@@ -176,13 +176,11 @@ static void e_toplevel_window_init_xdg_scene_tree(struct e_toplevel_window* topl
     toplevel_window->xdg_toplevel->base->data = toplevel_window->base->tree;
 }
 
-static void e_window_toplevel_set_tiled(struct e_window *window, bool tiled)
+static void e_window_toplevel_changed_tiling(struct e_window* window, bool tiled)
 {
     assert(window);
 
     wlr_xdg_toplevel_set_tiled(window->toplevel_window->xdg_toplevel, tiled ? WLR_EDGE_BOTTOM | WLR_EDGE_LEFT | WLR_EDGE_RIGHT | WLR_EDGE_TOP : WLR_EDGE_NONE);
-
-    e_window_base_set_tiled(window, tiled);
 }
 
 static uint32_t e_window_toplevel_configure(struct e_window* window, int lx, int ly, int width, int height)
@@ -190,7 +188,12 @@ static uint32_t e_window_toplevel_configure(struct e_window* window, int lx, int
     assert(window && window->tree);
 
     wlr_scene_node_set_position(&window->tree->node, lx, ly);
-    return wlr_xdg_toplevel_set_size(window->toplevel_window->xdg_toplevel, width, height);
+
+    //schedule empty configure if size remains the same
+    if (window->current.width == width && window->current.height == height)
+        return wlr_xdg_surface_schedule_configure(window->toplevel_window->xdg_toplevel->base);
+    else
+        return wlr_xdg_toplevel_set_size(window->toplevel_window->xdg_toplevel, width, height);
 }
 
 static void e_window_toplevel_send_close(struct e_window* window)
@@ -214,7 +217,7 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
     window->title = xdg_toplevel->title;
     window->surface = xdg_toplevel->base->surface;
 
-    window->implementation.set_tiled = e_window_toplevel_set_tiled;
+    window->implementation.changed_tiled = e_window_toplevel_changed_tiling;
     window->implementation.configure = e_window_toplevel_configure;
     window->implementation.send_close = e_window_toplevel_send_close;
 

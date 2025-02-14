@@ -47,7 +47,7 @@ struct e_window* e_window_create(struct e_server* server, enum e_window_type typ
     window->title = NULL;
     window->tiled = false;
 
-    window->implementation.set_tiled = NULL;
+    window->implementation.changed_tiled = NULL;
     window->implementation.configure = NULL;
     window->implementation.send_close = NULL;
 
@@ -96,22 +96,14 @@ void e_window_set_position(struct e_window* window, int lx, int ly)
 {
     assert(window && window->tree);
 
-    switch(window->type)
-    {
-        case E_WINDOW_TOPLEVEL:
-            wlr_scene_node_set_position(&window->tree->node, lx, ly);
-            break;
-        case E_WINDOW_XWAYLAND:
-            e_window_configure(window, lx, ly, window->current.width, window->current.height);
-            break;
-    }
+    e_window_configure(window, lx, ly, window->current.width, window->current.height);
 }
 
-void e_window_set_size(struct e_window* window, int32_t x, int32_t y)
+uint32_t e_window_set_size(struct e_window* window, int width, int height)
 {
     assert(window && window->tree);
 
-    e_window_configure(window, window->tree->node.x, window->tree->node.y, x, y);
+    return e_window_configure(window, window->tree->node.x, window->tree->node.y, width, height);
 }
 
 static void e_window_set_parent_container(struct e_window* window, struct e_container* parent)
@@ -247,18 +239,7 @@ static void e_window_float_container(struct e_window* window)
     e_window_set_parent_container(window, parent_container);
 }
 
-//TODO: unsure if this fits within implementation...
 void e_window_set_tiled(struct e_window* window, bool tiled)
-{
-    assert(window);
-
-    if (window->implementation.set_tiled != NULL)
-        return window->implementation.set_tiled(window, tiled);
-    else
-        e_log_error("e_window_set_tiled: set_tiled is not implemented!");
-}
-
-void e_window_base_set_tiled(struct e_window* window, bool tiled)
 {
     assert(window);
 
@@ -277,6 +258,9 @@ void e_window_base_set_tiled(struct e_window* window, bool tiled)
         else //floating
             e_window_float_container(window);
     }
+
+    if (window->implementation.changed_tiled != NULL)
+        return window->implementation.changed_tiled(window, tiled);
 }
 
 uint32_t e_window_configure(struct e_window* window, int lx, int ly, int width, int height)
