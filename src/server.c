@@ -68,6 +68,38 @@ static void e_server_backend_destroy(struct wl_listener* listener, void* data)
     wl_list_remove(&server->backend_destroy.link);
 }
 
+// GPU lost, destroy and recreate renderer
+static void e_server_renderer_lost(struct wl_listener* listener, void* data)
+{
+    struct e_server* server = wl_container_of(listener, server, renderer_lost);
+
+    e_log_info("server lost gpu and renderer! destroying old renderer & creating new renderer...");
+
+    // destroy renderer
+
+    wl_list_remove(&server->renderer_lost.link);
+
+    wlr_renderer_destroy(server->renderer);
+
+    // recreate & init renderer
+    
+    server->renderer = wlr_renderer_autocreate(server->backend);
+
+    if (server->renderer == NULL)
+    {
+        e_log_error("failed to create renderer");
+        return;
+    }
+
+    if(!wlr_renderer_init_wl_display(server->renderer, server->display))
+    {
+        e_log_error("failed to init renderer & display");
+        return;
+    }
+
+    wl_signal_add(&server->renderer->events.lost, &server->renderer_lost);
+}
+
 int e_server_init(struct e_server* server)
 {
     //handles accepting clients from Unix socket, managing wl globals, ...
@@ -109,9 +141,12 @@ int e_server_init(struct e_server* server)
 
     if(!wlr_renderer_init_wl_display(server->renderer, server->display))
     {
-        e_log_error("failed to init buffer factory protocols");
+        e_log_error("failed to init renderer & display");
         return 1;
     }
+
+    server->renderer_lost.notify = e_server_renderer_lost;
+    wl_signal_add(&server->renderer->events.lost, &server->renderer_lost);
 
     //allocates memory for pixel buffers 
     server->allocator = wlr_allocator_autocreate(server->backend, server->renderer);
@@ -195,6 +230,8 @@ bool e_server_run(struct e_server* server)
 
 void e_server_destroy(struct e_server* server)
 {
+    wl_list_remove(&server->renderer_lost.link);
+
     e_xwayland_destroy(server->xwayland);
     
     wl_display_destroy_clients(server->display);

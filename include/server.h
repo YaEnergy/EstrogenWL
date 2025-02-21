@@ -26,8 +26,12 @@ struct e_server
     
     //allocates memory for pixel buffers 
     struct wlr_allocator* allocator;
+    
     //renderer handles rendering, used by scene
     struct wlr_renderer* renderer;
+    //gpu lost, destroy old renderer and create new renderer
+    struct wl_listener renderer_lost;
+
     //used by clients to create surfaces & regions
     struct wlr_compositor* compositor;
 
