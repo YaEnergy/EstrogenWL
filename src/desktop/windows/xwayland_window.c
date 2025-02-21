@@ -186,15 +186,21 @@ static uint32_t e_window_xwayland_configure(struct e_window* window, int lx, int
     assert(window && window->tree);
 
     wlr_scene_node_set_position(&window->tree->node, lx, ly);
-    wlr_xwayland_surface_configure(window->xwayland_window->xwayland_surface, lx, ly, (uint16_t)width, (uint16_t)height);
+
+    struct e_xwayland_window* xwayland_window = window->data;
+
+    wlr_xwayland_surface_configure(xwayland_window->xwayland_surface, lx, ly, (uint16_t)width, (uint16_t)height);
+
     return 0;
 }
 
 static void e_window_xwayland_send_close(struct e_window* window)
 {
-    assert(window);
+    assert(window && window->data);
 
-    wlr_xwayland_surface_close(window->xwayland_window->xwayland_surface);
+    struct e_xwayland_window* xwayland_window = window->data;
+
+    wlr_xwayland_surface_close(xwayland_window->xwayland_surface);
 }
 
 //creates new xwayland window inside server
@@ -206,7 +212,7 @@ struct e_xwayland_window* e_xwayland_window_create(struct e_server* server, stru
     xwayland_window->xwayland_surface = xwayland_surface;
 
     struct e_window* window = e_window_create(server, E_WINDOW_XWAYLAND);
-    window->xwayland_window = xwayland_window;
+    window->data = xwayland_window;
     xwayland_window->base = window;
 
     window->title = xwayland_surface->title;

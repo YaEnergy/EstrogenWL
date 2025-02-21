@@ -187,6 +187,36 @@ static void e_window_tile_container(struct e_window* window)
     e_window_set_parent_container(window, parent_container);
 }
 
+// Returns the window's first current output with a root floating container
+// May return NULL.
+static struct e_container* e_window_first_output_floating_container(struct e_window* window)
+{
+    assert(window);
+
+    if (window->surface == NULL)
+        return NULL;
+
+    if (wl_list_empty(&window->surface->current_outputs))
+        return NULL;
+
+    //loop over surface outputs until output is found with a root floating container
+    struct wlr_surface_output* wlr_surface_output;
+    wl_list_for_each(wlr_surface_output, &window->surface->current_outputs, link)
+    {
+        //attempt to acquire output from it
+        if (wlr_surface_output->output != NULL && wlr_surface_output->output->data != NULL)
+        {
+            struct e_output* output = wlr_surface_output->output->data;
+
+            if (output->root_floating_container != NULL)
+                return output->root_floating_container;
+        }
+    }
+
+    //none found
+    return NULL;
+}
+
 static void e_window_float_container(struct e_window* window)
 {
     assert(window && window->container);
@@ -201,25 +231,7 @@ static void e_window_float_container(struct e_window* window)
     struct e_container* parent_container = NULL;
 
     if (window_surface != NULL)
-    {
-        //loop over surface outputs until output is found with a root floating container
-        struct wlr_surface_output* wlr_surface_output;
-        wl_list_for_each(wlr_surface_output, &window_surface->current_outputs, link)
-        {
-            //attempt to acquire output from it
-            if (wlr_surface_output->output != NULL && wlr_surface_output->output->data != NULL)
-            {
-                struct e_output* output = wlr_surface_output->output->data;
-
-                if (output->root_floating_container != NULL)
-                {
-                    parent_container = output->root_floating_container;
-                    e_log_info("output found!");
-                    break;
-                }
-            }
-        }
-    }
+        parent_container = e_window_first_output_floating_container(window);
 
     if (parent_container == NULL)
     {

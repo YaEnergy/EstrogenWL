@@ -14,16 +14,11 @@
 
 #include "server.h"
 
-// 2024-12-26 23:13:08 unsure why I made these comments so much more detailed than others, I should do that more often
-
-struct e_toplevel_window;
-struct e_xwayland_window;
-
 //type of an e_window
 enum e_window_type
 {
-    E_WINDOW_TOPLEVEL = 1, //e_toplevel_window
-    E_WINDOW_XWAYLAND = 2 //e_xwayland_window
+    E_WINDOW_TOPLEVEL = 1, //struct e_toplevel_window*
+    E_WINDOW_XWAYLAND = 2 //struct e_xwayland_window*
 };
 
 // Implementation of window functions for different window types
@@ -47,13 +42,7 @@ struct e_window
     //Determines what type of window this is: see e_window_type
     enum e_window_type type;
     
-    union
-    {
-        //Only a valid pointer if type == E_WINDOW_TOPLEVEL
-        struct e_toplevel_window* toplevel_window;
-        //Only a valid pointer if type == E_WINDOW_XWAYLAND
-        struct e_xwayland_window* xwayland_window;
-    };
+    void* data;
 
     struct e_window_impl implementation;
 
@@ -62,6 +51,7 @@ struct e_window
 
     // Window's main surface, may be NULL.
     struct wlr_surface* surface;
+    // Window's current geometry
     struct wlr_box current;
 
     bool tiled;

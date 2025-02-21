@@ -178,29 +178,35 @@ static void e_toplevel_window_init_xdg_scene_tree(struct e_toplevel_window* topl
 
 static void e_window_toplevel_changed_tiling(struct e_window* window, bool tiled)
 {
-    assert(window);
+    assert(window && window->data);
 
-    wlr_xdg_toplevel_set_tiled(window->toplevel_window->xdg_toplevel, tiled ? WLR_EDGE_BOTTOM | WLR_EDGE_LEFT | WLR_EDGE_RIGHT | WLR_EDGE_TOP : WLR_EDGE_NONE);
+    struct e_toplevel_window* toplevel_window = window->data;
+
+    wlr_xdg_toplevel_set_tiled(toplevel_window->xdg_toplevel, tiled ? WLR_EDGE_BOTTOM | WLR_EDGE_LEFT | WLR_EDGE_RIGHT | WLR_EDGE_TOP : WLR_EDGE_NONE);
 }
 
 static uint32_t e_window_toplevel_configure(struct e_window* window, int lx, int ly, int width, int height)
 {
-    assert(window && window->tree);
+    assert(window && window->tree && window->data);
+
+    struct e_toplevel_window* toplevel_window = window->data;
 
     wlr_scene_node_set_position(&window->tree->node, lx, ly);
 
     //schedule empty configure if size remains the same
     if (window->current.width == width && window->current.height == height)
-        return wlr_xdg_surface_schedule_configure(window->toplevel_window->xdg_toplevel->base);
+        return wlr_xdg_surface_schedule_configure(toplevel_window->xdg_toplevel->base);
     else
-        return wlr_xdg_toplevel_set_size(window->toplevel_window->xdg_toplevel, width, height);
+        return wlr_xdg_toplevel_set_size(toplevel_window->xdg_toplevel, width, height);
 }
 
 static void e_window_toplevel_send_close(struct e_window* window)
 {
-    assert(window);
+    assert(window && window->data);
 
-    wlr_xdg_toplevel_send_close(window->toplevel_window->xdg_toplevel);
+    struct e_toplevel_window* toplevel_window = window->data;
+    
+    wlr_xdg_toplevel_send_close(toplevel_window->xdg_toplevel);
 }
 
 struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, struct wlr_xdg_toplevel* xdg_toplevel)
@@ -211,7 +217,7 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, stru
     toplevel_window->xdg_toplevel = xdg_toplevel;
 
     struct e_window* window = e_window_create(server, E_WINDOW_TOPLEVEL);
-    window->toplevel_window = toplevel_window;
+    window->data = toplevel_window;
     toplevel_window->base = window;
 
     window->title = xdg_toplevel->title;
