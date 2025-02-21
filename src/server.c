@@ -73,15 +73,17 @@ static void e_server_renderer_lost(struct wl_listener* listener, void* data)
 {
     struct e_server* server = wl_container_of(listener, server, renderer_lost);
 
-    e_log_info("server lost gpu and renderer! destroying old renderer & creating new renderer...");
+    e_log_info("lost gpu! recreating renderer & allocator");
 
-    // destroy renderer
+    // destroy old allocator and renderer
+
+    wlr_allocator_destroy(server->allocator);
 
     wl_list_remove(&server->renderer_lost.link);
 
     wlr_renderer_destroy(server->renderer);
 
-    // recreate & init renderer
+    // recreate & init new renderer
     
     server->renderer = wlr_renderer_autocreate(server->backend);
 
@@ -98,6 +100,19 @@ static void e_server_renderer_lost(struct wl_listener* listener, void* data)
     }
 
     wl_signal_add(&server->renderer->events.lost, &server->renderer_lost);
+
+    // recreate allocator
+
+    server->allocator = wlr_allocator_autocreate(server->backend, server->renderer);
+
+    if (server->allocator == NULL)
+    {
+        e_log_error("failed to create allocator");
+        return;
+    }
+
+    // set compositor to use new renderer
+    wlr_compositor_set_renderer(server->compositor, server->renderer);
 }
 
 int e_server_init(struct e_server* server)
