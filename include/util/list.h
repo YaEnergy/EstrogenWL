@@ -2,8 +2,7 @@
 
 #include <stdbool.h>
 
-// Just a simple list using an array
-// All items must be of the same type
+// Just a simple generic list using an array
 struct e_list
 {
     // items
