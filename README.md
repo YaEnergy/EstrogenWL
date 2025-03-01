@@ -5,7 +5,22 @@ Tiling wayland compositor using wlroots.
 This project is mostly made to have fun & learn! :3
 This already has been quite the adventure...
 
-## Support
+## Building (using meson & ninja)
+
+    meson setup build
+    ninja
+
+## Dependencies
+
+- wayland
+- wayland-protocols
+- [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots)
+- xkbcommon
+- pixman
+- libdrm
+- xcb
+
+## Support (out-of-date, updating later...)
 
 - Supported (atleast working)
   - Cursor
@@ -52,17 +67,3 @@ This already has been quite the adventure...
 - [sway](https://github.com/swaywm/sway)
 - [labwc](https://github.com/labwc/labwc)
 - [Writing a Wayland compositor by Drew DeVault (out-of-date, but still useful)](https://drewdevault.com/2018/02/17/Writing-a-Wayland-compositor-1.html)
-
-## Dependancies
-- [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots)
-- xkb
-
-## Project structure:
-- src: C source files
-- include: header files
-- protocols: wayland protocol xml files & generated header files
-- install: files neccessary for installation of EstrogenWL
-- compile_flags.txt: for clangd
-- Makefile
-- README.md
-- .gitignore

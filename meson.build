@@ -18,10 +18,15 @@ add_project_arguments(
 cc = meson.get_compiler('c')
 
 wlroots = dependency('wlroots-0.18')
+
 wayland_server = dependency('wayland-server')
 wayland_cursor = dependency('wayland-cursor')
 wayland_protocols = dependency('wayland-protocols')
+
 xkbcommon = dependency('xkbcommon')
+
+pixman = dependency('pixman-1')
+libdrm = dependency('libdrm')
 
 xcb = dependency('xcb')
 
@@ -31,6 +36,8 @@ deps = [
     wayland_cursor,
     wayland_protocols,
     xkbcommon,
+    pixman,
+    libdrm,
     xcb,
 ]
 
@@ -65,7 +72,6 @@ estrogenwl_src = files(
     'src/input/seat.c',
     'src/input/keyboard.c',
     'src/input/keybinding.c',
-    'src/input/keybind_list.c',
     'src/input/keybind.c',
     'src/input/cursor.c',
 
