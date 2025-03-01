@@ -1,16 +1,33 @@
 #include "input/keybind.h"
 
+#include <assert.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
-#include <string.h>
 #include <xkbcommon/xkbcommon.h>
 
-bool e_keybind_equals(struct e_keybind a, struct e_keybind b)
+struct e_keybind* e_keybind_create(xkb_keysym_t keysym, enum wlr_keyboard_modifier mods, const char* command)
 {
-    return (a.keysym == b.keysym && a.mods == b.mods && strcmp(a.command, b.command) == 0);
+    struct e_keybind* keybind = calloc(1, sizeof(*keybind));
+
+    if (keybind == NULL)
+        return NULL;
+
+    keybind->keysym = keysym;
+    keybind->mods = mods;
+    keybind->command = command;
+
+    return keybind;
 }
 
-bool e_keybind_should_activate(struct e_keybind keybind, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods)
+bool e_keybind_should_activate(struct e_keybind* keybind, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods)
 {
-    return (keybind.keysym == keysym && keybind.mods == mods);
+    return (keybind->keysym == keysym && keybind->mods == mods);
+}
+
+void e_keybind_free(struct e_keybind* keybind)
+{
+    assert(keybind);
+
+    free(keybind);
 }

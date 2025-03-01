@@ -9,10 +9,11 @@
 
 #include "desktop/scene.h"
 
+#include "input/keybind.h"
 #include "input/seat.h"
-#include "input/keybind_list.h"
 #include "input/cursor.h"
 
+#include "util/list.h"
 #include "util/log.h"
 
 static void e_input_manager_new_input(struct wl_listener* listener, void* data)
@@ -47,7 +48,7 @@ struct e_input_manager* e_input_manager_create(struct e_server* server)
 
     input_manager->server = server;
     
-    input_manager->keybind_list = e_keybind_list_create();
+    input_manager->keybinds = e_list_create(3);
 
     input_manager->cursor = e_cursor_create(input_manager, server->scene->output_layout);
 
@@ -63,8 +64,16 @@ struct e_input_manager* e_input_manager_create(struct e_server* server)
 void e_input_manager_destroy(struct e_input_manager* input_manager)
 {
     e_cursor_destroy(input_manager->cursor);
-    
-    e_keybind_list_destroy(&input_manager->keybind_list);
+
+    for (int i = 0; i < input_manager->keybinds->count; i++)
+    {
+        struct e_keybind* keybind = e_list_at(input_manager->keybinds, i);
+
+        if (keybind != NULL)
+            e_keybind_free(keybind);
+    }
+
+    e_list_destroy(input_manager->keybinds);
 
     wl_list_remove(&input_manager->new_input.link);
 

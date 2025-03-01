@@ -12,8 +12,8 @@
 
 #include <xkbcommon/xkbcommon.h>
 
+#include "input/input_manager.h"
 #include "input/seat.h"
-
 #include "input/keybinding.h"
 
 //key pressed or released, emitted before keyboard xkb state is updated (including modifiers)
@@ -21,6 +21,8 @@ static void e_keyboard_key(struct wl_listener* listener, void* data)
 {
     struct e_keyboard* keyboard = wl_container_of(listener, keyboard, key);
     struct wlr_keyboard_key_event* event = data;
+
+    struct e_input_manager* input_manager = keyboard->seat->input_manager;
 
     bool handled = false;
 
@@ -38,7 +40,7 @@ static void e_keyboard_key(struct wl_listener* listener, void* data)
 
         for (int i = 0; i < num_syms; i++)
         {
-            if (e_keybinding_handle(keyboard->seat->input_manager->server, &keyboard->seat->input_manager->keybind_list, syms[i], modifiers))
+            if (e_keybinding_handle(input_manager->server, input_manager->keybinds, syms[i], modifiers))
                 handled = true;
         }
     }
@@ -75,7 +77,7 @@ struct e_keyboard* e_keyboard_create(struct wlr_input_device* input, struct e_se
 {
     struct wlr_keyboard* wlr_keyboard = wlr_keyboard_from_input_device(input);
     
-    struct e_keyboard* keyboard = calloc(1, sizeof(struct e_keyboard));
+    struct e_keyboard* keyboard = calloc(1, sizeof(*keyboard));
     keyboard->seat = seat;
     keyboard->wlr_keyboard = wlr_keyboard;
 

@@ -7,9 +7,10 @@
 
 #include "server.h"
 
-#include "input/keybind_list.h"
 #include "input/cursor.h"
 #include "input/seat.h"
+
+#include "util/list.h"
 
 struct e_input_manager
 {
@@ -19,7 +20,7 @@ struct e_input_manager
 
     struct e_cursor* cursor;
 
-    struct e_keybind_list keybind_list;
+    struct e_list* keybinds; //struct e_keybind*
 
     //new input found on the backend
     struct wl_listener new_input;
