@@ -73,7 +73,7 @@ static void e_xwayland_window_request_move(struct wl_listener* listener, void* d
     struct e_xwayland_window* xwayland_window = wl_container_of(listener, xwayland_window, request_move);
     
     struct e_server* server = xwayland_window->base->server;
-    e_cursor_start_window_move(server->input_manager->cursor, xwayland_window->base);
+    e_cursor_start_window_move(server->seat->cursor, xwayland_window->base);
 }
 
 static void e_xwayland_window_request_resize(struct wl_listener* listener, void* data)
@@ -82,7 +82,7 @@ static void e_xwayland_window_request_resize(struct wl_listener* listener, void*
     struct wlr_xwayland_resize_event* event = data;
     
     struct e_server* server = xwayland_window->base->server;
-    e_cursor_start_window_resize(server->input_manager->cursor, xwayland_window->base, event->edges);
+    e_cursor_start_window_resize(server->seat->cursor, xwayland_window->base, event->edges);
 }
 
 static void e_xwayland_window_set_title(struct wl_listener* listener, void* data)

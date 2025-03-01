@@ -20,7 +20,7 @@
 
 static void e_commands_kill_focussed_window(struct e_server* server)
 {
-    struct e_seat* seat = server->input_manager->seat;
+    struct e_seat* seat = server->seat;
 
     if (seat->focus_surface == NULL)
         return;
@@ -41,7 +41,7 @@ static void e_commands_kill_focussed_window(struct e_server* server)
 
 static void e_commands_toggle_tiling_focussed_window(struct e_server* server)
 {
-    struct e_seat* seat = server->input_manager->seat;
+    struct e_seat* seat = server->seat;
 
     if (seat->focus_surface == NULL)
         return;
@@ -62,7 +62,7 @@ static void e_commands_toggle_tiling_focussed_window(struct e_server* server)
 
 static void e_commands_toggle_fullscreen_focussed_window(struct e_server* server)
 {
-    struct e_seat* seat = server->input_manager->seat;
+    struct e_seat* seat = server->seat;
 
     if (seat->focus_surface == NULL)
         return;

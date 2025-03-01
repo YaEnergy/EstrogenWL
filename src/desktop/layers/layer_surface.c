@@ -74,7 +74,7 @@ static void e_layer_surface_add_to_desired_layer(struct e_layer_surface* layer_s
 //if this layer surface requests exclusive focus, and is on a higher layer than or a layer equal to the current focused exclusive layer surface
 static bool e_layer_surface_should_get_exclusive_focus(struct e_layer_surface* layer_surface)
 {
-    struct e_seat* seat = layer_surface->server->input_manager->seat;
+    struct e_seat* seat = layer_surface->server->seat;
 
     struct wlr_layer_surface_v1* wlr_layer_surface_v1 = layer_surface->scene_layer_surface_v1->layer_surface;
 
@@ -121,7 +121,7 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
     //committed keyboard interactivity
     if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_KEYBOARD_INTERACTIVITY)
     {
-        struct e_seat* seat = layer_surface->server->input_manager->seat;
+        struct e_seat* seat = layer_surface->server->seat;
 
         //give exclusive focus if requested and allowed and doesn't have focus
         if (e_layer_surface_should_get_exclusive_focus(layer_surface) && !e_seat_has_focus(seat, wlr_layer_surface_v1->surface))
@@ -174,7 +174,7 @@ static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
     struct e_layer_surface* next_layer_surface = e_layer_shell_get_exclusive_topmost_layer_surface(layer_shell);
 
     if (next_layer_surface != NULL)
-        e_seat_set_focus(next_layer_surface->server->input_manager->seat, next_layer_surface->scene_layer_surface_v1->layer_surface->surface, true);
+        e_seat_set_focus(next_layer_surface->server->seat, next_layer_surface->scene_layer_surface_v1->layer_surface->surface, true);
 }
 
 static void e_layer_surface_destroy(struct wl_listener* listener, void* data)

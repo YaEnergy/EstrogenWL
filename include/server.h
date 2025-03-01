@@ -13,7 +13,7 @@
 #include "desktop/layers/layer_shell.h"
 #include "desktop/xdg_shell.h"
 #include "desktop/xwayland.h"
-#include "input/input_manager.h"
+#include "input/seat.h"
 
 struct e_server
 {
@@ -47,7 +47,7 @@ struct e_server
     struct wl_listener new_output;
 
     //collection & management of input devices: keyboard, mouse, ...
-    struct e_input_manager* input_manager;
+    struct e_seat* seat;
 
     //xwayland
     struct e_xwayland* xwayland;
@@ -57,4 +57,4 @@ int e_server_init(struct e_server* server);
 
 bool e_server_run(struct e_server* server);
 
-void e_server_destroy(struct e_server* server);
+void e_server_fini(struct e_server* server);

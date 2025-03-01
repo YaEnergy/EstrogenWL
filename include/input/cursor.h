@@ -9,7 +9,7 @@
 #include <wlr/util/box.h>
 #include <wlr/util/edges.h>
 
-#include "input/input_manager.h"
+#include "input/seat.h"
 
 #include "desktop/windows/window.h"
 
@@ -23,7 +23,8 @@ enum e_cursor_mode
 //display of cursor image and management cursor
 struct e_cursor
 {
-    struct e_input_manager* input_manager;
+    struct e_seat* seat;
+
     struct wlr_cursor* wlr_cursor;
     struct wlr_xcursor_manager* xcursor_manager;
 
@@ -47,7 +48,7 @@ struct e_cursor
     enum wlr_edges grab_edges;
 };
 
-struct e_cursor* e_cursor_create(struct e_input_manager* input_manager, struct wlr_output_layout* output_layout);
+struct e_cursor* e_cursor_create(struct e_seat* seat, struct wlr_output_layout* output_layout);
 
 void e_cursor_set_mode(struct e_cursor* cursor, enum e_cursor_mode mode);
 

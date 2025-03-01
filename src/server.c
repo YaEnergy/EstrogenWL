@@ -20,15 +20,17 @@
 #include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_viewporter.h>
 
-#include "desktop/scene.h"
 #include "util/log.h"
 
-#include "output.h"
+#include "desktop/scene.h"
 #include "desktop/xdg_shell.h"
 #include "desktop/gamma_control_manager.h"
 #include "desktop/layers/layer_shell.h"
 #include "desktop/scene.h"
-#include "input/input_manager.h"
+
+#include "input/seat.h"
+
+#include "output.h"
 
 static void e_server_new_output(struct wl_listener* listener, void* data)
 {
@@ -197,13 +199,13 @@ int e_server_init(struct e_server* server)
     server->layer_shell = e_layer_shell_create(server);
 
     //input device management
-    server->input_manager = e_input_manager_create(server);
+    server->seat = e_seat_create(server, server->scene->output_layout, "seat0");
 
     //gamma control manager for output, does everything it needs to on its own
     e_gamma_control_manager_create(server->display);
 
     //create & start xwayland server
-    server->xwayland = e_xwayland_create(server, server->display, server->compositor, server->input_manager->seat->wlr_seat);
+    server->xwayland = e_xwayland_create(server, server->display, server->compositor, server->seat->wlr_seat);
 
     return 0;
 }
@@ -243,7 +245,7 @@ bool e_server_run(struct e_server* server)
     return true;
 }
 
-void e_server_destroy(struct e_server* server)
+void e_server_fini(struct e_server* server)
 {
     wl_list_remove(&server->renderer_lost.link);
 
@@ -251,7 +253,6 @@ void e_server_destroy(struct e_server* server)
     
     wl_display_destroy_clients(server->display);
 
-    e_input_manager_destroy(server->input_manager);
     e_scene_destroy(server->scene);
 
     wlr_allocator_destroy(server->allocator);

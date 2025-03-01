@@ -18,7 +18,6 @@
 #include "desktop/tree/container.h"
 #include "desktop/tree/node.h"
 
-#include "input/input_manager.h"
 #include "input/seat.h"
 #include "input/cursor.h"
 
@@ -141,7 +140,7 @@ static void e_window_tile_container(struct e_window* window)
     //else give up
 
     struct e_server* server = window->server;
-    struct e_seat* seat = server->input_manager->seat;
+    struct e_seat* seat = server->seat;
 
     struct wlr_surface* window_surface = window->surface;
 
@@ -316,22 +315,22 @@ void e_window_map(struct e_window* window)
 
     //set focus to this window's main surface
     if (window->surface != NULL)
-        e_seat_set_focus(window->server->input_manager->seat, window->surface, false);
+        e_seat_set_focus(window->server->seat, window->surface, false);
 }
 
 void e_window_unmap(struct e_window* window)
 {   
     assert(window);
 
-    struct e_input_manager* input_manager = window->server->input_manager;
+    struct e_seat* seat = window->server->seat;
 
     //if this window's surface had focus, clear it
-    if (window->surface != NULL && e_seat_has_focus(input_manager->seat, window->surface))
-        e_seat_clear_focus(input_manager->seat);
+    if (window->surface != NULL && e_seat_has_focus(seat, window->surface))
+        e_seat_clear_focus(seat);
 
     //if this window was grabbed by the cursor make it let go
-    if (input_manager->cursor->grab_window == window)
-        e_cursor_reset_mode(input_manager->cursor);
+    if (seat->cursor->grab_window == window)
+        e_cursor_reset_mode(seat->cursor);
 
     struct e_container* parent_container = window->container->parent;
     if (parent_container != NULL)
@@ -342,7 +341,7 @@ void e_window_unmap(struct e_window* window)
 
     wl_list_remove(&window->link);
         
-    e_cursor_update_focus(input_manager->cursor);
+    e_cursor_update_focus(seat->cursor);
 }
 
 struct e_window* e_window_from_surface(struct e_server* server, struct wlr_surface* surface)

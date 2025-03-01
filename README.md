@@ -8,7 +8,7 @@ This already has been quite the adventure...
 ## Building (using meson & ninja)
 
     meson setup build
-    ninja
+    ninja -C build
 
 ## Dependencies
 

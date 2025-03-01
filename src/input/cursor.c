@@ -23,8 +23,6 @@
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #include "desktop/layers/layer_shell.h"
-#include "desktop/xdg_shell.h"
-#include "input/input_manager.h"
 
 #include "input/seat.h"
 #include "server.h"
@@ -46,8 +44,8 @@ static void e_cursor_update_seat_focus(struct e_cursor* cursor, struct wlr_surfa
 {
     assert(cursor && surface);
 
-    struct e_server* server = cursor->input_manager->server;
-    struct e_seat* seat = cursor->input_manager->seat;
+    struct e_server* server = cursor->seat->server;
+    struct e_seat* seat = cursor->seat;
 
     //focus on windows
 
@@ -78,7 +76,7 @@ static void e_cursor_frame(struct wl_listener* listener, void* data)
 {
     struct e_cursor* cursor = wl_container_of(listener, cursor, frame);
     
-    wlr_seat_pointer_notify_frame(cursor->input_manager->seat->wlr_seat);
+    wlr_seat_pointer_notify_frame(cursor->seat->wlr_seat);
 }
 
 //mouse button presses
@@ -89,7 +87,7 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
 
     bool handled = false;
 
-    struct wlr_keyboard* keyboard = wlr_seat_get_keyboard(cursor->input_manager->seat->wlr_seat);
+    struct wlr_keyboard* keyboard = wlr_seat_get_keyboard(cursor->seat->wlr_seat);
 
     //is ALT modifier is pressed on keyboard? (for both cases within here, cursor mode should be in default mode)
     if (keyboard != NULL && (wlr_keyboard_get_modifiers(keyboard) & WLR_MODIFIER_ALT) && cursor->mode == E_CURSOR_MODE_DEFAULT)
@@ -97,7 +95,7 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
         //right click is held, start resizing the focussed window (right & bottom edge)
         if (event->button == E_POINTER_BUTTON_RIGHT && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
         {
-            struct e_window* focussed_window = e_window_from_surface(cursor->input_manager->server, cursor->input_manager->seat->focus_surface);
+            struct e_window* focussed_window = e_window_from_surface(cursor->seat->server, cursor->seat->focus_surface);
 
             e_cursor_start_window_resize(cursor, focussed_window, WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT);
             handled = true;
@@ -105,7 +103,7 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
         //middle click is held, start moving the focussed window
         else if (event->button == E_POINTER_BUTTON_MIDDLE && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
         {
-            struct e_window* focussed_window = e_window_from_surface(cursor->input_manager->server, cursor->input_manager->seat->focus_surface);
+            struct e_window* focussed_window = e_window_from_surface(cursor->seat->server, cursor->seat->focus_surface);
 
             e_cursor_start_window_move(cursor, focussed_window);
             handled = true;
@@ -121,7 +119,7 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
 
     //send to clients if button hasn't been handled
     if (!handled)
-        wlr_seat_pointer_notify_button(cursor->input_manager->seat->wlr_seat, event->time_msec, event->button, event->state);
+        wlr_seat_pointer_notify_button(cursor->seat->wlr_seat, event->time_msec, event->button, event->state);
 }
 
 static void e_cursor_handle_mode_move(struct e_cursor* cursor)
@@ -224,8 +222,8 @@ static void e_cursor_handle_move(struct e_cursor* cursor, uint32_t time_msec)
             break;
     }
 
-    struct e_server* server = cursor->input_manager->server;
-    struct e_seat* seat = cursor->input_manager->seat;
+    struct e_server* server = cursor->seat->server;
+    struct e_seat* seat = cursor->seat;
 
     double sx, sy;
     struct wlr_scene_node* hover_node;
@@ -279,13 +277,13 @@ static void e_cursor_axis(struct wl_listener* listener, void* data)
     struct wlr_pointer_axis_event* event = data;
     
     //send to clients
-    wlr_seat_pointer_notify_axis(cursor->input_manager->seat->wlr_seat, event->time_msec, event->orientation, event->delta, event->delta_discrete, event->source, event->relative_direction);
+    wlr_seat_pointer_notify_axis(cursor->seat->wlr_seat, event->time_msec, event->orientation, event->delta, event->delta_discrete, event->source, event->relative_direction);
 }
 
-struct e_cursor* e_cursor_create(struct e_input_manager* input_manager, struct wlr_output_layout* output_layout)
+struct e_cursor* e_cursor_create(struct e_seat* seat, struct wlr_output_layout* output_layout)
 {
     struct e_cursor* cursor = calloc(1, sizeof(*cursor));
-    cursor->input_manager = input_manager;
+    cursor->seat = seat;
     cursor->mode = E_CURSOR_MODE_DEFAULT;
 
     cursor->wlr_cursor = wlr_cursor_create();
@@ -445,8 +443,8 @@ void e_cursor_update_focus(struct e_cursor *cursor)
     if (cursor->mode != E_CURSOR_MODE_DEFAULT)
         return;
 
-    struct e_server* server = cursor->input_manager->server;
-    struct e_seat* seat = cursor->input_manager->seat;
+    struct e_server* server = cursor->seat->server;
+    struct e_seat* seat = cursor->seat;
 
     double sx, sy;
     struct wlr_scene_node* hover_node;

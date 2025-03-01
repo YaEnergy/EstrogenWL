@@ -3,8 +3,8 @@ project(
     'c',
     default_options: [
         'warning_level=2',
-        'werror=true'
-    ]
+        'werror=true',
+    ],
 )
 
 add_project_arguments(
@@ -12,7 +12,7 @@ add_project_arguments(
         '-DWLR_USE_UNSTABLE',
         '-Wno-unused-parameter',
     ],
-    language: 'c'
+    language: 'c',
 )
 
 cc = meson.get_compiler('c')
@@ -27,6 +27,8 @@ xkbcommon = dependency('xkbcommon')
 
 pixman = dependency('pixman-1')
 libdrm = dependency('libdrm')
+libudev = dependency('libudev')
+libinput = dependency('libinput')
 
 xcb = dependency('xcb')
 
@@ -39,6 +41,8 @@ deps = [
     pixman,
     libdrm,
     xcb,
+    libudev,
+    libinput,
 ]
 
 estrogenwl_includedir = include_directories('include')
@@ -68,7 +72,6 @@ estrogenwl_src = files(
     'src/desktop/windows/toplevel_window.c',
     'src/desktop/windows/xwayland_window.c',
 
-    'src/input/input_manager.c',
     'src/input/seat.c',
     'src/input/keyboard.c',
     'src/input/keybinding.c',
@@ -77,7 +80,7 @@ estrogenwl_src = files(
 
     'src/util/filesystem.c',
     'src/util/list.c',
-    'src/util/log.c'
+    'src/util/log.c',
 )
 
 exe = executable('EstrogenWL', sources: estrogenwl_src + protocol_src, dependencies: [ deps ], include_directories: [ estrogenwl_includedir ])

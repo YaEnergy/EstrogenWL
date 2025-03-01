@@ -41,20 +41,20 @@ int main()
     //check out: xkbcommon.org
     //Important function: xkb_keysym_from_name (const char *name, enum xkb_keysym_flags flags)
     
-    e_keybinding_bind(server.input_manager->keybinds, XKB_KEY_F1, WLR_MODIFIER_ALT, "exec rofi -modi drun,run -show drun");
-    e_keybinding_bind(server.input_manager->keybinds, XKB_KEY_F2, WLR_MODIFIER_ALT, "exec alacritty");
-    e_keybinding_bind(server.input_manager->keybinds, XKB_KEY_F3, WLR_MODIFIER_ALT, "exit");
-    e_keybinding_bind(server.input_manager->keybinds, XKB_KEY_F4, WLR_MODIFIER_ALT, "kill");
-    e_keybinding_bind(server.input_manager->keybinds, XKB_KEY_F5, WLR_MODIFIER_ALT, "toggle_fullscreen");
-    e_keybinding_bind(server.input_manager->keybinds, XKB_KEY_F6, WLR_MODIFIER_ALT, "toggle_tiling");
+    e_keybinding_bind(server.seat->keybinds, XKB_KEY_F1, WLR_MODIFIER_ALT, "exec rofi -modi drun,run -show drun");
+    e_keybinding_bind(server.seat->keybinds, XKB_KEY_F2, WLR_MODIFIER_ALT, "exec alacritty");
+    e_keybinding_bind(server.seat->keybinds, XKB_KEY_F3, WLR_MODIFIER_ALT, "exit");
+    e_keybinding_bind(server.seat->keybinds, XKB_KEY_F4, WLR_MODIFIER_ALT, "kill");
+    e_keybinding_bind(server.seat->keybinds, XKB_KEY_F5, WLR_MODIFIER_ALT, "toggle_fullscreen");
+    e_keybinding_bind(server.seat->keybinds, XKB_KEY_F6, WLR_MODIFIER_ALT, "toggle_tiling");
 
     e_server_run(&server);
 
     // display runs
 
-    //destroy everything
+    // destroy everything
     
-    e_server_destroy(&server);
+    e_server_fini(&server);
 
     e_log_deinit();
     

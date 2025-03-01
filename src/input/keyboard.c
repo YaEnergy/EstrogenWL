@@ -12,7 +12,6 @@
 
 #include <xkbcommon/xkbcommon.h>
 
-#include "input/input_manager.h"
 #include "input/seat.h"
 #include "input/keybinding.h"
 
@@ -21,8 +20,6 @@ static void e_keyboard_key(struct wl_listener* listener, void* data)
 {
     struct e_keyboard* keyboard = wl_container_of(listener, keyboard, key);
     struct wlr_keyboard_key_event* event = data;
-
-    struct e_input_manager* input_manager = keyboard->seat->input_manager;
 
     bool handled = false;
 
@@ -40,7 +37,7 @@ static void e_keyboard_key(struct wl_listener* listener, void* data)
 
         for (int i = 0; i < num_syms; i++)
         {
-            if (e_keybinding_handle(input_manager->server, input_manager->keybinds, syms[i], modifiers))
+            if (e_keybinding_handle(keyboard->seat->server, keyboard->seat->keybinds, syms[i], modifiers))
                 handled = true;
         }
     }

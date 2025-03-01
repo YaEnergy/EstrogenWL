@@ -12,19 +12,54 @@
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
+#include <wlr/types/wlr_output_layout.h>
 
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #include "desktop/layers/layer_shell.h"
-#include "server.h"
-#include "input/input_manager.h"
-#include "input/keyboard.h"
-#include "input/cursor.h"
 #include "desktop/windows/window.h"
 
+#include "input/keyboard.h"
+#include "input/cursor.h"
+
+#include "input/keybind.h"
+
+#include "server.h"
+
 #include "util/log.h"
+#include "util/list.h"
 
 //2024-12-18 22:29:22 | starting to be able to do this more on my own now, I feel like I'm learning a lot :3
+
+static void e_seat_update_capabilities(struct e_seat* seat)
+{
+    //send to clients what the capabilities of this seat are
+
+    //seat capabilities mask, always has capability for pointers
+    uint32_t capabilities = WL_SEAT_CAPABILITY_POINTER;
+
+    //keyboard available?
+    if (!wl_list_empty(&seat->keyboards))
+        capabilities |= WL_SEAT_CAPABILITY_KEYBOARD;
+
+    wlr_seat_set_capabilities(seat->wlr_seat, capabilities);
+}
+
+static void e_seat_add_keyboard(struct e_seat* seat, struct wlr_input_device* input)
+{
+    e_log_info("adding keyboard input device");
+
+    struct e_keyboard* keyboard = e_keyboard_create(input, seat);
+
+    //add to seat
+    wl_list_insert(&seat->keyboards, &keyboard->link);
+    wlr_seat_set_keyboard(seat->wlr_seat, keyboard->wlr_keyboard);
+    
+    if (seat->focus_surface != NULL)
+        e_seat_set_focus(seat, seat->focus_surface, true);
+
+    e_seat_update_capabilities(seat);
+}
 
 static void e_seat_request_set_cursor(struct wl_listener* listener, void* data)
 {
@@ -33,7 +68,7 @@ static void e_seat_request_set_cursor(struct wl_listener* listener, void* data)
 
     //any client can request, only allow focused client to actually set the surface of the cursor
     if (event->seat_client == seat->wlr_seat->pointer_state.focused_client)
-        wlr_cursor_set_surface(seat->input_manager->cursor->wlr_cursor, event->surface, event->hotspot_x, event->hotspot_y);
+        wlr_cursor_set_surface(seat->cursor->wlr_cursor, event->surface, event->hotspot_x, event->hotspot_y);
 }
 
 static void e_seat_request_set_selection(struct wl_listener* listener, void* data)
@@ -48,25 +83,68 @@ static void e_seat_destroy(struct wl_listener* listener, void* data)
 {
     struct e_seat* seat = wl_container_of(listener, seat, destroy);
 
+    e_cursor_destroy(seat->cursor);
+
+    for (int i = 0; i < seat->keybinds->count; i++)
+    {
+        struct e_keybind* keybind = e_list_at(seat->keybinds, i);
+
+        if (keybind != NULL)
+            e_keybind_free(keybind);
+    }
+
+    e_list_destroy(seat->keybinds);
+
     wl_list_remove(&seat->keyboards);
 
     wl_list_remove(&seat->request_set_cursor.link);
     wl_list_remove(&seat->request_set_selection.link);
     wl_list_remove(&seat->destroy.link);
 
+    wl_list_remove(&seat->new_input.link);
+
     free(seat);
 }
 
-struct e_seat* e_seat_create(struct e_input_manager* input_manager, const char* name)
+static void e_seat_new_input(struct wl_listener* listener, void* data)
 {
-    struct e_seat* seat = calloc(1, sizeof(struct e_seat));
+    struct e_seat* seat = wl_container_of(listener, seat, new_input);
 
-    struct wlr_seat* wlr_seat = wlr_seat_create(input_manager->server->display, name);
+    struct wlr_input_device* input = data;
+
+    switch(input->type)
+    {
+        case WLR_INPUT_DEVICE_KEYBOARD:
+            e_log_info("new keyboard input device");
+
+            e_seat_add_keyboard(seat, input);
+            break;
+        case WLR_INPUT_DEVICE_POINTER:
+            e_log_info("new pointer input device");
+
+            //attach pointer to cursor
+            wlr_cursor_attach_input_device(seat->cursor->wlr_cursor, input);
+            
+            break;
+        default:
+            e_log_info("new unsupported input device, ignoring...");
+            break;
+    }
+}
+
+struct e_seat* e_seat_create(struct e_server* server, struct wlr_output_layout* output_layout, const char* name)
+{
+    struct e_seat* seat = calloc(1, sizeof(*seat));
+
+    seat->server = server;
+
+    struct wlr_seat* wlr_seat = wlr_seat_create(server->display, name);
 
     seat->wlr_seat = wlr_seat;
-    seat->input_manager = input_manager;
     seat->focus_surface = NULL;
     seat->previous_focus_surface = NULL;
+
+    seat->cursor = e_cursor_create(seat, output_layout);
 
     wl_list_init(&seat->keyboards);
 
@@ -79,6 +157,12 @@ struct e_seat* e_seat_create(struct e_input_manager* input_manager, const char* 
 
     seat->destroy.notify = e_seat_destroy;
     wl_signal_add(&wlr_seat->events.destroy, &seat->destroy);
+
+    //listen for new input devices on backend
+    seat->new_input.notify = e_seat_new_input;
+    wl_signal_add(&server->backend->events.new_input, &seat->new_input);
+
+    seat->keybinds = e_list_create(3);
 
     return seat;
 }
@@ -107,7 +191,7 @@ void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface, bool ove
     seat->previous_focus_surface = seat->focus_surface;
     seat->focus_surface = surface;
 
-    struct e_window* window = e_window_from_surface(seat->input_manager->server, surface);
+    struct e_window* window = e_window_from_surface(seat->server, surface);
     
     if (window != NULL && window->tree != NULL)
         wlr_scene_node_raise_to_top(&window->tree->node);
@@ -146,36 +230,4 @@ void e_seat_clear_focus(struct e_seat* seat)
     
     seat->previous_focus_surface = seat->focus_surface;
     seat->focus_surface = NULL;
-}
-
-// input devices
-
-static void e_seat_update_capabilities(struct e_seat* seat)
-{
-    //send to clients what the capabilities of this seat are
-
-    //seat capabilities mask, always has capability for pointers
-    uint32_t capabilities = WL_SEAT_CAPABILITY_POINTER;
-
-    //keyboard available?
-    if (!wl_list_empty(&seat->keyboards))
-        capabilities |= WL_SEAT_CAPABILITY_KEYBOARD;
-
-    wlr_seat_set_capabilities(seat->wlr_seat, capabilities);
-}
-
-void e_seat_add_keyboard(struct e_seat* seat, struct wlr_input_device* input)
-{
-    e_log_info("adding keyboard input device");
-
-    struct e_keyboard* keyboard = e_keyboard_create(input, seat);
-
-    //add to seat
-    wl_list_insert(&seat->keyboards, &keyboard->link);
-    wlr_seat_set_keyboard(seat->wlr_seat, keyboard->wlr_keyboard);
-    
-    if (seat->focus_surface != NULL)
-        e_seat_set_focus(seat, seat->focus_surface, true);
-
-    e_seat_update_capabilities(seat);
 }

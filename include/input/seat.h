@@ -7,15 +7,21 @@
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_seat.h>
 
-#include "input/input_manager.h"
+#include "input/cursor.h"
+#include "server.h"
 
 //collection & management of input devices: keyboard, mouse, ...
 struct e_seat
 {
-    struct e_input_manager* input_manager;
+    struct e_server* server;
+
     struct wlr_seat* wlr_seat;
 
     struct wl_list keyboards;
+
+    struct e_cursor* cursor;
+
+    struct e_list* keybinds; //struct e_keybind*
 
     //surface that currently has focus
     struct wlr_surface* focus_surface;
@@ -34,7 +40,7 @@ struct e_seat
     struct wl_listener destroy;
 };
 
-struct e_seat* e_seat_create(struct e_input_manager* input_manager, const char* name);
+struct e_seat* e_seat_create(struct e_server* server, struct wlr_output_layout* output_layout, const char* name);
 
 // only sets keyboard (if active) focus, pointer focus is only on hover
 void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface, bool override_exclusive);
@@ -46,5 +52,3 @@ bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface);
 bool e_seat_has_exclusive_layer_focus(struct e_seat* seat);
 
 void e_seat_clear_focus(struct e_seat* seat);
-
-void e_seat_add_keyboard(struct e_seat* seat, struct wlr_input_device* input);

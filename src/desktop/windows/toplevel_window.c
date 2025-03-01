@@ -117,7 +117,7 @@ static void e_toplevel_window_request_move(struct wl_listener* listener, void* d
     //TODO: any client can request this, verify button serials
     
     struct e_server* server = toplevel_window->base->server;
-    e_cursor_start_window_move(server->input_manager->cursor, toplevel_window->base);
+    e_cursor_start_window_move(server->seat->cursor, toplevel_window->base);
 }
 
 static void e_toplevel_window_request_resize(struct wl_listener* listener, void* data)
@@ -128,7 +128,7 @@ static void e_toplevel_window_request_resize(struct wl_listener* listener, void*
     //TODO: any client can request this, verify buttons serial
     
     struct e_server* server = toplevel_window->base->server;
-    e_cursor_start_window_resize(server->input_manager->cursor, toplevel_window->base, event->edges);
+    e_cursor_start_window_resize(server->seat->cursor, toplevel_window->base, event->edges);
 }
 
 static void e_toplevel_window_set_title(struct wl_listener* listener, void* data)
