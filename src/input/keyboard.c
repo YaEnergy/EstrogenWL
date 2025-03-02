@@ -13,7 +13,29 @@
 #include <xkbcommon/xkbcommon.h>
 
 #include "input/seat.h"
-#include "input/keybinding.h"
+#include "input/keybind.h"
+
+#include "util/list.h"
+
+#include "commands.h"
+
+bool e_server_handle_keybind(struct e_server* server, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods)
+{
+    struct e_list* keybinds = server->seat->keybinds;
+
+    for (int i = 0; i < keybinds->count; i++)
+    {
+        struct e_keybind* keybind = e_list_at(keybinds, i);
+
+        if (e_keybind_should_activate(keybind, keysym, mods))
+        {
+            e_commands_parse(server, keybind->command);
+            return true;
+        }
+    }
+
+    return false;
+}
 
 //key pressed or released, emitted before keyboard xkb state is updated (including modifiers)
 static void e_keyboard_key(struct wl_listener* listener, void* data)
@@ -37,7 +59,7 @@ static void e_keyboard_key(struct wl_listener* listener, void* data)
 
         for (int i = 0; i < num_syms; i++)
         {
-            if (e_keybinding_handle(keyboard->seat->server, keyboard->seat->keybinds, syms[i], modifiers))
+            if (e_server_handle_keybind(keyboard->seat->server, syms[i], modifiers))
                 handled = true;
         }
     }
