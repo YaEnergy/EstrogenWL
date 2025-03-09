@@ -14,6 +14,8 @@
 
 #include "util/log.h"
 
+#include "config.h"
+
 static void e_xwayland_new_surface(struct wl_listener* listener, void* data)
 {
     struct e_xwayland* xwayland = wl_container_of(listener, xwayland, new_surface);
@@ -28,7 +30,7 @@ struct e_xwayland* e_xwayland_create(struct e_server* server, struct wl_display*
 {
     struct e_xwayland* xwayland = calloc(1, sizeof(*xwayland));
     xwayland->server = server;
-    xwayland->wlr_xwayland = wlr_xwayland_create(display, compositor, false);
+    xwayland->wlr_xwayland = wlr_xwayland_create(display, compositor, server->config->xwayland_lazy);
 
     wlr_xwayland_set_seat(xwayland->wlr_xwayland, seat);
 

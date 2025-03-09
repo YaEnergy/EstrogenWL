@@ -54,6 +54,7 @@ estrogenwl_src = files(
     'src/server.c',
     'src/output.c',
     'src/commands.c',
+    'src/config.c',
 
     'src/desktop/scene.c',
     'src/desktop/xdg_shell.c',

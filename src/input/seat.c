@@ -23,12 +23,9 @@
 #include "input/keyboard.h"
 #include "input/cursor.h"
 
-#include "input/keybind.h"
-
 #include "server.h"
 
 #include "util/log.h"
-#include "util/list.h"
 
 //2024-12-18 22:29:22 | starting to be able to do this more on my own now, I feel like I'm learning a lot :3
 
@@ -86,22 +83,14 @@ static void e_seat_destroy(struct wl_listener* listener, void* data)
 
     e_cursor_destroy(seat->cursor);
 
-    for (int i = 0; i < seat->keybinds->count; i++)
-    {
-        struct e_keybind* keybind = e_list_at(seat->keybinds, i);
-
-        if (keybind != NULL)
-            e_keybind_free(keybind);
-    }
-
-    e_list_destroy(seat->keybinds);
-
     wl_list_remove(&seat->keyboards);
 
     wl_list_remove(&seat->request_set_cursor.link);
     wl_list_remove(&seat->request_set_selection.link);
     wl_list_remove(&seat->destroy.link);
 
+    //FIXME: mem leak here
+    wl_list_init(&seat->new_input.link);
     wl_list_remove(&seat->new_input.link);
 
     free(seat);
@@ -162,8 +151,6 @@ struct e_seat* e_seat_create(struct e_server* server, struct wlr_output_layout* 
     //listen for new input devices on backend
     seat->new_input.notify = e_seat_new_input;
     wl_signal_add(&server->backend->events.new_input, &seat->new_input);
-
-    seat->keybinds = e_list_create(3);
 
     return seat;
 }

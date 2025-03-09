@@ -21,7 +21,7 @@
 
 bool e_server_handle_keybind(struct e_server* server, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods)
 {
-    struct e_list* keybinds = server->seat->keybinds;
+    struct e_list* keybinds = server->config->keyboard.keybinds;
 
     for (int i = 0; i < keybinds->count; i++)
     {

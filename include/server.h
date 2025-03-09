@@ -13,10 +13,15 @@
 #include "desktop/layers/layer_shell.h"
 #include "desktop/xdg_shell.h"
 #include "desktop/xwayland.h"
+
 #include "input/seat.h"
+
+#include "config.h"
 
 struct e_server
 {
+    struct e_config* config;
+
     //handles accepting clients from Unix socket, managing wl globals, ...
     struct wl_display* display;
 

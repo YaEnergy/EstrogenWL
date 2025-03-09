@@ -21,8 +21,6 @@ struct e_seat
 
     struct e_cursor* cursor;
 
-    struct e_list* keybinds; //struct e_keybind*
-
     //surface that currently has focus
     struct wlr_surface* focus_surface;
     //surface that previously has focus

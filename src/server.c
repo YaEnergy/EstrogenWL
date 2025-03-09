@@ -31,6 +31,7 @@
 #include "input/seat.h"
 
 #include "output.h"
+#include "config.h"
 
 static void e_server_new_output(struct wl_listener* listener, void* data)
 {
@@ -119,11 +120,19 @@ static void e_server_renderer_lost(struct wl_listener* listener, void* data)
 
 int e_server_init(struct e_server* server)
 {
+    server->config = e_config_create();
+
+    if (server->config == NULL)
+    {
+        e_log_error("failed to create default config");
+        return 1;
+    }
+
     //handles accepting clients from Unix socket, managing wl globals, ...
     e_log_info("creating display...");
     server->display = wl_display_create();
 
-     if (server->display == NULL)
+    if (server->display == NULL)
     {
         e_log_error("failed to create display");
         return 1;
@@ -247,6 +256,9 @@ bool e_server_run(struct e_server* server)
 
 void e_server_fini(struct e_server* server)
 {
+    if (server->config != NULL)
+        e_config_destroy(server->config);
+
     wl_list_remove(&server->renderer_lost.link);
 
     e_xwayland_destroy(server->xwayland);
