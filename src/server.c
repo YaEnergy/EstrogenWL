@@ -20,13 +20,11 @@
 #include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_viewporter.h>
 
+#include "desktop/desktop.h"
+#include "desktop/xwayland.h"
 #include "util/log.h"
 
-#include "desktop/scene.h"
-#include "desktop/xdg_shell.h"
 #include "desktop/gamma_control_manager.h"
-#include "desktop/layers/layer_shell.h"
-#include "desktop/scene.h"
 
 #include "input/seat.h"
 
@@ -38,8 +36,8 @@ static void e_server_new_input(struct wl_listener* listener, void* data)
     struct e_server* server = wl_container_of(listener, server, new_input);
     struct wlr_input_device* input = data;
 
-    if (server->seat != NULL)
-        e_seat_add_input_device(server->seat, input);
+    if (server->desktop->seat != NULL)
+        e_seat_add_input_device(server->desktop->seat, input);
 }
 
 static void e_server_new_output(struct wl_listener* listener, void* data)
@@ -67,9 +65,9 @@ static void e_server_new_output(struct wl_listener* listener, void* data)
     wlr_output_state_finish(&state);
 
     //allocate & configure output
-    struct e_output* output = e_output_create(server, wlr_output);
+    struct e_output* output = e_output_create(server->desktop, wlr_output);
 
-    e_scene_add_output(server->scene, output);
+    e_desktop_add_output(server->desktop, output);
 }
 
 static void e_server_backend_destroy(struct wl_listener* listener, void* data)
@@ -130,13 +128,7 @@ static void e_server_renderer_lost(struct wl_listener* listener, void* data)
 
 int e_server_init(struct e_server* server)
 {
-    server->config = e_config_create();
-
-    if (server->config == NULL)
-    {
-        e_log_error("failed to create default config");
-        return 1;
-    }
+    e_config_init(&server->config);
 
     //handles accepting clients from Unix socket, managing wl globals, ...
     e_log_info("creating display...");
@@ -207,27 +199,29 @@ int e_server_init(struct e_server* server)
     //allows clients to ask to copy part of the screen content to a client buffer, seems to be fully implemented by wlroots already
     wlr_screencopy_manager_v1_create(server->display);
 
-    server->scene = e_scene_create(server->display);
+    server->desktop = e_desktop_create(server->display, server->compositor, &server->config);
+
+    if (server->desktop == NULL)
+    {
+        e_log_error("failed to create desktop");
+        return 1;
+    }
+
+    //xdg shell v6, protocol for application windows
+    server->xdg_shell = e_xdg_shell_create(server->display, server->desktop);
+    //protocol for layer surfaces
+    server->layer_shell = e_layer_shell_create(server->display, server->desktop);
+    //create & start xwayland server, xwayland shell protocol
+    server->xwayland = e_xwayland_create(server->desktop, server->display, server->compositor, server->desktop->seat->wlr_seat, server->config.xwayland_lazy); 
 
     //protocol to describe output regions, seems to be fully implemented by wlroots already
-    wlr_xdg_output_manager_v1_create(server->display, server->scene->output_layout);
+    wlr_xdg_output_manager_v1_create(server->display, server->desktop->output_layout);
 
     //enable viewporter => the size of the surface texture may not match the surface size anymore, only use surface size
     wlr_viewporter_create(server->display);
-    
-    //xdg shell v6, protocol for application windows
-    server->xdg_shell = e_xdg_shell_create(server);
-
-    server->layer_shell = e_layer_shell_create(server);
-
-    //input device management
-    server->seat = e_seat_create(server, server->scene->output_layout, "seat0");
 
     //gamma control manager for output, does everything it needs to on its own
     e_gamma_control_manager_create(server->display);
-
-    //create & start xwayland server
-    server->xwayland = e_xwayland_create(server, server->display, server->compositor, server->seat->wlr_seat);
 
     return 0;
 }
@@ -269,16 +263,13 @@ bool e_server_run(struct e_server* server)
 
 void e_server_fini(struct e_server* server)
 {
-    if (server->config != NULL)
-        e_config_destroy(server->config);
-
     wl_list_remove(&server->renderer_lost.link);
 
     e_xwayland_destroy(server->xwayland);
-    
+
     wl_display_destroy_clients(server->display);
 
-    e_scene_destroy(server->scene);
+    e_desktop_destroy(server->desktop);
 
     wlr_allocator_destroy(server->allocator);
     wlr_renderer_destroy(server->renderer);

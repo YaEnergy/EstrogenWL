@@ -13,18 +13,16 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/backend.h>
 
-#include "desktop/layers/layer_shell.h"
-#include "desktop/scene.h"
-
 #include "desktop/tree/container.h"
 #include "server.h"
+#include "desktop/desktop.h"
 
 #include "util/log.h"
 
 static void e_output_frame(struct wl_listener* listener, void* data)
 {
     struct e_output* output = wl_container_of(listener, output, frame);
-    struct wlr_scene* scene = output->server->scene->wlr_scene;
+    struct wlr_scene* scene = output->desktop->scene;
     
     //render scene, commit its output to show it, and send frame from this timestamp
 
@@ -78,11 +76,12 @@ static void e_output_destroy(struct wl_listener* listener, void* data)
     free(output);
 }
 
-struct e_output* e_output_create(struct e_server* server, struct wlr_output* wlr_output)
+struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* wlr_output)
 {
     struct e_output* output = calloc(1, sizeof(*output));
     output->wlr_output = wlr_output;
-    output->server = server;
+    output->desktop = desktop;
+
     output->root_tiling_container = NULL;
     output->root_floating_container = NULL;
 
@@ -111,8 +110,8 @@ void e_output_arrange(struct e_output* output)
     wlr_output_layout_get_box(output->layout, output->wlr_output, &useable_area);
 
     //TODO: account for output's useable area after layer shell arrangement
-    if (output->server->layer_shell != NULL)
-        e_layer_shell_arrange_all_layers(output->server->layer_shell, output->wlr_output);
+    if (output->desktop != NULL)
+        e_desktop_arrange_all_layers(output->desktop, output->wlr_output);
 
     if (output->root_tiling_container != NULL)
     {

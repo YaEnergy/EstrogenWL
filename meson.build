@@ -55,8 +55,8 @@ estrogenwl_src = files(
     'src/output.c',
     'src/commands.c',
     'src/config.c',
-
-    'src/desktop/scene.c',
+    
+    'src/desktop/desktop.c',
     'src/desktop/xdg_shell.c',
     'src/desktop/xdg_popup.c',
     'src/desktop/xwayland.c',

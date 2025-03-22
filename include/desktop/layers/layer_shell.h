@@ -5,15 +5,13 @@
 
 #include <wlr/types/wlr_layer_shell_v1.h>
 
-#include "wlr-layer-shell-unstable-v1-protocol.h"
+struct e_desktop;
 
 struct e_layer_shell
 {
-    struct e_server* server;
+    struct e_desktop* desktop;
 
     struct wlr_layer_shell_v1* wlr_layer_shell_v1;
-
-    struct wl_list layer_surfaces; //struct e_layer_surface
 
     //new wlr_layer_surface_v1 that has been configured by client to configure and commit
     struct wl_listener new_surface;
@@ -21,11 +19,4 @@ struct e_layer_shell
     struct wl_listener destroy;
 };
 
-struct e_layer_shell* e_layer_shell_create(struct e_server* server);
-
-void e_layer_shell_arrange_layer(struct e_layer_shell* layer_shell, struct wlr_output* wlr_output, enum zwlr_layer_shell_v1_layer layer);
-
-void e_layer_shell_arrange_all_layers(struct e_layer_shell* layer_shell, struct wlr_output* wlr_output);
-
-//get topmost layer surface that requests exclusive focus, may be NULL
-struct e_layer_surface* e_layer_shell_get_exclusive_topmost_layer_surface(struct e_layer_shell* layer_shell);
+struct e_layer_shell* e_layer_shell_create(struct wl_display* display, struct e_desktop* desktop);

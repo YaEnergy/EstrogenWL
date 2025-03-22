@@ -11,7 +11,7 @@
 
 #include "desktop/windows/window.h"
 
-#include "server.h"
+struct e_desktop;
 
 struct e_xwayland_window
 {
@@ -45,5 +45,5 @@ struct e_xwayland_window
     //TODO: request resize, fullscreen, ... events
 };
 
-//creates new xwayland window inside server
-struct e_xwayland_window* e_xwayland_window_create(struct e_server* server, struct wlr_xwayland_surface* xwayland_surface);
+//creates new xwayland window on desktop
+struct e_xwayland_window* e_xwayland_window_create(struct e_desktop* desktop, struct wlr_xwayland_surface* xwayland_surface);

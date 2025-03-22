@@ -19,9 +19,9 @@
 
 #include "commands.h"
 
-bool e_server_handle_keybind(struct e_server* server, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods)
+bool e_desktop_handle_keybind(struct e_desktop* desktop, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods)
 {
-    struct e_list* keybinds = server->config->keyboard.keybinds;
+    struct e_list* keybinds = desktop->config->keyboard.keybinds;
 
     for (int i = 0; i < keybinds->count; i++)
     {
@@ -29,7 +29,7 @@ bool e_server_handle_keybind(struct e_server* server, xkb_keysym_t keysym, enum 
 
         if (e_keybind_should_activate(keybind, keysym, mods))
         {
-            e_commands_parse(server, keybind->command);
+            e_commands_parse(desktop, keybind->command);
             return true;
         }
     }
@@ -59,7 +59,7 @@ static void e_keyboard_key(struct wl_listener* listener, void* data)
 
         for (int i = 0; i < num_syms; i++)
         {
-            if (e_server_handle_keybind(keyboard->seat->server, syms[i], modifiers))
+            if (e_desktop_handle_keybind(keyboard->seat->desktop, syms[i], modifiers))
                 handled = true;
         }
     }
@@ -102,6 +102,7 @@ struct e_keyboard* e_keyboard_create(struct wlr_input_device* input, struct e_se
 
     //TODO: allow configuring of keyboard xkb keymaps
     //set up keymap (DEFAULT: US)
+
     struct xkb_context* xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
     struct xkb_keymap* keymap = xkb_keymap_new_from_names(xkb_context, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);
 
@@ -110,8 +111,8 @@ struct e_keyboard* e_keyboard_create(struct wlr_input_device* input, struct e_se
     xkb_keymap_unref(keymap);
     xkb_context_unref(xkb_context);
 
-    //TODO: allow configuring of keyboard repeat info
-    wlr_keyboard_set_repeat_info(wlr_keyboard, 25, 600);
+    struct e_config* config = seat->desktop->config;
+    wlr_keyboard_set_repeat_info(wlr_keyboard, config->keyboard.repeat_rate_hz, config->keyboard.repeat_delay_ms);
 
     wl_list_init(&keyboard->link);
     

@@ -10,7 +10,7 @@
 
 #include "desktop/windows/window.h"
 
-#include "server.h"
+struct e_desktop;
 
 struct e_toplevel_window
 {
@@ -41,5 +41,5 @@ struct e_toplevel_window
     //TODO: request resize, fullscreen, ... events
 };
 
-//creates new top level window inside server
-struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, struct wlr_xdg_toplevel* xdg_toplevel);
+//creates new top level window on desktop
+struct e_toplevel_window* e_toplevel_window_create(struct e_desktop* desktop, struct wlr_xdg_toplevel* xdg_toplevel);

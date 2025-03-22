@@ -13,8 +13,7 @@
 #include <wlr/util/edges.h>
 #include <wlr/util/box.h>
 
-#include "desktop/scene.h"
-
+#include "desktop/desktop.h"
 #include "desktop/tree/container.h"
 #include "desktop/tree/node.h"
 
@@ -24,14 +23,13 @@
 #include "util/log.h"
 
 #include "output.h"
-#include "server.h"
 
 //this function should only be called by the implementations of each window type. 
 //I mean it would be a bit weird to even call this function somewhere else.
-struct e_window* e_window_create(struct e_server* server, enum e_window_type type)
+struct e_window* e_window_create(struct e_desktop* desktop, enum e_window_type type)
 {
     struct e_window* window = calloc(1, sizeof(*window));
-    window->server = server;
+    window->desktop = desktop;
     window->type = type;
 
     window->tree = NULL;
@@ -139,8 +137,8 @@ static void e_window_tile_container(struct e_window* window)
     //add to container if found
     //else give up
 
-    struct e_server* server = window->server;
-    struct e_seat* seat = server->seat;
+    struct e_desktop* desktop = window->desktop;
+    struct e_seat* seat = desktop->seat;
 
     struct wlr_surface* window_surface = window->surface;
 
@@ -151,7 +149,7 @@ static void e_window_tile_container(struct e_window* window)
         //if not focused, find current TILED focused window's parent container
         if (!e_seat_has_focus(seat, window_surface) && seat->focus_surface != NULL)
         {
-            struct e_window* focus_window = e_window_from_surface(server, seat->focus_surface);
+            struct e_window* focus_window = e_window_from_surface(desktop, seat->focus_surface);
 
             if (focus_window != NULL && focus_window->tiled && focus_window->container != NULL)
                 parent_container = focus_window->container->parent;
@@ -160,7 +158,7 @@ static void e_window_tile_container(struct e_window* window)
         //if focused or none, find previous TILED focused's parent container
         if ((parent_container == NULL || e_seat_has_focus(seat, window_surface)) && seat->previous_focus_surface != NULL)
         {
-            struct e_window* previous_focus_window = e_window_from_surface(server, seat->previous_focus_surface);
+            struct e_window* previous_focus_window = e_window_from_surface(desktop, seat->previous_focus_surface);
 
             if (previous_focus_window != NULL && previous_focus_window->tiled && previous_focus_window->container != NULL)
                 parent_container = previous_focus_window->container->parent;
@@ -171,7 +169,7 @@ static void e_window_tile_container(struct e_window* window)
     if (parent_container == NULL)
     {
         //Set to output 0's container
-        struct e_output* output = e_scene_get_output(window->server->scene, 0);
+        struct e_output* output = e_desktop_get_output(window->desktop, 0);
 
         if (output != NULL && output->root_tiling_container != NULL)
             parent_container = output->root_tiling_container;
@@ -235,7 +233,7 @@ static void e_window_float_container(struct e_window* window)
     if (parent_container == NULL)
     {
         //Set to output 0's container
-        struct e_output* output = e_scene_get_output(window->server->scene, 0);
+        struct e_output* output = e_desktop_get_output(window->desktop, 0);
 
         if (output != NULL && output->root_floating_container != NULL)
             parent_container = output->root_floating_container;
@@ -303,7 +301,7 @@ void e_window_map(struct e_window* window)
 
     e_log_info("map");
 
-    wl_list_insert(&window->server->scene->windows, &window->link);
+    wl_list_insert(&window->desktop->windows, &window->link);
 
     if (window->container->parent == NULL)
     {
@@ -315,14 +313,14 @@ void e_window_map(struct e_window* window)
 
     //set focus to this window's main surface
     if (window->surface != NULL)
-        e_seat_set_focus(window->server->seat, window->surface, false);
+        e_seat_set_focus(window->desktop->seat, window->surface, false);
 }
 
 void e_window_unmap(struct e_window* window)
 {   
     assert(window);
 
-    struct e_seat* seat = window->server->seat;
+    struct e_seat* seat = window->desktop->seat;
 
     //if this window's surface had focus, clear it
     if (window->surface != NULL && e_seat_has_focus(seat, window->surface))
@@ -344,14 +342,14 @@ void e_window_unmap(struct e_window* window)
     e_cursor_update_focus(seat->cursor);
 }
 
-struct e_window* e_window_from_surface(struct e_server* server, struct wlr_surface* surface)
+struct e_window* e_window_from_surface(struct e_desktop* desktop, struct wlr_surface* surface)
 {
-    if (wl_list_empty(&server->scene->windows))
+    if (wl_list_empty(&desktop->windows))
         return NULL;
 
     struct e_window* window;
 
-    wl_list_for_each(window, &server->scene->windows, link)
+    wl_list_for_each(window, &desktop->windows, link)
     {
         if (window->surface == NULL)
             continue;
@@ -399,7 +397,7 @@ struct e_window* e_window_at(struct wlr_scene_node* node, double lx, double ly, 
     }
 
     struct wlr_scene_node* snode;
-    *surface = e_scene_wlr_surface_at(node, lx, ly, &snode, sx, sy);
+    *surface = e_desktop_wlr_surface_at(node, lx, ly, &snode, sx, sy);
 
     if (snode == NULL || *surface == NULL)
         return NULL;

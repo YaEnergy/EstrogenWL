@@ -37,7 +37,7 @@ struct e_window_impl
 //a window: xdg toplevel or xwayland window
 struct e_window
 {
-    struct e_server* server;
+    struct e_desktop* desktop;
 
     //Determines what type of window this is: see e_window_type
     enum e_window_type type;
@@ -62,12 +62,12 @@ struct e_window
     //May be NULL, if not created
     struct e_container* container;
 
-    struct wl_list link; //e_scene::windows
+    struct wl_list link; //e_desktop::windows
 };
 
 //this function should only be called by the implementations of each window type. 
 //I mean it would be a bit weird to even call this function somewhere else.
-struct e_window* e_window_create(struct e_server* server, enum e_window_type type);
+struct e_window* e_window_create(struct e_desktop* desktop, enum e_window_type type);
 
 void e_window_create_container_tree(struct e_window* window, struct wlr_scene_tree* parent);
 
@@ -98,7 +98,7 @@ void e_window_map(struct e_window* window);
 void e_window_unmap(struct e_window* window);
 
 //finds the window which has this surface as its main surface, NULL if not found
-struct e_window* e_window_from_surface(struct e_server* server, struct wlr_surface* surface);
+struct e_window* e_window_from_surface(struct e_desktop* desktop, struct wlr_surface* surface);
 
 //Returns NULL on fail.
 struct e_window* e_window_try_from_node_ancestors(struct wlr_scene_node* node);

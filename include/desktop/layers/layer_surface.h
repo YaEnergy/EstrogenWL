@@ -12,11 +12,11 @@
 #include "output.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
-#include "server.h"
+struct e_desktop;
 
 struct e_layer_surface
 {
-    struct e_server* server;
+    struct e_desktop* desktop;
 
     struct e_output* output;
 
@@ -34,10 +34,10 @@ struct e_layer_surface
 
     struct wl_listener destroy;
 
-    struct wl_list link;
+    struct wl_list link; //e_desktop::layer_surfaces
 };
 
-struct e_layer_surface* e_layer_surface_create(struct e_server* server, struct wlr_layer_surface_v1* wlr_layer_surface_v1);
+struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct wlr_layer_surface_v1* wlr_layer_surface_v1);
 
 //configures an e_layer_surface's layout, updates remaining area
 void e_layer_surface_configure(struct e_layer_surface* layer_surface, struct wlr_box* full_area, struct wlr_box* remaining_area);

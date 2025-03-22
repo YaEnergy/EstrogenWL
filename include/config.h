@@ -23,6 +23,7 @@ struct e_keyboard_config
     int32_t repeat_delay_ms;
 };
 
+// server configuration
 struct e_config
 {
     enum e_tiling_mode current_tiling_mode;
@@ -34,11 +35,10 @@ struct e_config
     bool xwayland_lazy;
 };
 
-// Creates a default config.
-// Returns NULL on fail.
-struct e_config* e_config_create();
+// Inits to a default config.
+void e_config_init(struct e_config* config);
 
-void e_config_destroy(struct e_config* config);
+void e_config_fini(struct e_config* config);
 
 //TODO: implement e_config_parse_config_file
 //bool e_config_parse_config_file(char* file_path, struct e_config* out);

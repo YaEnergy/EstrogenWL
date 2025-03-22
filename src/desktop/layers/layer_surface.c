@@ -9,20 +9,19 @@
 
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
+#include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/box.h>
 
-#include "desktop/layers/layer_popup.h"
-#include "desktop/tree/node.h"
-#include "desktop/xdg_shell.h"
-#include "output.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
+
+#include "desktop/desktop.h"
+#include "desktop/tree/node.h"
+#include "desktop/layers/layer_shell.h"
+#include "desktop/layers/layer_popup.h"
 
 #include "input/seat.h"
 
-#include "desktop/layers/layer_shell.h"
-#include "desktop/layers/layer_popup.h"
 #include "output.h"
-#include "server.h"
 
 #include "util/log.h"
 
@@ -74,7 +73,7 @@ static void e_layer_surface_add_to_desired_layer(struct e_layer_surface* layer_s
 //if this layer surface requests exclusive focus, and is on a higher layer than or a layer equal to the current focused exclusive layer surface
 static bool e_layer_surface_should_get_exclusive_focus(struct e_layer_surface* layer_surface)
 {
-    struct e_seat* seat = layer_surface->server->seat;
+    struct e_seat* seat = layer_surface->desktop->seat;
 
     struct wlr_layer_surface_v1* wlr_layer_surface_v1 = layer_surface->scene_layer_surface_v1->layer_surface;
 
@@ -101,7 +100,7 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
     //configure on initial commit
     if (wlr_layer_surface_v1->initial_commit)
     {
-        wl_list_insert(&layer_surface->server->layer_shell->layer_surfaces, &layer_surface->link);
+        wl_list_insert(&layer_surface->desktop->layer_surfaces, &layer_surface->link);
 
         update_arrangement = true;
     }
@@ -121,7 +120,7 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
     //committed keyboard interactivity
     if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_KEYBOARD_INTERACTIVITY)
     {
-        struct e_seat* seat = layer_surface->server->seat;
+        struct e_seat* seat = layer_surface->desktop->seat;
 
         //give exclusive focus if requested and allowed and doesn't have focus
         if (e_layer_surface_should_get_exclusive_focus(layer_surface) && !e_seat_has_focus(seat, wlr_layer_surface_v1->surface))
@@ -158,23 +157,22 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
     }
 
     if (update_arrangement)
-        e_layer_shell_arrange_layer(layer_surface->server->layer_shell, layer_surface->output->wlr_output, e_layer_surface_get_layer(layer_surface));
+        e_desktop_arrange_layer(layer_surface->desktop, layer_surface->output->wlr_output, e_layer_surface_get_layer(layer_surface));
 }
 
 static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
 {
     struct e_layer_surface* unmapped_layer_surface = wl_container_of(listener, unmapped_layer_surface, unmap);
-    struct e_layer_shell* layer_shell = unmapped_layer_surface->server->layer_shell;
 
     wl_list_remove(&unmapped_layer_surface->link);
-    e_layer_shell_arrange_layer(layer_shell, e_layer_surface_get_wlr_output(unmapped_layer_surface), e_layer_surface_get_layer(unmapped_layer_surface));
+    e_desktop_arrange_layer(unmapped_layer_surface->desktop, e_layer_surface_get_wlr_output(unmapped_layer_surface), e_layer_surface_get_layer(unmapped_layer_surface));
 
     //get next topmost layer surface that requests exclusive focus, and focus on it
 
-    struct e_layer_surface* next_layer_surface = e_layer_shell_get_exclusive_topmost_layer_surface(layer_shell);
+    struct e_layer_surface* next_layer_surface = e_desktop_get_exclusive_topmost_layer_surface(unmapped_layer_surface->desktop);
 
     if (next_layer_surface != NULL)
-        e_seat_set_focus(next_layer_surface->server->seat, next_layer_surface->scene_layer_surface_v1->layer_surface->surface, true);
+        e_seat_set_focus(next_layer_surface->desktop->seat, next_layer_surface->scene_layer_surface_v1->layer_surface->surface, true);
 }
 
 static void e_layer_surface_destroy(struct wl_listener* listener, void* data)
@@ -189,12 +187,12 @@ static void e_layer_surface_destroy(struct wl_listener* listener, void* data)
     free(layer_surface);
 }
 
-struct e_layer_surface* e_layer_surface_create(struct e_server* server, struct wlr_layer_surface_v1* wlr_layer_surface_v1)
+struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct wlr_layer_surface_v1* wlr_layer_surface_v1)
 {
-    assert(server && wlr_layer_surface_v1 && wlr_layer_surface_v1->output);
+    assert(desktop && wlr_layer_surface_v1 && wlr_layer_surface_v1->output);
 
     struct e_layer_surface* layer_surface = calloc(1, sizeof(struct e_layer_surface));
-    layer_surface->server = server;
+    layer_surface->desktop = desktop;
 
     layer_surface->output = wlr_layer_surface_v1->output->data;
     

@@ -22,12 +22,9 @@
 #include "desktop/tree/container.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
-#include "desktop/layers/layer_shell.h"
-
 #include "input/seat.h"
-#include "server.h"
 
-#include "desktop/scene.h"
+#include "desktop/desktop.h"
 #include "desktop/windows/window.h"
 
 #include "util/log.h"
@@ -44,13 +41,13 @@ static void e_cursor_update_seat_focus(struct e_cursor* cursor, struct wlr_surfa
 {
     assert(cursor && surface);
 
-    struct e_server* server = cursor->seat->server;
+    struct e_desktop* desktop = cursor->seat->desktop;
     struct e_seat* seat = cursor->seat;
 
     //focus on windows
 
     struct wlr_surface* root_surface = wlr_surface_get_root_surface(surface);
-    struct e_window* window = e_window_from_surface(server, root_surface);
+    struct e_window* window = e_window_from_surface(desktop, root_surface);
 
     if (window != NULL && !e_seat_has_focus(seat, window->surface))
     {
@@ -95,7 +92,7 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
         //right click is held, start resizing the focussed window (right & bottom edge)
         if (event->button == E_POINTER_BUTTON_RIGHT && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
         {
-            struct e_window* focussed_window = e_window_from_surface(cursor->seat->server, cursor->seat->focus_surface);
+            struct e_window* focussed_window = e_window_from_surface(cursor->seat->desktop, cursor->seat->focus_surface);
 
             e_cursor_start_window_resize(cursor, focussed_window, WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT);
             handled = true;
@@ -103,7 +100,7 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
         //middle click is held, start moving the focussed window
         else if (event->button == E_POINTER_BUTTON_MIDDLE && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
         {
-            struct e_window* focussed_window = e_window_from_surface(cursor->seat->server, cursor->seat->focus_surface);
+            struct e_window* focussed_window = e_window_from_surface(cursor->seat->desktop, cursor->seat->focus_surface);
 
             e_cursor_start_window_move(cursor, focussed_window);
             handled = true;
@@ -222,12 +219,12 @@ static void e_cursor_handle_move(struct e_cursor* cursor, uint32_t time_msec)
             break;
     }
 
-    struct e_server* server = cursor->seat->server;
+    struct e_desktop* desktop = cursor->seat->desktop;
     struct e_seat* seat = cursor->seat;
 
     double sx, sy;
     struct wlr_scene_node* hover_node;
-    struct wlr_surface* hover_surface = e_scene_wlr_surface_at(&server->scene->wlr_scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_node, &sx, &sy);
+    struct wlr_surface* hover_surface = e_desktop_wlr_surface_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_node, &sx, &sy);
     struct e_window* window = (hover_node == NULL) ? NULL : e_window_try_from_node_ancestors(hover_node);
 
     if (hover_surface != NULL)
@@ -437,18 +434,18 @@ void e_cursor_start_window_move(struct e_cursor* cursor, struct e_window* window
     e_cursor_start_grab_window_mode(cursor, window, E_CURSOR_MODE_MOVE);
 }
 
-void e_cursor_update_focus(struct e_cursor *cursor)
+void e_cursor_update_focus(struct e_cursor* cursor)
 {
     //only update focus in default mode
     if (cursor->mode != E_CURSOR_MODE_DEFAULT)
         return;
 
-    struct e_server* server = cursor->seat->server;
+    struct e_desktop* desktop = cursor->seat->desktop;
     struct e_seat* seat = cursor->seat;
 
     double sx, sy;
     struct wlr_scene_node* hover_node;
-    struct wlr_surface* hover_surface = e_scene_wlr_surface_at(&server->scene->wlr_scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_node, &sx, &sy);
+    struct wlr_surface* hover_surface = e_desktop_wlr_surface_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_node, &sx, &sy);
     struct e_window* window = (hover_node == NULL) ? NULL : e_window_try_from_node_ancestors(hover_node);
 
     if (hover_surface != NULL)

@@ -8,12 +8,13 @@
 #include <wlr/types/wlr_seat.h>
 
 #include "input/cursor.h"
-#include "server.h"
+
+struct e_desktop;
 
 //collection & management of input devices: keyboard, mouse, ...
 struct e_seat
 {
-    struct e_server* server;
+    struct e_desktop* desktop;
 
     struct wlr_seat* wlr_seat;
 
@@ -35,7 +36,7 @@ struct e_seat
     struct wl_listener destroy;
 };
 
-struct e_seat* e_seat_create(struct e_server* server, struct wlr_output_layout* output_layout, const char* name);
+struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* desktop, struct wlr_output_layout* output_layout, const char* name);
 
 void e_seat_add_input_device(struct e_seat* seat, struct wlr_input_device* input);
 

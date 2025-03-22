@@ -18,13 +18,10 @@
 
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
-#include "desktop/layers/layer_shell.h"
 #include "desktop/windows/window.h"
 
 #include "input/keyboard.h"
 #include "input/cursor.h"
-
-#include "server.h"
 
 #include "util/log.h"
 
@@ -63,13 +60,13 @@ static void e_seat_destroy(struct wl_listener* listener, void* data)
     free(seat);
 }
 
-struct e_seat* e_seat_create(struct e_server* server, struct wlr_output_layout* output_layout, const char* name)
+struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* desktop, struct wlr_output_layout* output_layout, const char* name)
 {
     struct e_seat* seat = calloc(1, sizeof(*seat));
 
-    seat->server = server;
+    seat->desktop = desktop;
 
-    struct wlr_seat* wlr_seat = wlr_seat_create(server->display, name);
+    struct wlr_seat* wlr_seat = wlr_seat_create(display, name);
 
     seat->wlr_seat = wlr_seat;
     seat->focus_surface = NULL;
@@ -172,7 +169,7 @@ void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface, bool ove
     seat->previous_focus_surface = seat->focus_surface;
     seat->focus_surface = surface;
 
-    struct e_window* window = e_window_from_surface(seat->server, surface);
+    struct e_window* window = e_window_from_surface(seat->desktop, surface);
     
     if (window != NULL && window->tree != NULL)
         wlr_scene_node_raise_to_top(&window->tree->node);

@@ -10,54 +10,50 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output_layout.h>
 
+#include "desktop/desktop.h"
 #include "desktop/layers/layer_shell.h"
 #include "desktop/xdg_shell.h"
 #include "desktop/xwayland.h"
 
-#include "input/seat.h"
-
 #include "config.h"
 
+// main struct handling:
+//  - backend (wl_display, wlr_backend, wlr_allocator, wlr_renderer, shells, protocols ...)
+//  - frontend (e_desktop)
+//  - config
 struct e_server
 {
-    struct e_config* config;
+    struct e_config config;
 
-    //handles accepting clients from Unix socket, managing wl globals, ...
+    // handles accepting clients from Unix socket, managing wl globals, ...
     struct wl_display* display;
 
-    //handles input and output hardware
+    // handles input and output hardware
     struct wlr_backend* backend;
     struct wl_listener new_input;
     struct wl_listener new_output;
     struct wl_listener backend_destroy;
     
-    //allocates memory for pixel buffers 
+    // allocates memory for pixel buffers 
     struct wlr_allocator* allocator;
     
-    //renderer handles rendering, used by scene
+    // renderer handles rendering, used by scene
     struct wlr_renderer* renderer;
-    //renderer lost gpu
+    // renderer lost gpu
     struct wl_listener renderer_lost;
 
-    //used by clients to create surfaces & regions
+    // used by clients to create surfaces & regions
     struct wlr_compositor* compositor;
 
-    //root scene tree for all layers, and further down windows and layer surfaces
-    struct e_scene* scene;
-
-    //handles protocol for application windows
+    // handles xdg shell protocol for xdg application windows
     struct e_xdg_shell* xdg_shell;
-
-    //handles protocol for layers
+    // handles wlr layer shell protocol for layer surfaces
     struct e_layer_shell* layer_shell;
-
-    struct wl_listener new_output;
-
-    //collection & management of input devices: keyboard, mouse, ...
-    struct e_seat* seat;
-
-    //xwayland
+    // handles xwayland protocol, server and wm for xwayland application windows
     struct e_xwayland* xwayland;
+
+    // what the user interacts with
+    struct e_desktop* desktop;
 };
 
 int e_server_init(struct e_server* server);

@@ -3,7 +3,7 @@
 // Command functions
 // usually called by keybinds
 
-#include "server.h"
+struct e_desktop;
 
 // Parses & executes the command
-void e_commands_parse(struct e_server* server, const char* command);
+void e_commands_parse(struct e_desktop* desktop, const char* command);

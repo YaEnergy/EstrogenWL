@@ -1,6 +1,7 @@
 #include "desktop/xwayland.h"
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <assert.h>
 
 #include <wayland-server-core.h>
@@ -14,8 +15,6 @@
 
 #include "util/log.h"
 
-#include "config.h"
-
 static void e_xwayland_new_surface(struct wl_listener* listener, void* data)
 {
     struct e_xwayland* xwayland = wl_container_of(listener, xwayland, new_surface);
@@ -23,14 +22,14 @@ static void e_xwayland_new_surface(struct wl_listener* listener, void* data)
 
     e_log_info("new xwayland surface");
 
-    e_xwayland_window_create(xwayland->server, wlr_xwayland_surface);
+    e_xwayland_window_create(xwayland->desktop, wlr_xwayland_surface);
 }
 
-struct e_xwayland* e_xwayland_create(struct e_server* server, struct wl_display* display, struct wlr_compositor* compositor, struct wlr_seat* seat)
+struct e_xwayland* e_xwayland_create(struct e_desktop* desktop, struct wl_display* display, struct wlr_compositor* compositor, struct wlr_seat* seat, bool lazy)
 {
     struct e_xwayland* xwayland = calloc(1, sizeof(*xwayland));
-    xwayland->server = server;
-    xwayland->wlr_xwayland = wlr_xwayland_create(display, compositor, server->config->xwayland_lazy);
+    xwayland->desktop = desktop;
+    xwayland->wlr_xwayland = wlr_xwayland_create(display, compositor, lazy);
 
     wlr_xwayland_set_seat(xwayland->wlr_xwayland, seat);
 

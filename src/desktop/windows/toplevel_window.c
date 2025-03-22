@@ -10,18 +10,14 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_scene.h>
 
-#include "desktop/tree/node.h"
-
+#include "desktop/desktop.h"
 #include "desktop/xdg_popup.h"
-#include "desktop/scene.h"
-
+#include "desktop/tree/node.h"
 #include "desktop/windows/window.h"
 
 #include "input/cursor.h"
 
 #include "util/log.h"
-
-#include "server.h"
 
 static bool e_toplevel_window_wants_floating(struct e_toplevel_window* toplevel_window)
 {
@@ -116,8 +112,8 @@ static void e_toplevel_window_request_move(struct wl_listener* listener, void* d
 
     //TODO: any client can request this, verify button serials
     
-    struct e_server* server = toplevel_window->base->server;
-    e_cursor_start_window_move(server->seat->cursor, toplevel_window->base);
+    struct e_desktop* desktop = toplevel_window->base->desktop;
+    e_cursor_start_window_move(desktop->seat->cursor, toplevel_window->base);
 }
 
 static void e_toplevel_window_request_resize(struct wl_listener* listener, void* data)
@@ -127,8 +123,8 @@ static void e_toplevel_window_request_resize(struct wl_listener* listener, void*
 
     //TODO: any client can request this, verify buttons serial
     
-    struct e_server* server = toplevel_window->base->server;
-    e_cursor_start_window_resize(server->seat->cursor, toplevel_window->base, event->edges);
+    struct e_desktop* desktop = toplevel_window->base->desktop;
+    e_cursor_start_window_resize(desktop->seat->cursor, toplevel_window->base, event->edges);
 }
 
 static void e_toplevel_window_set_title(struct wl_listener* listener, void* data)
@@ -166,11 +162,11 @@ static void e_toplevel_window_destroy(struct wl_listener* listener, void* data)
 static void e_toplevel_window_init_xdg_scene_tree(struct e_toplevel_window* toplevel_window)
 {
     //create scene xdg surface for xdg toplevel and window, and set up window scene tree
-    struct e_scene* scene = toplevel_window->base->server->scene;
-    toplevel_window->base->tree = wlr_scene_xdg_surface_create(scene->pending, toplevel_window->xdg_toplevel->base);
+    struct e_desktop* desktop = toplevel_window->base->desktop;
+    toplevel_window->base->tree = wlr_scene_xdg_surface_create(desktop->pending, toplevel_window->xdg_toplevel->base);
     e_node_desc_create(&toplevel_window->base->tree->node, E_NODE_DESC_WINDOW, toplevel_window->base);
 
-    e_window_create_container_tree(toplevel_window->base, scene->pending);
+    e_window_create_container_tree(toplevel_window->base, desktop->pending);
 
     //allows popup scene trees to add themselves to this window's scene tree
     toplevel_window->xdg_toplevel->base->data = toplevel_window->base->tree;
@@ -209,14 +205,14 @@ static void e_window_toplevel_send_close(struct e_window* window)
     wlr_xdg_toplevel_send_close(toplevel_window->xdg_toplevel);
 }
 
-struct e_toplevel_window* e_toplevel_window_create(struct e_server* server, struct wlr_xdg_toplevel* xdg_toplevel)
+struct e_toplevel_window* e_toplevel_window_create(struct e_desktop* desktop, struct wlr_xdg_toplevel* xdg_toplevel)
 {
     struct e_toplevel_window* toplevel_window = calloc(1, sizeof(*toplevel_window));
 
     //give pointer to xdg toplevel
     toplevel_window->xdg_toplevel = xdg_toplevel;
 
-    struct e_window* window = e_window_create(server, E_WINDOW_TOPLEVEL);
+    struct e_window* window = e_window_create(desktop, E_WINDOW_TOPLEVEL);
     window->data = toplevel_window;
     toplevel_window->base = window;
 

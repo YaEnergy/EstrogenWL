@@ -6,7 +6,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 
 #include "util/log.h"
-#include "server.h"
+
 #include "desktop/xdg_shell.h"
 #include "desktop/windows/toplevel_window.h"
 
@@ -18,8 +18,8 @@ static void e_xdg_shell_new_toplevel_window(struct wl_listener* listener, void* 
 
     e_log_info("New toplevel window");
 
-    //creates a top level window for this shell's server
-    e_toplevel_window_create(shell->server, xdg_toplevel);
+    //creates a top level window for this shell's desktop
+    e_toplevel_window_create(shell->desktop, xdg_toplevel);
 }
 
 static void e_xdg_shell_destroy(struct wl_listener* listener, void* data)
@@ -32,15 +32,15 @@ static void e_xdg_shell_destroy(struct wl_listener* listener, void* data)
     free(shell);
 }
 
-struct e_xdg_shell* e_xdg_shell_create(struct e_server* server)
+struct e_xdg_shell* e_xdg_shell_create(struct wl_display* display, struct e_desktop* desktop)
 {
-    struct e_xdg_shell* shell = calloc(1, sizeof(struct e_xdg_shell));
+    struct e_xdg_shell* shell = calloc(1, sizeof(*shell));
 
-    //give the shell a pointer to the server
-    shell->server = server;
+    //give the shell a pointer to the desktop
+    shell->desktop = desktop;
 
-    //create xdg shell v6 for this server's display
-    shell->xdg_shell = wlr_xdg_shell_create(server->display, 6);
+    //create xdg shell v6 for this display
+    shell->xdg_shell = wlr_xdg_shell_create(display, 6);
 
     //events
 

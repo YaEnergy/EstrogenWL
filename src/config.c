@@ -1,8 +1,6 @@
 #include "config.h"
 
 #include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
 #include <assert.h>
 
 #include "desktop/tree/container.h"
@@ -11,12 +9,9 @@
 
 #include "util/list.h"
 
-struct e_config* e_config_create()
+void e_config_init(struct e_config* config)
 {
-    struct e_config* config = calloc(1, sizeof(*config));
-
-    if (config == NULL)
-        return NULL;
+    assert(config);
 
     config->current_tiling_mode = E_TILING_MODE_HORIZONTAL;
 
@@ -25,11 +20,9 @@ struct e_config* e_config_create()
     config->keyboard.repeat_delay_ms = 600;
 
     config->xwayland_lazy = true;
-
-    return config;
 }
 
-void e_config_destroy(struct e_config* config)
+void e_config_fini(struct e_config* config)
 {
     assert(config);
     
@@ -42,6 +35,4 @@ void e_config_destroy(struct e_config* config)
     }
 
     e_list_destroy(config->keyboard.keybinds);
-
-    free(config);
 }

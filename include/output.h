@@ -11,12 +11,12 @@
 
 #include "desktop/tree/container.h"
 
-struct e_server;
+struct e_desktop;
 
 struct e_output
 {
-    struct wl_list link;
-    struct e_server* server;
+    struct wl_list link; //e_desktop::outputs
+    struct e_desktop* desktop;
     struct wlr_output* wlr_output;
 
     struct wlr_output_layout* layout;
@@ -53,6 +53,6 @@ struct e_output
     struct wl_listener destroy;
 };
 
-struct e_output* e_output_create(struct e_server* server, struct wlr_output* wlr_output);
+struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* wlr_output);
 
 void e_output_arrange(struct e_output* output);
