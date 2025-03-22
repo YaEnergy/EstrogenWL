@@ -1,6 +1,7 @@
 #include "input/seat.h"
 
 #include <stdlib.h>
+#include <assert.h>
 
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
@@ -28,36 +29,6 @@
 #include "util/log.h"
 
 //2024-12-18 22:29:22 | starting to be able to do this more on my own now, I feel like I'm learning a lot :3
-
-static void e_seat_update_capabilities(struct e_seat* seat)
-{
-    //send to clients what the capabilities of this seat are
-
-    //seat capabilities mask, always has capability for pointers
-    uint32_t capabilities = WL_SEAT_CAPABILITY_POINTER;
-
-    //keyboard available?
-    if (!wl_list_empty(&seat->keyboards))
-        capabilities |= WL_SEAT_CAPABILITY_KEYBOARD;
-
-    wlr_seat_set_capabilities(seat->wlr_seat, capabilities);
-}
-
-static void e_seat_add_keyboard(struct e_seat* seat, struct wlr_input_device* input)
-{
-    e_log_info("adding keyboard input device");
-
-    struct e_keyboard* keyboard = e_keyboard_create(input, seat);
-
-    //add to seat
-    wl_list_insert(&seat->keyboards, &keyboard->link);
-    wlr_seat_set_keyboard(seat->wlr_seat, keyboard->wlr_keyboard);
-    
-    if (seat->focus_surface != NULL)
-        e_seat_set_focus(seat, seat->focus_surface, true);
-
-    e_seat_update_capabilities(seat);
-}
 
 static void e_seat_request_set_cursor(struct wl_listener* listener, void* data)
 {
@@ -89,37 +60,7 @@ static void e_seat_destroy(struct wl_listener* listener, void* data)
     wl_list_remove(&seat->request_set_selection.link);
     wl_list_remove(&seat->destroy.link);
 
-    //FIXME: mem leak here
-    wl_list_init(&seat->new_input.link);
-    wl_list_remove(&seat->new_input.link);
-
     free(seat);
-}
-
-static void e_seat_new_input(struct wl_listener* listener, void* data)
-{
-    struct e_seat* seat = wl_container_of(listener, seat, new_input);
-
-    struct wlr_input_device* input = data;
-
-    switch(input->type)
-    {
-        case WLR_INPUT_DEVICE_KEYBOARD:
-            e_log_info("new keyboard input device");
-
-            e_seat_add_keyboard(seat, input);
-            break;
-        case WLR_INPUT_DEVICE_POINTER:
-            e_log_info("new pointer input device");
-
-            //attach pointer to cursor
-            wlr_cursor_attach_input_device(seat->cursor->wlr_cursor, input);
-            
-            break;
-        default:
-            e_log_info("new unsupported input device, ignoring...");
-            break;
-    }
 }
 
 struct e_seat* e_seat_create(struct e_server* server, struct wlr_output_layout* output_layout, const char* name)
@@ -148,11 +89,63 @@ struct e_seat* e_seat_create(struct e_server* server, struct wlr_output_layout* 
     seat->destroy.notify = e_seat_destroy;
     wl_signal_add(&wlr_seat->events.destroy, &seat->destroy);
 
-    //listen for new input devices on backend
-    seat->new_input.notify = e_seat_new_input;
-    wl_signal_add(&server->backend->events.new_input, &seat->new_input);
-
     return seat;
+}
+
+// input devices & capability
+
+static void e_seat_update_capabilities(struct e_seat* seat)
+{
+    //send to clients what the capabilities of this seat are
+
+    //seat capabilities mask, always has capability for pointers
+    uint32_t capabilities = WL_SEAT_CAPABILITY_POINTER;
+
+    //keyboard available?
+    if (!wl_list_empty(&seat->keyboards))
+        capabilities |= WL_SEAT_CAPABILITY_KEYBOARD;
+
+    wlr_seat_set_capabilities(seat->wlr_seat, capabilities);
+}
+
+static void e_seat_add_keyboard(struct e_seat* seat, struct wlr_input_device* input)
+{
+    e_log_info("adding keyboard input device");
+
+    struct e_keyboard* keyboard = e_keyboard_create(input, seat);
+
+    //add to seat
+    wl_list_insert(&seat->keyboards, &keyboard->link);
+    wlr_seat_set_keyboard(seat->wlr_seat, keyboard->wlr_keyboard);
+    
+    if (seat->focus_surface != NULL)
+        e_seat_set_focus(seat, seat->focus_surface, true);
+
+    e_seat_update_capabilities(seat);
+}
+
+void e_seat_add_input_device(struct e_seat* seat, struct wlr_input_device* input)
+{
+    assert(seat && input);
+
+    switch(input->type)
+    {
+        case WLR_INPUT_DEVICE_KEYBOARD:
+            e_log_info("new keyboard input device");
+
+            e_seat_add_keyboard(seat, input);
+            break;
+        case WLR_INPUT_DEVICE_POINTER:
+            e_log_info("new pointer input device");
+
+            //attach pointer to cursor
+            wlr_cursor_attach_input_device(seat->cursor->wlr_cursor, input);
+            
+            break;
+        default:
+            e_log_info("new unsupported input device, ignoring...");
+            break;
+    }
 }
 
 // focus

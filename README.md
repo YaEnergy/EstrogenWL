@@ -66,4 +66,5 @@ This already has been quite the adventure...
 - [tinywl](https://gitlab.freedesktop.org/wlroots/wlroots/-/tree/master/tinywl?ref_type=heads)
 - [sway](https://github.com/swaywm/sway)
 - [labwc](https://github.com/labwc/labwc)
+- [kiwmi](https://github.com/buffet/kiwmi)
 - [Writing a Wayland compositor by Drew DeVault (out-of-date, but still useful)](https://drewdevault.com/2018/02/17/Writing-a-Wayland-compositor-1.html)

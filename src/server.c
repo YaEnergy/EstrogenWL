@@ -33,6 +33,15 @@
 #include "output.h"
 #include "config.h"
 
+static void e_server_new_input(struct wl_listener* listener, void* data)
+{
+    struct e_server* server = wl_container_of(listener, server, new_input);
+    struct wlr_input_device* input = data;
+
+    if (server->seat != NULL)
+        e_seat_add_input_device(server->seat, input);
+}
+
 static void e_server_new_output(struct wl_listener* listener, void* data)
 {
     struct e_server* server = wl_container_of(listener, server, new_output);
@@ -67,6 +76,7 @@ static void e_server_backend_destroy(struct wl_listener* listener, void* data)
 {
     struct e_server* server = wl_container_of(listener, server, backend_destroy);
 
+    wl_list_remove(&server->new_input.link);
     wl_list_remove(&server->new_output.link);
     wl_list_remove(&server->backend_destroy.link);
 }
@@ -148,7 +158,10 @@ int e_server_init(struct e_server* server)
         return 1;
     }
 
-    //init listener for new outputs
+    //backend events
+    server->new_input.notify = e_server_new_input;
+    wl_signal_add(&server->backend->events.new_input, &server->new_input);
+
     server->new_output.notify = e_server_new_output;
     wl_signal_add(&server->backend->events.new_output, &server->new_output);
 

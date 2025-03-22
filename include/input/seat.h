@@ -32,13 +32,12 @@ struct e_seat
     //user requests to set selection (copying data)
     struct wl_listener request_set_selection;
 
-    //new input device found
-    struct wl_listener new_input;
-
     struct wl_listener destroy;
 };
 
 struct e_seat* e_seat_create(struct e_server* server, struct wlr_output_layout* output_layout, const char* name);
+
+void e_seat_add_input_device(struct e_seat* seat, struct wlr_input_device* input);
 
 // only sets keyboard (if active) focus, pointer focus is only on hover
 void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface, bool override_exclusive);
