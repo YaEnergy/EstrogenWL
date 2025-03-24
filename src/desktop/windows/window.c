@@ -26,9 +26,10 @@
 
 //this function should only be called by the implementations of each window type. 
 //I mean it would be a bit weird to even call this function somewhere else.
-struct e_window* e_window_create(struct e_desktop* desktop, enum e_window_type type)
+void e_window_init(struct e_window* window, struct e_desktop* desktop, enum e_window_type type)
 {
-    struct e_window* window = calloc(1, sizeof(*window));
+    assert(window && desktop);
+
     window->desktop = desktop;
     window->type = type;
 
@@ -49,8 +50,6 @@ struct e_window* e_window_create(struct e_desktop* desktop, enum e_window_type t
     window->implementation.send_close = NULL;
 
     wl_list_init(&window->link);
-
-    return window;
 }
 
 void e_window_create_container_tree(struct e_window* window, struct wlr_scene_tree* parent)
@@ -415,13 +414,11 @@ void e_window_send_close(struct e_window* window)
         e_log_error("e_window_send_close: send_close is not implemented!");
 }
 
-void e_window_destroy(struct e_window* window)
+void e_window_fini(struct e_window* window)
 {
     if (window->container != NULL || window->tree != NULL)
         e_window_destroy_container_tree(window);
 
     wl_list_init(&window->link);
     wl_list_remove(&window->link);
-
-    free(window);
 }

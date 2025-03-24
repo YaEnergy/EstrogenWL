@@ -15,7 +15,7 @@ struct e_desktop;
 struct e_toplevel_window
 {
     //base window
-    struct e_window* base;
+    struct e_window base;
 
     struct wlr_xdg_toplevel* xdg_toplevel;
 

@@ -16,7 +16,7 @@ struct e_desktop;
 struct e_xwayland_window
 {
     //base window
-    struct e_window* base;
+    struct e_window base;
 
     struct wlr_xwayland_surface* xwayland_surface;
 

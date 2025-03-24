@@ -34,19 +34,19 @@ struct e_window_impl
     void (*send_close)(struct e_window* window);
 };
 
-//a window: xdg toplevel or xwayland window
+// a window: xdg toplevel or xwayland window
 struct e_window
 {
     struct e_desktop* desktop;
 
-    //Determines what type of window this is: see e_window_type
+    // Determines what type of window this is: see e_window_type
     enum e_window_type type;
     
     void* data;
 
     struct e_window_impl implementation;
 
-    //May be NULL, if not created
+    // May be NULL, if not created
     struct wlr_scene_tree* tree;
 
     // Window's main surface, may be NULL.
@@ -56,18 +56,19 @@ struct e_window
 
     bool tiled;
 
-    //May be NULL, if not set
+    // May be NULL, if not set
     char* title;
 
-    //May be NULL, if not created
+    // May be NULL, if not created
     struct e_container* container;
 
     struct wl_list link; //e_desktop::windows
 };
 
+//Init a window, must call e_window_fini at the end of its life.
 //this function should only be called by the implementations of each window type. 
 //I mean it would be a bit weird to even call this function somewhere else.
-struct e_window* e_window_create(struct e_desktop* desktop, enum e_window_type type);
+void e_window_init(struct e_window* window, struct e_desktop* desktop, enum e_window_type type);
 
 void e_window_create_container_tree(struct e_window* window, struct wlr_scene_tree* parent);
 
@@ -111,5 +112,5 @@ struct e_window* e_window_at(struct wlr_scene_node* node, double lx, double ly, 
 //Requests that this window uses its method of closing
 void e_window_send_close(struct e_window* window);
 
-//Destroys the base window and frees up its used memory
-void e_window_destroy(struct e_window* window);
+//Deinit a window
+void e_window_fini(struct e_window* window);
