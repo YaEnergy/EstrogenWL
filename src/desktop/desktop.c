@@ -112,20 +112,21 @@ struct e_output* e_desktop_get_output(struct e_desktop* desktop, int index)
 {
     assert(desktop);
 
+    if (wl_list_empty(&desktop->outputs))
+        return NULL;
+
     if (index < 0 || index >= wl_list_length(&desktop->outputs))
         return NULL;
 
-    int i = 0;
-    struct e_output* output;
-    wl_list_for_each(output, &desktop->outputs, link)
-    {
-        if (i == index)
-            return output;
+    struct wl_list* pos = desktop->outputs.next; //first output is in next, as desktop->outputs is contained in e_desktop (index 0)
+    
+    //go further in the list until we reach our destination
+    for (int i = 0; i < index; i++)
+        pos = desktop->outputs.next;
 
-        i++;
-    }
+    struct e_output* output = wl_container_of(pos, output, link);
 
-    return NULL; //not found, should be impossible to reach
+    return output;
 }
 
 static void e_desktop_remove_output(struct e_desktop* desktop, struct e_output* output)
