@@ -14,6 +14,8 @@
 
 #include "server.h"
 
+struct e_window;
+
 //type of an e_window
 enum e_window_type
 {

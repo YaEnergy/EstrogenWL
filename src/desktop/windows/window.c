@@ -52,12 +52,25 @@ void e_window_init(struct e_window* window, struct e_desktop* desktop, enum e_wi
     wl_list_init(&window->link);
 }
 
+uint32_t e_container_autoconfigure_window(struct e_container* container)
+{
+    assert(container && container->data);
+
+    struct e_window* window = container->data;
+
+    return e_window_configure(window, 0, 0, container->area.width, container->area.height);
+}
+
 void e_window_create_container_tree(struct e_window* window, struct wlr_scene_tree* parent)
 {
     assert(window && parent && window->container == NULL);
 
     //create container for window
-    window->container = e_container_window_create(parent, window);
+    window->container = e_container_create(parent, E_TILING_MODE_NONE);
+    window->container->data = window;
+    window->container->implementation.autoconfigure_data = e_container_autoconfigure_window;
+
+    wlr_scene_node_reparent(&window->tree->node, window->container->tree);
 
     if (parent->node.data != NULL) //struct e_node_desc*
     {

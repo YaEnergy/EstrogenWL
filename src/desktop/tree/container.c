@@ -11,11 +11,9 @@
 #include <wlr/util/box.h>
 
 #include "desktop/tree/node.h"
-#include "desktop/windows/window.h"
 #include "util/log.h"
 
 //TODO: return NULL and add error checks instead of aborting
-//TODO: destroy container on window's destroy signal
 
 static void e_container_destroy_node(struct wl_listener* listener, void* data)
 {
@@ -25,9 +23,6 @@ static void e_container_destroy_node(struct wl_listener* listener, void* data)
         e_container_remove_container(container->parent, container);
 
     container->tree = NULL;
-
-    if (container->window != NULL)
-        container->window->container = NULL;
 
     wl_list_init(&container->link); //just in case container->link wasn't init
     wl_list_remove(&container->link);
@@ -48,8 +43,11 @@ struct e_container* e_container_create(struct wlr_scene_tree* parent, enum e_til
     if (container == NULL)
     {
         e_log_error("Failed to allocate e_container");
-        abort();
+        return NULL;
     }
+    
+    container->data = NULL;
+    container->implementation.autoconfigure_data = NULL;
 
     container->parent = NULL;
     container->tree = wlr_scene_tree_create(parent);
@@ -149,31 +147,8 @@ void e_container_configure(struct e_container* container, int lx, int ly, int wi
     wlr_scene_node_set_position(&container->tree->node, lx, ly);
     container->area = (struct wlr_box){lx, ly, width, height};
 
-    if (container->window != NULL)
-        e_window_configure(container->window, 0, 0, width, height);
-}
-
-struct e_container* e_container_window_create(struct wlr_scene_tree* parent, struct e_window* window)
-{
-    assert(parent && window && window->tree);
-
-    struct e_container* container = e_container_create(parent, E_TILING_MODE_NONE);
-
-    if (container == NULL)
-    {
-        e_log_error("Failed to allocate e_container");
-        abort();
-    }
-
-    container->window = window;
-    wlr_scene_node_reparent(&window->tree->node, container->tree);
-
-    return container;
-}
-
-bool e_container_contains_window(struct e_container* container)
-{
-    return (container->window != NULL);
+    if (container->data != NULL && container->implementation.autoconfigure_data != NULL)
+        container->implementation.autoconfigure_data(container);
 }
 
 //Arranges a containter's children (window or other containers) to fit within container's area
@@ -223,8 +198,8 @@ void e_container_destroy(struct e_container* container)
         return;
     }
 
-    if (container->window != NULL)
-        e_log_info("destroying WINDOW container...");
+    if (container->data != NULL)
+        e_log_info("destroying DATA container...");
     else if (container->parent == NULL)
         e_log_info("destroying ROOT container...");
     else
