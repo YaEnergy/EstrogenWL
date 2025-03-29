@@ -12,8 +12,18 @@
 
 #include "server.h"
 
-#include "input/keybinding.h"
+#include "input/keybind.h"
 #include "util/log.h"
+
+static bool bind_keybind(struct e_list* keybinds, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods, const char* command)
+{
+    struct e_keybind* keybind = e_keybind_create(keysym, mods, command);
+
+    if (keybind == NULL)
+        return false;
+
+    return e_list_add(keybinds, keybind);
+}
 
 // Entry point program
 int main()
@@ -41,13 +51,13 @@ int main()
     //check out: xkbcommon.org
     //Important function: xkb_keysym_from_name (const char *name, enum xkb_keysym_flags flags)
     
-    e_keybinding_bind(server.config.keyboard.keybinds, XKB_KEY_F1, WLR_MODIFIER_ALT, "exec rofi -modi drun,run -show drun");
-    e_keybinding_bind(server.config.keyboard.keybinds, XKB_KEY_F2, WLR_MODIFIER_ALT, "exec alacritty");
-    e_keybinding_bind(server.config.keyboard.keybinds, XKB_KEY_F3, WLR_MODIFIER_ALT, "exit");
-    e_keybinding_bind(server.config.keyboard.keybinds, XKB_KEY_F4, WLR_MODIFIER_ALT, "kill");
-    e_keybinding_bind(server.config.keyboard.keybinds, XKB_KEY_F5, WLR_MODIFIER_ALT, "toggle_fullscreen");
-    e_keybinding_bind(server.config.keyboard.keybinds, XKB_KEY_F6, WLR_MODIFIER_ALT, "toggle_tiling");
-    e_keybinding_bind(server.config.keyboard.keybinds, XKB_KEY_F7, WLR_MODIFIER_ALT, "switch_tiling_mode");
+    bind_keybind(server.config.keyboard.keybinds, XKB_KEY_F1, WLR_MODIFIER_ALT, "exec rofi -modi drun,run -show drun");
+    bind_keybind(server.config.keyboard.keybinds, XKB_KEY_Return, WLR_MODIFIER_ALT, "exec alacritty");
+    bind_keybind(server.config.keyboard.keybinds, XKB_KEY_F3, WLR_MODIFIER_ALT, "exit");
+    bind_keybind(server.config.keyboard.keybinds, XKB_KEY_F4, WLR_MODIFIER_ALT, "kill");
+    bind_keybind(server.config.keyboard.keybinds, XKB_KEY_F5, WLR_MODIFIER_ALT, "toggle_fullscreen");
+    bind_keybind(server.config.keyboard.keybinds, XKB_KEY_F6, WLR_MODIFIER_ALT, "toggle_tiling");
+    bind_keybind(server.config.keyboard.keybinds, XKB_KEY_F7, WLR_MODIFIER_ALT, "switch_tiling_mode");
 
     e_server_run(&server);
 

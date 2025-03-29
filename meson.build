@@ -75,7 +75,6 @@ estrogenwl_src = files(
 
     'src/input/seat.c',
     'src/input/keyboard.c',
-    'src/input/keybinding.c',
     'src/input/keybind.c',
     'src/input/cursor.c',
 
