@@ -279,7 +279,16 @@ static void e_cursor_axis(struct wl_listener* listener, void* data)
 
 struct e_cursor* e_cursor_create(struct e_seat* seat, struct wlr_output_layout* output_layout)
 {
+    assert(seat && output_layout);
+
     struct e_cursor* cursor = calloc(1, sizeof(*cursor));
+
+    if (cursor == NULL)
+    {
+        e_log_error("failed to allocate cursor");
+        return NULL;
+    }
+
     cursor->seat = seat;
     cursor->mode = E_CURSOR_MODE_DEFAULT;
 

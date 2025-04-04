@@ -1,6 +1,8 @@
 #include "desktop/gamma_control_manager.h"
+#include "util/log.h"
 
 #include <stdlib.h>
+#include <assert.h>
 
 #include <wayland-util.h>
 
@@ -41,7 +43,15 @@ static void e_gamma_control_manager_destroy(struct wl_listener* listener, void* 
 
 struct e_gamma_control_manager* e_gamma_control_manager_create(struct wl_display* display)
 {
-    struct e_gamma_control_manager* gamma_control_manager = calloc(1, sizeof(struct e_gamma_control_manager));
+    assert(display);
+
+    struct e_gamma_control_manager* gamma_control_manager = calloc(1, sizeof(*gamma_control_manager));
+
+    if (gamma_control_manager == NULL)
+    {
+        e_log_error("failed to allocate gamma_control_manager");
+        return NULL;
+    }
 
     gamma_control_manager->wlr_gamma_control_manager_v1 = wlr_gamma_control_manager_v1_create(display);
 

@@ -11,7 +11,7 @@
 
 struct e_desktop;
 
-//collection & management of input devices: keyboard, mouse, ...
+// Collection & management of input devices: keyboard, mouse, ...
 struct e_seat
 {
     struct e_desktop* desktop;
@@ -36,6 +36,7 @@ struct e_seat
     struct wl_listener destroy;
 };
 
+// Returns NULL on fail.
 struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* desktop, struct wlr_output_layout* output_layout, const char* name);
 
 void e_seat_add_input_device(struct e_seat* seat, struct wlr_input_device* input);

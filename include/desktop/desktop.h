@@ -64,6 +64,8 @@ struct e_desktop
     struct e_seat* seat;
 };
 
+// Creates a desktop.
+// Returns NULL on fail.
 struct e_desktop* e_desktop_create(struct wl_display* display, struct wlr_compositor* compositor, struct e_config* config);
 
 /* outputs */

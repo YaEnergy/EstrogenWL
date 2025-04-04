@@ -429,6 +429,7 @@ void e_window_send_close(struct e_window* window)
 
 void e_window_fini(struct e_window* window)
 {
+    //FIXME: if container is destroyed first, window->container will not be NULL, causing this to still try to destroy the container
     if (window->container != NULL || window->tree != NULL)
         e_window_destroy_container_tree(window);
 

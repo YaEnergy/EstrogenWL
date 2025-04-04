@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 
+#include <stdint.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
@@ -25,7 +26,7 @@ struct e_container_impl
     uint32_t (*autoconfigure_data)(struct e_container* container);
 };
 
-// a container for multiple other containers, or a single window
+// a container for tiling multiple other containers, or autoconfiguring data
 struct e_container
 {
     // how this container should tile containers
@@ -60,7 +61,8 @@ struct e_container
     bool destroying;
 };
 
-// Creates a container
+// Creates a container.
+// Returns NULL on fail.
 struct e_container* e_container_create(struct wlr_scene_tree* parent, enum e_tiling_mode tiling_mode);
 
 // Adds a container to a container

@@ -13,7 +13,7 @@ struct e_keybind
     const char* command;
 };
 
-// May return NULL.
+// Returns NULL on fail.
 struct e_keybind* e_keybind_create(xkb_keysym_t keysym, enum wlr_keyboard_modifier mods, const char* command);
 
 bool e_keybind_should_activate(struct e_keybind* keybind, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods);

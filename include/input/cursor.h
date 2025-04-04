@@ -48,6 +48,7 @@ struct e_cursor
     enum wlr_edges grab_edges;
 };
 
+// Returns NULL on fail.
 struct e_cursor* e_cursor_create(struct e_seat* seat, struct wlr_output_layout* output_layout);
 
 void e_cursor_set_mode(struct e_cursor* cursor, enum e_cursor_mode mode);

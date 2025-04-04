@@ -27,4 +27,5 @@ struct e_keyboard
     struct wl_list link;
 };
 
+// Returns NULL on fail.
 struct e_keyboard* e_keyboard_create(struct wlr_input_device* input, struct e_seat* seat);

@@ -1,4 +1,7 @@
+#include "desktop/xdg_shell.h"
+
 #include <stdlib.h>
+#include <assert.h>
 
 #include <wayland-server-core.h>
 #include <wayland-util.h>
@@ -7,7 +10,6 @@
 
 #include "util/log.h"
 
-#include "desktop/xdg_shell.h"
 #include "desktop/windows/toplevel_window.h"
 
 static void e_xdg_shell_new_toplevel_window(struct wl_listener* listener, void* data)
@@ -34,7 +36,15 @@ static void e_xdg_shell_destroy(struct wl_listener* listener, void* data)
 
 struct e_xdg_shell* e_xdg_shell_create(struct wl_display* display, struct e_desktop* desktop)
 {
+    assert(display && desktop);
+    
     struct e_xdg_shell* shell = calloc(1, sizeof(*shell));
+
+    if (shell == NULL)
+    {
+        e_log_error("failed to allocate xdg_shell");
+        return NULL;
+    }
 
     //give the shell a pointer to the desktop
     shell->desktop = desktop;

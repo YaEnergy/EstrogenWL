@@ -24,5 +24,6 @@ struct e_xdg_popup
     struct wl_listener destroy;
 };
 
-//creates new xdg popup
+// Creates new xdg popup.
+// Returns NULL on fail.
 struct e_xdg_popup* e_xdg_popup_create(struct wlr_xdg_popup* xdg_popup, struct wlr_xdg_surface* xdg_surface);

@@ -45,6 +45,12 @@ struct e_desktop* e_desktop_create(struct wl_display* display, struct wlr_compos
     assert(display && compositor && config);
 
     struct e_desktop* desktop = calloc(1, sizeof(*desktop));
+
+    if (desktop == NULL)
+    {
+        e_log_error("failed to allocate desktop");
+        return NULL;
+    }
     
     desktop->display = display;
     desktop->config = config;

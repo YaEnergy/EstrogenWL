@@ -62,7 +62,15 @@ static void e_seat_destroy(struct wl_listener* listener, void* data)
 
 struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* desktop, struct wlr_output_layout* output_layout, const char* name)
 {
+    assert(display && desktop && output_layout && name);
+
     struct e_seat* seat = calloc(1, sizeof(*seat));
+
+    if (seat == NULL)
+    {
+        e_log_error("failed to allocate seat");
+        return NULL;
+    }
 
     seat->desktop = desktop;
 

@@ -27,7 +27,16 @@ static void e_xwayland_new_surface(struct wl_listener* listener, void* data)
 
 struct e_xwayland* e_xwayland_create(struct e_desktop* desktop, struct wl_display* display, struct wlr_compositor* compositor, struct wlr_seat* seat, bool lazy)
 {
+    assert(desktop && display && compositor && seat);
+
     struct e_xwayland* xwayland = calloc(1, sizeof(*xwayland));
+
+    if (xwayland == NULL)
+    {
+        e_log_error("failed to allocate xwayland");
+        return NULL;
+    }
+
     xwayland->desktop = desktop;
     xwayland->wlr_xwayland = wlr_xwayland_create(display, compositor, lazy);
 

@@ -9,6 +9,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 
 #include "desktop/tree/node.h"
+#include "util/log.h"
 
 //another xdg_popup? oh woaw
 static void e_xdg_popup_new_popup(struct wl_listener* listener, void* data)
@@ -47,7 +48,14 @@ struct e_xdg_popup* e_xdg_popup_create(struct wlr_xdg_popup* xdg_popup, struct w
 {
     assert(xdg_popup && xdg_surface);
 
-    struct e_xdg_popup* popup = calloc(1, sizeof(struct e_xdg_popup));
+    struct e_xdg_popup* popup = calloc(1, sizeof(*popup));
+
+    if (popup == NULL)
+    {
+        e_log_error("failed to allocate xdg_popup");
+        return NULL;
+    }
+
     popup->xdg_popup = xdg_popup;
     popup->xdg_surface = xdg_surface;
 

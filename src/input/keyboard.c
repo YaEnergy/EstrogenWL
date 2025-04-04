@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
@@ -18,6 +19,7 @@
 #include "util/list.h"
 
 #include "commands.h"
+#include "util/log.h"
 
 bool e_desktop_handle_keybind(struct e_desktop* desktop, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods)
 {
@@ -94,9 +96,18 @@ static void e_keyboard_destroy(struct wl_listener* listener, void* data)
 
 struct e_keyboard* e_keyboard_create(struct wlr_input_device* input, struct e_seat* seat)
 {
-    struct wlr_keyboard* wlr_keyboard = wlr_keyboard_from_input_device(input);
+    assert(input && seat);
     
     struct e_keyboard* keyboard = calloc(1, sizeof(*keyboard));
+
+    if (keyboard == NULL)
+    {
+        e_log_error("failed to allocate keyboard");
+        return NULL;
+    }
+
+    struct wlr_keyboard* wlr_keyboard = wlr_keyboard_from_input_device(input);
+
     keyboard->seat = seat;
     keyboard->wlr_keyboard = wlr_keyboard;
 

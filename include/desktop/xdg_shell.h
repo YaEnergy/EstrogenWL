@@ -18,4 +18,5 @@ struct e_xdg_shell
     struct wl_listener destroy;
 };
 
+// Returns NULL on fail.
 struct e_xdg_shell* e_xdg_shell_create(struct wl_display* display, struct e_desktop* desktop);
