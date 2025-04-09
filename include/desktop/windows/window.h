@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include <wayland-server-core.h>
 #include <wayland-util.h>
 
 #include <wlr/types/wlr_compositor.h>
@@ -10,9 +11,7 @@
 
 #include <wlr/util/box.h>
 
-#include "desktop/tree/container.h"
-
-#include "server.h"
+#include "desktop/desktop.h"
 
 struct e_window;
 
@@ -26,7 +25,7 @@ enum e_window_type
 // Implementation of window functions for different window types
 struct e_window_impl
 {
-    void (*changed_tiled)(struct e_window* window, bool tiled);
+    void (*set_tiled)(struct e_window* window, bool tiled);
     
     // Configure a window within given layout position and size
     // Returns configure serial, returns 0 if no serial is given
@@ -48,6 +47,7 @@ struct e_window
 
     struct e_window_impl implementation;
 
+    // Window's content tree
     // May be NULL, if not created
     struct wlr_scene_tree* tree;
 
@@ -62,30 +62,33 @@ struct e_window
     char* title;
 
     // May be NULL, if not created
-    struct e_container* container;
+    struct e_window_container* container;
+
+    struct
+    {
+        // Window's tiled state was set.
+        struct wl_signal set_tiled;
+        
+        // Window title was set.
+        struct wl_signal set_title; //char* title
+    } events;
 
     struct wl_list link; //e_desktop::windows
 };
 
-//Init a window, must call e_window_fini at the end of its life.
-//this function should only be called by the implementations of each window type. 
-//I mean it would be a bit weird to even call this function somewhere else.
-void e_window_init(struct e_window* window, struct e_desktop* desktop, enum e_window_type type);
+// Init a window, must call e_window_fini at the end of its life.
+// This function should only be called by the implementations of each window type. 
+// I mean it would be a bit weird to even call this function somewhere else.
+void e_window_init(struct e_window* window, struct e_desktop* desktop, enum e_window_type type, void* data);
 
-void e_window_create_container_tree(struct e_window* window, struct wlr_scene_tree* parent);
-
-void e_window_destroy_container_tree(struct e_window* window);
-
-//set window's tree position, relative to container
+// Set window's tree position, relative to container.
 void e_window_set_position(struct e_window* window, int lx, int ly);
 
-// Configures a window with the given size
-// Returns configure serial, returns 0 if no serial is given
+// Configures a window with the given size.
+// Returns configure serial, returns 0 if no serial is given.
 uint32_t e_window_set_size(struct e_window* window, int width, int height);
 
 void e_window_set_tiled(struct e_window* window, bool tiled);
-
-void e_window_base_set_tiled(struct e_window* window, bool tiled);
 
 // Configures a window within given layout position and size
 // Returns configure serial, returns 0 if no serial is given
@@ -103,7 +106,7 @@ void e_window_unmap(struct e_window* window);
 //finds the window which has this surface as its main surface, NULL if not found
 struct e_window* e_window_from_surface(struct e_desktop* desktop, struct wlr_surface* surface);
 
-//Returns NULL on fail.
+// Returns NULL on fail.
 struct e_window* e_window_try_from_node_ancestors(struct wlr_scene_node* node);
 
 //Searches for a window at the specified layout coords in the given scene graph

@@ -87,6 +87,7 @@ static void e_xwayland_window_set_title(struct wl_listener* listener, void* data
     struct e_xwayland_window* xwayland_window = wl_container_of(listener, xwayland_window, set_title);
 
     xwayland_window->base.title = xwayland_window->xwayland_surface->title;
+    wl_signal_emit(&xwayland_window->base.events.set_title, xwayland_window->xwayland_surface->title);
 }
 
 //surface becomes valid, like me!
@@ -133,8 +134,6 @@ static void e_xwayland_window_associate(struct wl_listener* listener, void* data
     struct e_desktop* desktop = xwayland_window->base.desktop;
     xwayland_window->base.tree = wlr_scene_subsurface_tree_create(desktop->pending, xwayland_window->xwayland_surface->surface);
     e_node_desc_create(&xwayland_window->base.tree->node, E_NODE_DESC_WINDOW, &xwayland_window->base);
-
-    e_window_create_container_tree(&xwayland_window->base, desktop->pending);
 }
 
 //surface becomes invalid
@@ -158,8 +157,8 @@ static void e_xwayland_window_dissociate(struct wl_listener* listener, void* dat
 
     wl_list_remove(&xwayland_window->set_title.link);
 
-    //remove from scene
-    e_window_destroy_container_tree(&xwayland_window->base);
+    xwayland_window->base.tree = NULL;
+    wlr_scene_node_destroy(&xwayland_window->base.tree->node);
 }
 
 //destruction...
@@ -217,8 +216,7 @@ struct e_xwayland_window* e_xwayland_window_create(struct e_desktop* desktop, st
 
     xwayland_window->xwayland_surface = xwayland_surface;
 
-    e_window_init(&xwayland_window->base, desktop, E_WINDOW_XWAYLAND);
-    xwayland_window->base.data = xwayland_window;
+    e_window_init(&xwayland_window->base, desktop, E_WINDOW_XWAYLAND, xwayland_window);
 
     xwayland_window->base.title = xwayland_surface->title;
 

@@ -14,8 +14,10 @@
 #include <wlr/util/box.h>
 
 #include "desktop/desktop.h"
-#include "desktop/tree/container.h"
 #include "desktop/tree/node.h"
+
+#include "desktop/tree/container.h"
+#include "desktop/windows/window_container.h"
 
 #include "input/seat.h"
 #include "input/cursor.h"
@@ -26,14 +28,16 @@
 
 //this function should only be called by the implementations of each window type. 
 //I mean it would be a bit weird to even call this function somewhere else.
-void e_window_init(struct e_window* window, struct e_desktop* desktop, enum e_window_type type)
+void e_window_init(struct e_window* window, struct e_desktop* desktop, enum e_window_type type, void* data)
 {
     assert(window && desktop);
 
     window->desktop = desktop;
     window->type = type;
+    window->data = data;
 
     window->tree = NULL;
+
     window->container = NULL;
     window->surface = NULL;
 
@@ -45,60 +49,14 @@ void e_window_init(struct e_window* window, struct e_desktop* desktop, enum e_wi
     window->title = NULL;
     window->tiled = false;
 
-    window->implementation.changed_tiled = NULL;
+    window->implementation.set_tiled = NULL;
     window->implementation.configure = NULL;
     window->implementation.send_close = NULL;
 
+    wl_signal_init(&window->events.set_tiled);
+    wl_signal_init(&window->events.set_title);
+
     wl_list_init(&window->link);
-}
-
-uint32_t e_container_autoconfigure_window(struct e_container* container)
-{
-    assert(container && container->data);
-
-    struct e_window* window = container->data;
-
-    return e_window_configure(window, 0, 0, container->area.width, container->area.height);
-}
-
-void e_window_create_container_tree(struct e_window* window, struct wlr_scene_tree* parent)
-{
-    assert(window && parent && window->container == NULL);
-
-    //create container for window
-    window->container = e_container_create(parent, E_TILING_MODE_NONE);
-    window->container->data = window;
-    window->container->implementation.autoconfigure_data = e_container_autoconfigure_window;
-
-    wlr_scene_node_reparent(&window->tree->node, window->container->tree);
-
-    if (parent->node.data != NULL) //struct e_node_desc*
-    {
-        struct e_container* parent_container = e_container_try_from_e_node_desc(parent->node.data);
-
-        if (parent_container != NULL)
-        {
-            e_container_set_parent(window->container, parent_container);
-            e_container_arrange(parent_container);
-        }
-    }
-}
-
-void e_window_destroy_container_tree(struct e_window* window)
-{
-    assert(window);
-    
-    if (window->container != NULL)
-    {
-        e_container_destroy(window->container);
-        window->container = NULL;
-        window->tree = NULL;
-    }
-    else if (window->tree != NULL)
-    {
-        wlr_scene_node_destroy(&window->tree->node);
-        window->tree = NULL;
-    }
 }
 
 void e_window_set_position(struct e_window* window, int lx, int ly)
@@ -115,151 +73,6 @@ uint32_t e_window_set_size(struct e_window* window, int width, int height)
     return e_window_configure(window, window->tree->node.x, window->tree->node.y, width, height);
 }
 
-static void e_window_set_parent_container(struct e_window* window, struct e_container* parent)
-{
-    assert(window && parent);
-
-    struct e_container* previous_parent = window->container->parent;
-
-    //parent container remains unchanged
-    if (parent == previous_parent)
-    {
-        e_log_info("parent container remains unchanged");
-        return;
-    }
-
-    //remove from & rearrange previous container
-    if (previous_parent != NULL)
-    {
-        e_container_remove_container(previous_parent, window->container);
-        e_container_arrange(previous_parent);
-    }
-
-    e_container_set_parent(window->container, parent);
-    e_container_arrange(parent);
-}
-
-static void e_window_tile_container(struct e_window* window)
-{
-    assert(window && window->container);
-
-    //if not focused, find current TILED focused window's parent container
-    // else if focused or if none, find previous TILED focused's parent container
-    //if none, then output 0's root tiling container
-    //add to container if found
-    //else give up
-
-    struct e_desktop* desktop = window->desktop;
-    struct e_seat* seat = desktop->seat;
-
-    struct wlr_surface* window_surface = window->surface;
-
-    struct e_container* parent_container = NULL;
-
-    if (window_surface != NULL)
-    {
-        //if not focused, find current TILED focused window's parent container
-        if (!e_seat_has_focus(seat, window_surface) && seat->focus_surface != NULL)
-        {
-            struct e_window* focus_window = e_window_from_surface(desktop, seat->focus_surface);
-
-            if (focus_window != NULL && focus_window->tiled && focus_window->container != NULL)
-                parent_container = focus_window->container->parent;
-        }
-
-        //if focused or none, find previous TILED focused's parent container
-        if ((parent_container == NULL || e_seat_has_focus(seat, window_surface)) && seat->previous_focus_surface != NULL)
-        {
-            struct e_window* previous_focus_window = e_window_from_surface(desktop, seat->previous_focus_surface);
-
-            if (previous_focus_window != NULL && previous_focus_window->tiled && previous_focus_window->container != NULL)
-                parent_container = previous_focus_window->container->parent;
-        }
-    }
-    
-    //if still none, then output 0's root tiling container
-    if (parent_container == NULL)
-    {
-        //Set to output 0's container
-        struct e_output* output = e_desktop_get_output(window->desktop, 0);
-
-        if (output != NULL && output->root_tiling_container != NULL)
-            parent_container = output->root_tiling_container;
-    }
-
-    if (parent_container == NULL)
-    {
-        e_log_error("Failed to set window container's parent to a tiled container");
-        return;
-    }
-    
-    e_window_set_parent_container(window, parent_container);
-}
-
-// Returns the window's first current output with a root floating container
-// May return NULL.
-static struct e_container* e_window_first_output_floating_container(struct e_window* window)
-{
-    assert(window);
-
-    if (window->surface == NULL)
-        return NULL;
-
-    if (wl_list_empty(&window->surface->current_outputs))
-        return NULL;
-
-    //loop over surface outputs until output is found with a root floating container
-    struct wlr_surface_output* wlr_surface_output;
-    wl_list_for_each(wlr_surface_output, &window->surface->current_outputs, link)
-    {
-        //attempt to acquire output from it
-        if (wlr_surface_output->output != NULL && wlr_surface_output->output->data != NULL)
-        {
-            struct e_output* output = wlr_surface_output->output->data;
-
-            if (output->root_floating_container != NULL)
-                return output->root_floating_container;
-        }
-    }
-
-    //none found
-    return NULL;
-}
-
-static void e_window_float_container(struct e_window* window)
-{
-    assert(window && window->container);
-
-    //find first of current outputs root floating container
-    //if none, then output 0's root floating container
-    //add to container if found
-    //else give up
-
-    struct wlr_surface* window_surface = window->surface;
-
-    struct e_container* parent_container = NULL;
-
-    if (window_surface != NULL)
-        parent_container = e_window_first_output_floating_container(window);
-
-    if (parent_container == NULL)
-    {
-        //Set to output 0's container
-        struct e_output* output = e_desktop_get_output(window->desktop, 0);
-
-        if (output != NULL && output->root_floating_container != NULL)
-            parent_container = output->root_floating_container;
-    }
-
-    if (parent_container == NULL)
-    {
-        e_log_error("Failed to set window container's parent to a floating container");
-        return;
-    }
-
-    e_window_set_parent_container(window, parent_container);
-}
-
 void e_window_set_tiled(struct e_window* window, bool tiled)
 {
     assert(window);
@@ -271,17 +84,10 @@ void e_window_set_tiled(struct e_window* window, bool tiled)
 
     window->tiled = tiled;
 
-    if (window->container != NULL)
-    {
-        //Reparent to current focused container
-        if (window->tiled)
-            e_window_tile_container(window);
-        else //floating
-            e_window_float_container(window);
-    }
+    if (window->implementation.set_tiled != NULL)
+        window->implementation.set_tiled(window, tiled);
 
-    if (window->implementation.changed_tiled != NULL)
-        return window->implementation.changed_tiled(window, tiled);
+    wl_signal_emit(&window->events.set_tiled, NULL);
 }
 
 uint32_t e_window_configure(struct e_window* window, int lx, int ly, int width, int height)
@@ -298,13 +104,23 @@ uint32_t e_window_configure(struct e_window* window, int lx, int ly, int width, 
 
 void e_window_maximize(struct e_window* window)
 {
-    assert(window && window->container);
+    assert(window);
 
-    //can't maximize tiled windows or window containers with no parent
-    if (window->tiled || window->container->parent == NULL)
-        return;
+    //can't maximize tiled windows
+    if (!window->tiled && window->container != NULL)
+        e_window_container_maximize(window->container);
+}
 
-    e_container_configure(window->container, 0, 0, window->container->parent->area.width, window->container->parent->area.height);
+static void e_window_create_container(struct e_window* window)
+{
+    assert(window && window->container == NULL);
+
+    #if E_VERBOSE
+    e_log_info("window create container tree");
+    #endif
+
+    //create container for window
+    window->container = e_window_container_create(window);
 }
 
 void e_window_map(struct e_window* window)
@@ -315,17 +131,28 @@ void e_window_map(struct e_window* window)
 
     wl_list_insert(&window->desktop->windows, &window->link);
 
-    if (window->container->parent == NULL)
-    {
-        if (window->tiled)
-            e_window_tile_container(window);
-        else //floating
-            e_window_float_container(window);
-    }
+    e_window_create_container(window);
 
     //set focus to this window's main surface
     if (window->surface != NULL)
         e_seat_set_focus(window->desktop->seat, window->surface, false);
+}
+
+static void e_window_destroy_container(struct e_window* window)
+{
+    assert(window && window->container);
+
+    struct e_tree_container* parent = window->container->base.parent;
+    
+    //keep window content tree
+    if (window->tree != NULL)
+        wlr_scene_node_reparent(&window->tree->node, window->desktop->pending);
+
+    e_window_container_destroy(window->container);
+    window->container = NULL;
+
+    if (parent != NULL)
+        e_tree_container_arrange(parent);
 }
 
 void e_window_unmap(struct e_window* window)
@@ -342,12 +169,12 @@ void e_window_unmap(struct e_window* window)
     if (seat->cursor->grab_window == window)
         e_cursor_reset_mode(seat->cursor);
 
-    struct e_container* parent_container = window->container->parent;
-    if (parent_container != NULL)
-    {
-        e_container_remove_container(parent_container, window->container);
-        e_container_arrange(parent_container);
-    }
+    #if E_VERBOSE
+    e_log_info("window unmap");
+    #endif
+
+    if (window->container != NULL)
+        e_window_destroy_container(window);
 
     wl_list_remove(&window->link);
         
@@ -429,9 +256,11 @@ void e_window_send_close(struct e_window* window)
 
 void e_window_fini(struct e_window* window)
 {
-    //FIXME: if container is destroyed first, window->container will not be NULL, causing this to still try to destroy the container
-    if (window->container != NULL || window->tree != NULL)
-        e_window_destroy_container_tree(window);
+    if (window->container != NULL)
+        e_window_destroy_container(window);
+    
+    if (window->tree != NULL)
+        wlr_scene_node_destroy(&window->tree->node);
 
     wl_list_init(&window->link);
     wl_list_remove(&window->link);

@@ -10,6 +10,7 @@ project(
 add_project_arguments(
     [
         '-DWLR_USE_UNSTABLE',
+        '-DE_VERBOSE',
         '-Wno-unused-parameter',
     ],
     language: 'c',
@@ -69,6 +70,7 @@ estrogenwl_src = files(
     'src/desktop/layers/layer_surface.c',
     'src/desktop/layers/layer_popup.c',
 
+    'src/desktop/windows/window_container.c',
     'src/desktop/windows/window.c',
     'src/desktop/windows/toplevel_window.c',
     'src/desktop/windows/xwayland_window.c',

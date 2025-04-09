@@ -50,12 +50,17 @@ static void e_toplevel_window_commit(struct wl_listener* listener, void* data)
         
     if (toplevel_window->xdg_toplevel->base->initial_commit)
     {
+        #if E_VERBOSE
+        e_log_info("toplevel window initial commit");
+        #endif
+
         if (e_toplevel_window_wants_floating(toplevel_window))
         {
-            //0x0 size to let windows configure their size themselves, instead of forcing min or max size
-            e_window_set_tiled(&toplevel_window->base, false);
-            e_window_set_size(&toplevel_window->base, 0, 0);
             e_log_info("toplevel window wants floating");
+
+            //0x0 size to let windows configure their size themselves, instead of forcing min or max size
+            e_window_set_size(&toplevel_window->base, 0, 0);
+            e_window_set_tiled(&toplevel_window->base, false);
         }
         else
         {
@@ -132,6 +137,7 @@ static void e_toplevel_window_set_title(struct wl_listener* listener, void* data
     struct e_toplevel_window* toplevel_window = wl_container_of(listener, toplevel_window, set_title);
 
     toplevel_window->base.title = toplevel_window->xdg_toplevel->title;
+    wl_signal_emit(&toplevel_window->base.events.set_title, toplevel_window->xdg_toplevel->title);
 }
 
 //xdg_toplevel got destroyed
@@ -162,21 +168,20 @@ static void e_toplevel_window_destroy(struct wl_listener* listener, void* data)
 static void e_toplevel_window_init_xdg_scene_tree(struct e_toplevel_window* toplevel_window)
 {
     //create scene xdg surface for xdg toplevel and window, and set up window scene tree
-    struct e_desktop* desktop = toplevel_window->base.desktop;
-    toplevel_window->base.tree = wlr_scene_xdg_surface_create(desktop->pending, toplevel_window->xdg_toplevel->base);
+    toplevel_window->base.tree = wlr_scene_xdg_surface_create(toplevel_window->base.desktop->pending, toplevel_window->xdg_toplevel->base);
     e_node_desc_create(&toplevel_window->base.tree->node, E_NODE_DESC_WINDOW, &toplevel_window->base);
-
-    e_window_create_container_tree(&toplevel_window->base, desktop->pending);
 
     //allows popup scene trees to add themselves to this window's scene tree
     toplevel_window->xdg_toplevel->base->data = toplevel_window->base.tree;
 }
 
-static void e_window_toplevel_changed_tiling(struct e_window* window, bool tiled)
+static void e_window_toplevel_set_tiled(struct e_window* window, bool tiled)
 {
     assert(window && window->data);
 
     struct e_toplevel_window* toplevel_window = window->data;
+
+    e_log_info("set tiled");
 
     wlr_xdg_toplevel_set_tiled(toplevel_window->xdg_toplevel, tiled ? WLR_EDGE_BOTTOM | WLR_EDGE_LEFT | WLR_EDGE_RIGHT | WLR_EDGE_TOP : WLR_EDGE_NONE);
 }
@@ -188,6 +193,10 @@ static uint32_t e_window_toplevel_configure(struct e_window* window, int lx, int
     struct e_toplevel_window* toplevel_window = window->data;
 
     wlr_scene_node_set_position(&window->tree->node, lx, ly);
+
+    #if E_VERBOSE
+    e_log_info("toplevel configure");
+    #endif
 
     //schedule empty configure if size remains the same
     if (window->current.width == width && window->current.height == height)
@@ -220,13 +229,12 @@ struct e_toplevel_window* e_toplevel_window_create(struct e_desktop* desktop, st
     //give pointer to xdg toplevel
     toplevel_window->xdg_toplevel = xdg_toplevel;
 
-    e_window_init(&toplevel_window->base, desktop, E_WINDOW_TOPLEVEL);
-    toplevel_window->base.data = toplevel_window;
+    e_window_init(&toplevel_window->base, desktop, E_WINDOW_TOPLEVEL, toplevel_window);
 
     toplevel_window->base.title = xdg_toplevel->title;
     toplevel_window->base.surface = xdg_toplevel->base->surface;
 
-    toplevel_window->base.implementation.changed_tiled = e_window_toplevel_changed_tiling;
+    toplevel_window->base.implementation.set_tiled = e_window_toplevel_set_tiled;
     toplevel_window->base.implementation.configure = e_window_toplevel_configure;
     toplevel_window->base.implementation.send_close = e_window_toplevel_send_close;
 

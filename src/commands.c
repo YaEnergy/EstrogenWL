@@ -14,6 +14,7 @@
 #include "desktop/desktop.h"
 #include "desktop/tree/container.h"
 #include "desktop/windows/window.h"
+#include "desktop/windows/window_container.h"
 #include "input/seat.h"
 
 #include "util/log.h"
@@ -73,10 +74,10 @@ static void e_commands_switch_tiling_mode(struct e_desktop* desktop)
 
     struct e_window* window = e_window_from_surface(desktop, seat->focus_surface);
 
-    if (window == NULL || window->container == NULL || window->container->parent == NULL)
+    if (window == NULL || window->container == NULL || window->container->base.parent == NULL)
         return;
 
-    struct e_tree_container* parent_container = window->container->parent;
+    struct e_tree_container* parent_container = window->container->base.parent;
 
     if (parent_container->tiling_mode == E_TILING_MODE_HORIZONTAL)
         parent_container->tiling_mode = E_TILING_MODE_VERTICAL;

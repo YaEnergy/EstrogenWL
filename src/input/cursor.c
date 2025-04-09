@@ -20,6 +20,7 @@
 #include <wlr/util/edges.h>
 
 #include "desktop/tree/container.h"
+#include "desktop/windows/window_container.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #include "input/seat.h"
@@ -31,10 +32,10 @@
 
 //xcursor names: https://www.freedesktop.org/wiki/Specifications/cursor-spec/
 
-//TODO: these should probably be replaced by a method of founding out the mouse button number
-#define E_POINTER_BUTTON_MIDDLE 274
-#define E_POINTER_BUTTON_RIGHT 273
-#define E_POINTER_BUTTON_LEFT 272
+// codes in /usr/include/linux/input-event-codes.h
+#define E_POINTER_BUTTON_MIDDLE 0x112
+#define E_POINTER_BUTTON_RIGHT 0x111
+#define E_POINTER_BUTTON_LEFT 0x110
 
 //checks whether this surface should be focussed on by the seat, and sets the seat focus if necessary
 static void e_cursor_update_seat_focus(struct e_cursor* cursor, struct wlr_surface* surface)
@@ -92,17 +93,17 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
         //right click is held, start resizing the focussed window (right & bottom edge)
         if (event->button == E_POINTER_BUTTON_RIGHT && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
         {
-            struct e_window* focussed_window = e_window_from_surface(cursor->seat->desktop, cursor->seat->focus_surface);
+            struct e_window* focused_window = e_window_from_surface(cursor->seat->desktop, cursor->seat->focus_surface);
 
-            e_cursor_start_window_resize(cursor, focussed_window, WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT);
+            e_cursor_start_window_resize(cursor, focused_window, WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT);
             handled = true;
         }
         //middle click is held, start moving the focussed window
         else if (event->button == E_POINTER_BUTTON_MIDDLE && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
         {
-            struct e_window* focussed_window = e_window_from_surface(cursor->seat->desktop, cursor->seat->focus_surface);
+            struct e_window* focused_window = e_window_from_surface(cursor->seat->desktop, cursor->seat->focus_surface);
 
-            e_cursor_start_window_move(cursor, focussed_window);
+            e_cursor_start_window_move(cursor, focused_window);
             handled = true;
         }
     }
@@ -136,7 +137,7 @@ static void e_cursor_handle_mode_move(struct e_cursor* cursor)
     else //floating
     {
         wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "all-scroll");
-        e_container_set_position(cursor->grab_window->container, cursor->wlr_cursor->x - cursor->grab_wcx, cursor->wlr_cursor->y - cursor->grab_wcy);
+        e_window_container_set_position(cursor->grab_window->container, cursor->wlr_cursor->x - cursor->grab_wcx, cursor->wlr_cursor->y - cursor->grab_wcy);
     }
 }
 
@@ -200,8 +201,7 @@ static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
                 bottom = top + 1;
         }
 
-        e_container_configure(cursor->grab_window->container, left, top, right - left, bottom - top);
-        e_container_arrange(cursor->grab_window->container);
+        e_window_container_configure(cursor->grab_window->container, left, top, right - left, bottom - top);
     }
 }
 
@@ -344,8 +344,16 @@ static void e_cursor_start_grab_window_mode(struct e_cursor* cursor, struct e_wi
     e_cursor_set_mode(cursor, mode);
 
     cursor->grab_window = window;
-    cursor->grab_wcx = cursor->wlr_cursor->x - window->container->tree->node.x;
-    cursor->grab_wcy = cursor->wlr_cursor->y - window->container->tree->node.y;
+    cursor->grab_wcx = cursor->wlr_cursor->x - window->container->base.tree->node.x;
+    cursor->grab_wcy = cursor->wlr_cursor->y - window->container->base.tree->node.y;
+    cursor->grab_start_wcbox = window->container->base.area;
+
+    e_log_info("Grabbed window");
+
+    #if E_VERBOSE
+    e_log_info("Window container grab position: XY(%f, %f)", cursor->grab_wcx, cursor->grab_wcy);
+    e_log_info("Container rect: XY(%i, %i); WH(%i, %i)", window->container->base.area.x, window->container->base.area.y, window->container->base.area.width, window->container->base.area.height);
+    #endif
 }
 
 static void e_cursor_set_xcursor_resize(struct e_cursor* cursor, enum wlr_edges edges)
@@ -427,7 +435,6 @@ void e_cursor_start_window_resize(struct e_cursor* cursor, struct e_window* wind
     if (window == NULL || window->container == NULL)
         return;
 
-    cursor->grab_start_wcbox = window->container->area;
     cursor->grab_edges = edges;
 
     e_cursor_start_grab_window_mode(cursor, window, E_CURSOR_MODE_RESIZE);
@@ -437,6 +444,8 @@ void e_cursor_start_window_resize(struct e_cursor* cursor, struct e_window* wind
 
 void e_cursor_start_window_move(struct e_cursor* cursor, struct e_window* window)
 {
+    assert(cursor);
+
     if (window == NULL || window->tree == NULL)
         return;
 
