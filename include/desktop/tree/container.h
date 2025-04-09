@@ -10,13 +10,6 @@
 
 #include <wlr/util/box.h>
 
-enum e_tiling_mode
-{
-    E_TILING_MODE_NONE = 0, //Mainly used by window containers & root floating container, as they only have a window
-    E_TILING_MODE_HORIZONTAL = 1, //Tile child containers horizontally
-    E_TILING_MODE_VERTICAL = 2 //Tile child containers vertically
-};
-
 struct e_container;
 struct e_tree_container;
 
@@ -25,6 +18,9 @@ struct e_container_impl
     // Configure the container.
     // Returns configure serial, returns 0 if no serial is given.
     uint32_t (*configure)(struct e_container* container, int lx, int ly, int width, int height);
+
+    // Destroy the container.
+    void (*destroy)(struct e_container* container);
 };
 
 // A container for autoconfiguring data by its ancestor containers.
@@ -51,6 +47,13 @@ struct e_container
     struct wlr_scene_tree* tree;
 };
 
+enum e_tiling_mode
+{
+    E_TILING_MODE_NONE = 0, //Mainly used by window containers & root floating container, as they only have a window
+    E_TILING_MODE_HORIZONTAL = 1, //Tile child containers horizontally
+    E_TILING_MODE_VERTICAL = 2 //Tile child containers vertically
+};
+
 // A container that tiles its children containers.
 // Destroys itself if it has no parent when last child is removed.
 struct e_tree_container
@@ -63,9 +66,6 @@ struct e_tree_container
     struct e_container base;
 
     bool destroying;
-
-    // container node destroy listener
-    struct wl_listener destroy;
 };
 
 // Returns true on success, false on fail.

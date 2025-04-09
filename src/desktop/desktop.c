@@ -87,10 +87,10 @@ static void e_desktop_init_output(struct e_desktop* desktop, struct e_output* ou
 
     //create output's root container
     if (output->root_tiling_container == NULL)
-        output->root_tiling_container = e_container_create(output->layers.tiling, E_TILING_MODE_HORIZONTAL);
+        output->root_tiling_container = e_tree_container_create(output->layers.tiling, E_TILING_MODE_HORIZONTAL);
 
     if (output->root_floating_container == NULL)
-        output->root_floating_container = e_container_create(output->layers.floating, E_TILING_MODE_NONE);
+        output->root_floating_container = e_tree_container_create(output->layers.floating, E_TILING_MODE_NONE);
 
     e_output_arrange(output);
 }
@@ -141,13 +141,13 @@ static void e_desktop_remove_output(struct e_desktop* desktop, struct e_output* 
 
     if (output->root_tiling_container != NULL)
     {
-        e_container_destroy(output->root_tiling_container);
+        e_tree_container_destroy(output->root_tiling_container);
         output->root_tiling_container = NULL;
     }
 
     if (output->root_floating_container != NULL)
     {
-        e_container_destroy(output->root_floating_container);
+        e_tree_container_destroy(output->root_floating_container);
         output->root_floating_container = NULL;
     }
 

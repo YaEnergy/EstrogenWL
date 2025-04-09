@@ -17,9 +17,10 @@
 #include "input/keybind.h"
 
 #include "util/list.h"
-
-#include "commands.h"
 #include "util/log.h"
+
+#include "config.h"
+#include "commands.h"
 
 bool e_desktop_handle_keybind(struct e_desktop* desktop, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods)
 {

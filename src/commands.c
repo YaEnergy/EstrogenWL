@@ -76,14 +76,14 @@ static void e_commands_switch_tiling_mode(struct e_desktop* desktop)
     if (window == NULL || window->container == NULL || window->container->parent == NULL)
         return;
 
-    struct e_container* parent_container = window->container->parent;
+    struct e_tree_container* parent_container = window->container->parent;
 
     if (parent_container->tiling_mode == E_TILING_MODE_HORIZONTAL)
         parent_container->tiling_mode = E_TILING_MODE_VERTICAL;
     else
         parent_container->tiling_mode = E_TILING_MODE_HORIZONTAL;
 
-    e_container_arrange(parent_container);
+    e_tree_container_arrange(parent_container);
 }
 
 static void e_commands_toggle_fullscreen_focussed_window(struct e_desktop* desktop)

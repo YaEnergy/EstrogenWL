@@ -24,6 +24,7 @@ bool e_container_init(struct e_container* container, struct wlr_scene_tree* pare
     container->data = data;
 
     container->implementation.configure = NULL;
+    container->implementation.destroy = NULL;
 
     wl_list_init(&container->link);
 
@@ -90,7 +91,7 @@ uint32_t e_container_configure(struct e_container* container, int lx, int ly, in
 
 // Tree container functions
 
-static uint32_t e_tree_container_configure(struct e_container* container, int lx, int ly, int width, int height)
+static uint32_t e_container_configure_tree_container(struct e_container* container, int lx, int ly, int width, int height)
 {
     assert(container);
 
@@ -103,11 +104,11 @@ static uint32_t e_tree_container_configure(struct e_container* container, int lx
     return 0;
 }
 
-static void e_tree_container_destroy_node(struct wl_listener* listener, void* data)
+static void e_container_destroy_tree_container(struct e_container* container)
 {
-    struct e_tree_container* tree_container = wl_container_of(listener, tree_container, destroy);
+    assert(container);
 
-    e_tree_container_destroy(tree_container);
+    e_tree_container_destroy(container->data);
 }
 
 // Creates a tree container.
@@ -132,12 +133,8 @@ struct e_tree_container* e_tree_container_create(struct wlr_scene_tree* parent, 
 
     //implementation
     
-    tree_container->base.implementation.configure = e_tree_container_configure;
-
-    //events
-
-    tree_container->destroy.notify = e_tree_container_destroy_node;
-    wl_signal_add(&tree_container->base.tree->node.events.destroy, &tree_container->destroy);
+    tree_container->base.implementation.configure = e_container_configure_tree_container;
+    tree_container->base.implementation.destroy = e_container_destroy_tree_container;
 
     return tree_container;
 }
@@ -147,6 +144,10 @@ struct e_tree_container* e_tree_container_create(struct wlr_scene_tree* parent, 
 bool e_tree_container_add_container(struct e_tree_container* tree_container, struct e_container* container)
 {
     assert(tree_container && container);
+
+    #if E_VERBOSE
+    e_log_info("tree container add container");
+    #endif
 
     if (container->parent != NULL)
     {
@@ -174,6 +175,10 @@ bool e_tree_container_add_container(struct e_tree_container* tree_container, str
 bool e_tree_container_remove_container(struct e_tree_container* tree_container, struct e_container* container)
 {
     assert(tree_container && container);
+
+    #if E_VERBOSE
+    e_log_info("tree container remove container");
+    #endif
 
     if (container->parent != tree_container)
     {
@@ -208,7 +213,11 @@ bool e_tree_container_remove_container(struct e_tree_container* tree_container, 
 void e_tree_container_arrange(struct e_tree_container* tree_container)
 {
     assert(tree_container);
-    
+
+    #if E_VERBOSE
+    e_log_info("tree container arrange");
+    #endif
+
     if (tree_container->tiling_mode == E_TILING_MODE_NONE)
         return;
 
@@ -249,7 +258,7 @@ void e_tree_container_destroy(struct e_tree_container* tree_container)
 
     tree_container->destroying = true;
 
-    wl_list_remove(&tree_container->destroy.link);
+    //TODO: destroy children
     
     e_container_fini(&tree_container->base);
 

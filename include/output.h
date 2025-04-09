@@ -39,10 +39,10 @@ struct e_output
     } layers;
 
     //container for tiled containers
-    struct e_container* root_tiling_container;
+    struct e_tree_container* root_tiling_container;
 
     //container for floating containers
-    struct e_container* root_floating_container;
+    struct e_tree_container* root_floating_container;
 
     //output has a new frame ready
     struct wl_listener frame;

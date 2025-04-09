@@ -57,13 +57,13 @@ static void e_output_destroy(struct wl_listener* listener, void* data)
 
     if (output->root_tiling_container != NULL)
     {
-        e_container_destroy(output->root_tiling_container);
+        e_tree_container_destroy(output->root_tiling_container);
         output->root_tiling_container = NULL;
     }
 
     if (output->root_floating_container != NULL)
     {
-        e_container_destroy(output->root_floating_container);
+        e_tree_container_destroy(output->root_floating_container);
         output->root_floating_container = NULL;
     }
 
@@ -114,14 +114,8 @@ void e_output_arrange(struct e_output* output)
         e_desktop_arrange_all_layers(output->desktop, output->wlr_output);
 
     if (output->root_tiling_container != NULL)
-    {
-        e_container_configure(output->root_tiling_container, useable_area.x, useable_area.y, useable_area.width, useable_area.height);
-        e_container_arrange(output->root_tiling_container);
-    }
-
+        e_container_configure(&output->root_tiling_container->base, useable_area.x, useable_area.y, useable_area.width, useable_area.height);
+    
     if (output->root_floating_container != NULL)
-    {
-        e_container_configure(output->root_floating_container, useable_area.x, useable_area.y, useable_area.width, useable_area.height);
-        e_container_arrange(output->root_floating_container);
-    }   
+        e_container_configure(&output->root_floating_container->base, useable_area.x, useable_area.y, useable_area.width, useable_area.height);
 }
