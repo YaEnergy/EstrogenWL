@@ -342,7 +342,7 @@ struct e_window* e_window_try_from_node(struct wlr_scene_node* node)
         return NULL;
 
     //data is either NULL or e_node_desc
-    if (node->data != NULL)
+    if (node->data == NULL)
         return NULL;
 
     struct e_node_desc* node_desc = node->data;
@@ -364,6 +364,11 @@ struct e_window* e_window_try_from_node_ancestors(struct wlr_scene_node* node)
     if (node == NULL)
         return NULL;
 
+    struct e_window* window = e_window_try_from_node(node);
+
+    if (window != NULL)
+        return window;
+
     //keep going upwards in the tree until we find a window (in which case we return it), or reach the root of the tree (no parent)
     while (node->parent != NULL)
     {
@@ -379,24 +384,19 @@ struct e_window* e_window_try_from_node_ancestors(struct wlr_scene_node* node)
     return NULL;
 }
 
-// Searches for a window at the specified layout coords in the given scene graph
-// Outs found surface and translated from layout to surface coords.
-// If nothing is found returns NULL, but surface may not always be NULL.
-struct e_window* e_window_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy)
+// Searches for a window at the specified layout coords in the given scene graph.
+// Returns NULL on fail.
+struct e_window* e_window_at(struct wlr_scene_node* node, double lx, double ly)
 {
-    if (node == NULL || surface == NULL || sx == NULL || sy == NULL)
-    {
-        e_log_error("e_view_at: *node, **surface, *sx, or *sy is NULL");
-        return NULL;
-    }
+    assert(node);
 
-    struct wlr_scene_node* snode;
-    *surface = e_desktop_wlr_surface_at(node, lx, ly, &snode, sx, sy);
+    double nx, ny = 0.0;
+    struct wlr_scene_node* node_found = wlr_scene_node_at(node, lx, ly, &nx, &ny);
 
-    if (snode == NULL || *surface == NULL)
+    if (node_found == NULL)
         return NULL;
 
-    return e_window_try_from_node_ancestors(snode);
+    return e_window_try_from_node_ancestors(node_found);
 }
 
 void e_window_send_close(struct e_window* window)

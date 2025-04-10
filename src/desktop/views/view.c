@@ -204,26 +204,45 @@ struct e_view* e_view_from_surface(struct e_desktop* desktop, struct wlr_surface
     return NULL; 
 }
 
-//may return NULL
+// Returns NULL on fail.
+static struct e_view* e_view_try_from_node(struct wlr_scene_node* node)
+{
+    if (node == NULL)
+        return NULL;
+
+    //data is either NULL or e_node_desc
+    if (node->data == NULL)
+        return NULL;
+
+    struct e_node_desc* node_desc = node->data;
+
+    if (node_desc->type == E_NODE_DESC_VIEW)
+        return node_desc->data;
+    else
+        return NULL;
+}
+
+// Returns NULL on fail.
 struct e_view* e_view_try_from_node_ancestors(struct wlr_scene_node* node)
 {
     if (node == NULL)
         return NULL;
 
+    struct e_view* view = e_view_try_from_node(node);
+
+    if (view != NULL)
+        return view;
+
     //keep going upwards in the tree until we find a view (in which case we return it), or reach the root of the tree (no parent)
     while (node->parent != NULL)
     {
-        //data is either NULL or e_node_desc
-        if (node->data != NULL)
-        {
-            struct e_node_desc* node_desc = node->data;
-
-            if (node_desc->type == E_NODE_DESC_VIEW)
-                return node_desc->data;
-        }
-
         //go to parent node
         node = &node->parent->node;
+
+        struct e_view* view = e_view_try_from_node(node);
+
+        if (view != NULL)
+            return view;
     }
 
     return NULL;

@@ -56,6 +56,7 @@ struct e_view
     // View's current geometry
     struct wlr_box current;
 
+    // Whether the view expects to be in a tiled or floating container.
     bool tiled;
 
     // May be NULL, if not set
@@ -85,34 +86,37 @@ void e_view_set_position(struct e_view* view, int lx, int ly);
 // Returns configure serial, returns 0 if no serial is given.
 uint32_t e_view_set_size(struct e_view* view, int width, int height);
 
+// Sets whether the view thinks it should be tiled or not.
+// NOTE: Does not tile its container/window.
 void e_view_set_tiled(struct e_view* view, bool tiled);
 
 // Configures a view within given layout position and size
 // Returns configure serial, returns 0 if no serial is given
 uint32_t e_view_configure(struct e_view* view, int lx, int ly, int width, int height);
 
-//maximizes view to fit within parent container, must be floating
+// Maximizes view to fit within parent container, must be floating.
 void e_view_maximize(struct e_view* view);
 
-//display view
+// Display view inside a window container.
 void e_view_map(struct e_view* view);
 
-//stop displaying view
+// Stop displaying view inside a window container.
 void e_view_unmap(struct e_view* view);
 
-//finds the view which has this surface as its main surface, NULL if not found
+// Finds the view which has this surface as its main surface.
+// Returns NULL on fail.
 struct e_view* e_view_from_surface(struct e_desktop* desktop, struct wlr_surface* surface);
 
 // Returns NULL on fail.
 struct e_view* e_view_try_from_node_ancestors(struct wlr_scene_node* node);
 
-//Searches for a view at the specified layout coords in the given scene graph
-//Outs found surface and translated from layout to surface coords.
-//If nothing is found returns NULL, but surface may not always be NULL.
+// Searches for a view at the specified layout coords in the given scene graph
+// Outs found surface and translated from layout to surface coords.
+// If nothing is found returns NULL, but surface may not always be NULL.
 struct e_view* e_view_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy);
 
-//Requests that this view uses its method of closing
+// Requests that this view uses its method of closing.
 void e_view_send_close(struct e_view* view);
 
-//Deinit a view
+// Deinit a view.
 void e_view_fini(struct e_view* view);

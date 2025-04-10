@@ -51,11 +51,12 @@ struct e_window* e_window_try_from_node(struct wlr_scene_node* node);
 // Returns NULL on fail.
 struct e_window* e_window_try_from_node_ancestors(struct wlr_scene_node* node);
 
-// Searches for a window container at the specified layout coords in the given scene graph
-// Outs found surface and translated from layout to surface coords.
-// If nothing is found returns NULL, but surface may not always be NULL.
-struct e_window* e_window_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy);
+// Searches for a window at the specified layout coords in the given scene graph.
+// Returns NULL on fail.
+struct e_window* e_window_at(struct wlr_scene_node* node, double lx, double ly);
 
+// Ask for this window to request its view to close.
 void e_window_send_close(struct e_window* window);
 
+// Destroy a window and free its memory.
 void e_window_destroy(struct e_window* window);

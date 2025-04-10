@@ -51,13 +51,13 @@ int main()
     //check out: xkbcommon.org
     //Important function: xkb_keysym_from_name (const char *name, enum xkb_keysym_flags flags)
     
-    bind_keybind(server.config.keyboard.keybinds, XKB_KEY_F1, WLR_MODIFIER_ALT, "exec rofi -modi drun,run -show drun");
-    bind_keybind(server.config.keyboard.keybinds, XKB_KEY_Return, WLR_MODIFIER_ALT, "exec alacritty");
-    bind_keybind(server.config.keyboard.keybinds, XKB_KEY_F3, WLR_MODIFIER_ALT, "exit");
-    bind_keybind(server.config.keyboard.keybinds, XKB_KEY_F4, WLR_MODIFIER_ALT, "kill");
-    bind_keybind(server.config.keyboard.keybinds, XKB_KEY_F5, WLR_MODIFIER_ALT, "toggle_fullscreen");
-    bind_keybind(server.config.keyboard.keybinds, XKB_KEY_F6, WLR_MODIFIER_ALT, "toggle_tiling");
-    bind_keybind(server.config.keyboard.keybinds, XKB_KEY_F7, WLR_MODIFIER_ALT, "switch_tiling_mode");
+    bind_keybind(&server.config.keyboard.keybinds, XKB_KEY_F1, WLR_MODIFIER_ALT, "exec rofi -modi drun,run -show drun");
+    bind_keybind(&server.config.keyboard.keybinds, XKB_KEY_F2, WLR_MODIFIER_ALT, "exec alacritty");
+    bind_keybind(&server.config.keyboard.keybinds, XKB_KEY_F3, WLR_MODIFIER_ALT, "exit");
+    bind_keybind(&server.config.keyboard.keybinds, XKB_KEY_F4, WLR_MODIFIER_ALT, "kill");
+    bind_keybind(&server.config.keyboard.keybinds, XKB_KEY_F5, WLR_MODIFIER_ALT, "toggle_fullscreen");
+    bind_keybind(&server.config.keyboard.keybinds, XKB_KEY_F6, WLR_MODIFIER_ALT, "toggle_tiling");
+    bind_keybind(&server.config.keyboard.keybinds, XKB_KEY_F7, WLR_MODIFIER_ALT, "switch_tiling_mode");
 
     e_server_run(&server);
 
