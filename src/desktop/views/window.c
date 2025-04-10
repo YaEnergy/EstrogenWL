@@ -55,6 +55,10 @@ static void e_window_tile(struct e_window* window)
 {
     assert(window && window->view);
 
+    #if E_VERBOSE
+    e_log_info("window tile container");
+    #endif
+
     //if not focused, find current TILED focused view's parent container
     // else if focused or if none, find previous TILED focused's parent container
     //if none, then output 0's root tiling container
@@ -70,22 +74,22 @@ static void e_window_tile(struct e_window* window)
 
     if (view_surface != NULL)
     {
-        //if not focused, find current TILED focused view's parent container
+        //if not focused, find current TILED focused windows's parent container
         if (!e_seat_has_focus(seat, view_surface) && seat->focus_surface != NULL)
         {
-            struct e_view* focused_view = e_view_from_surface(desktop, seat->focus_surface);
+            struct e_window* focused_window = e_seat_focused_window(seat);
 
-            if (focused_view != NULL && focused_view->container != NULL && focused_view->tiled && focused_view->container->base.parent != NULL)
-                parent_container = focused_view->container->base.parent;
+            if (focused_window != NULL && focused_window->tiled && focused_window->base.parent != NULL)
+                parent_container = focused_window->base.parent;
         }
 
         //if focused or none, find previous TILED focused's parent container
         if ((parent_container == NULL || e_seat_has_focus(seat, view_surface)) && seat->previous_focus_surface != NULL)
         {
-            struct e_view* prev_focused_view = e_view_from_surface(desktop, seat->previous_focus_surface);
+            struct e_window* prev_focused_window = e_seat_prev_focused_window(seat);
 
-            if (prev_focused_view != NULL && prev_focused_view->container != NULL && prev_focused_view->tiled && prev_focused_view->container->base.parent != NULL)
-                parent_container = prev_focused_view->container->base.parent;
+            if (prev_focused_window != NULL && prev_focused_window->tiled && prev_focused_window->base.parent != NULL)
+                parent_container = prev_focused_window->base.parent;
         }
     }
     
@@ -142,6 +146,10 @@ static void e_window_float(struct e_window* window)
 {
     assert(window && window->view);
 
+    #if E_VERBOSE
+    e_log_info("window float container");
+    #endif
+
     //find first of current outputs root floating container
     //if none, then output 0's root floating container
     //add to container if found
@@ -174,20 +182,6 @@ static void e_window_float(struct e_window* window)
     e_window_set_parent(window, parent_container);
 }
 
-static void e_window_view_set_tiled(struct wl_listener* listener, void* data)
-{
-    struct e_window* window = wl_container_of(listener, window, view_set_tiled);
-    
-    e_log_info("window view set tiled");
-
-    window->tiled = window->view->tiled;
-
-    if (window->tiled)
-        e_window_tile(window);
-    else
-        e_window_float(window);
-}
-
 static void e_window_view_set_title(struct wl_listener* listener, void* data)
 {
     struct e_window* window = wl_container_of(listener, window, view_set_title);
@@ -214,6 +208,12 @@ static void e_container_destroy_window(struct e_container* container)
 
 static void e_window_init_view(struct e_window* window, struct e_view* view)
 {
+    assert(window && view);
+
+    window->view = view;
+
+    window->title = view->title;
+
     int width = view->current.width + BORDER_THICKNESS * 2;
     int height = view->current.height + BORDER_THICKNESS * 2;
 
@@ -230,6 +230,20 @@ static void e_window_init_view(struct e_window* window, struct e_view* view)
     window->base.area.height = height;
 
     wlr_scene_node_reparent(&view->tree->node, window->base.tree);
+
+    // events
+
+    window->view_set_title.notify = e_window_view_set_title;
+    wl_signal_add(&window->view->events.set_title, &window->view_set_title);
+
+    // tile or float window
+
+    window->tiled = view->tiled;
+
+    if (window->tiled)
+        e_window_tile(window);
+    else
+        e_window_float(window);
 }
 
 struct e_window* e_window_create(struct e_view* view)
@@ -245,30 +259,14 @@ struct e_window* e_window_create(struct e_view* view)
     }
 
     e_container_init(&window->base, view->desktop->pending, E_CONTAINER_WINDOW, window);
-    window->view = view;
     window->desktop = view->desktop;
-
-    e_window_init_view(window, view);
-
-    window->tiled = false;
 
     //implementation
     
     window->base.implementation.configure = e_container_configure_window;
     window->base.implementation.destroy = e_container_destroy_window;
 
-    //events
-
-    window->view_set_tiled.notify = e_window_view_set_tiled;
-    wl_signal_add(&window->view->events.set_tiled, &window->view_set_tiled);
-
-    window->view_set_title.notify = e_window_view_set_title;
-    wl_signal_add(&window->view->events.set_title, &window->view_set_title);
-
-    if (view->tiled)
-        e_window_tile(window);
-    else
-        e_window_float(window);
+    e_window_init_view(window, view);
 
     return window;
 }
@@ -282,11 +280,15 @@ uint32_t e_window_configure(struct e_window* window, int lx, int ly, int width, 
 {
     assert(window);
 
+    #if E_VERBOSE
+    e_log_info("window configure");
+    #endif
+
     //Min size: border + 1 pixel
-    if (width <= BORDER_THICKNESS * 2)
+    if (width < BORDER_THICKNESS * 2 + 1)
         width = BORDER_THICKNESS * 2 + 1;
 
-    if (height <= BORDER_THICKNESS * 2)
+    if (height < BORDER_THICKNESS * 2 + 1)
         height = BORDER_THICKNESS * 2 + 1;
 
     //Container
@@ -307,7 +309,7 @@ uint32_t e_window_maximize(struct e_window* window)
 
     struct e_tree_container* parent = window->base.parent;
 
-    return e_window_configure(window, parent->base.area.x, parent->base.area.y, parent->base.area.width, parent->base.area.height);
+    return e_window_configure(window, 0, 0, parent->base.area.width, parent->base.area.height);
 }
 
 void e_window_set_tiled(struct e_window* window, bool tiled)
@@ -320,10 +322,7 @@ void e_window_set_tiled(struct e_window* window, bool tiled)
         return;
     }
 
-    e_log_info("setting tiling mode of view to %d...", tiled);
-
-    if (window->tiled == tiled)
-        return;
+    e_log_info("setting tiling mode of window to %d...", tiled);
 
     window->tiled = tiled;
 
@@ -416,7 +415,6 @@ void e_window_destroy(struct e_window* window)
     e_log_info("window destroy");
     #endif
 
-    wl_list_remove(&window->view_set_tiled.link);
     wl_list_remove(&window->view_set_title.link);
 
     //keep content tree, it's owned by view

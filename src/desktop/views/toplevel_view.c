@@ -181,8 +181,6 @@ static void e_view_toplevel_set_tiled(struct e_view* view, bool tiled)
 
     struct e_toplevel_view* toplevel_view = view->data;
 
-    e_log_info("set tiled");
-
     wlr_xdg_toplevel_set_tiled(toplevel_view->xdg_toplevel, tiled ? WLR_EDGE_BOTTOM | WLR_EDGE_LEFT | WLR_EDGE_RIGHT | WLR_EDGE_TOP : WLR_EDGE_NONE);
 }
 

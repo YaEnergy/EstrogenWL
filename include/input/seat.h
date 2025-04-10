@@ -9,6 +9,8 @@
 
 #include "input/cursor.h"
 
+struct e_window;
+struct e_view;
 struct e_desktop;
 
 // Collection & management of input devices: keyboard, mouse, ...
@@ -46,6 +48,22 @@ void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface, bool ove
 
 //returns true if seat has focus on this surface
 bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface);
+
+// Returns view currently in focus.
+// Returns NULL if no view has focus.
+struct e_view* e_seat_focused_view(struct e_seat* seat);
+
+// Returns window currently in focus.
+// Returns NULL if no window has focus.
+struct e_window* e_seat_focused_window(struct e_seat* seat);
+
+// Returns view previously in focus.
+// Returns NULL if no view had focus.
+struct e_view* e_seat_prev_focused_view(struct e_seat* seat);
+
+// Returns window previously in focus.
+// Returns NULL if no window had focus.
+struct e_window* e_seat_prev_focused_window(struct e_seat* seat);
 
 //returns true if seat has focus on a layer surface with exclusive interactivity
 bool e_seat_has_exclusive_layer_focus(struct e_seat* seat);

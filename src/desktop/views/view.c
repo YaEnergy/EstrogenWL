@@ -53,7 +53,6 @@ void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_typ
     view->implementation.configure = NULL;
     view->implementation.send_close = NULL;
 
-    wl_signal_init(&view->events.set_tiled);
     wl_signal_init(&view->events.set_title);
 
     wl_list_init(&view->link);
@@ -86,13 +85,15 @@ void e_view_set_tiled(struct e_view* view, bool tiled)
 
     if (view->implementation.set_tiled != NULL)
         view->implementation.set_tiled(view, tiled);
-
-    wl_signal_emit(&view->events.set_tiled, NULL);
 }
 
 uint32_t e_view_configure(struct e_view* view, int lx, int ly, int width, int height)
 {
     assert(view);
+
+    #if E_VERBOSE
+    e_log_info("view configure");
+    #endif
 
     if (view->implementation.configure != NULL)
         return view->implementation.configure(view, lx, ly, width, height);
@@ -179,6 +180,11 @@ void e_view_unmap(struct e_view* view)
 
 struct e_view* e_view_from_surface(struct e_desktop* desktop, struct wlr_surface* surface)
 {
+    assert(desktop);
+    
+    if (surface == NULL)
+        return NULL;
+
     if (wl_list_empty(&desktop->views))
         return NULL;
 

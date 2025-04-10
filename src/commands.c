@@ -21,14 +21,14 @@
 
 #define SHELL_PATH "/bin/sh"
 
-static void e_commands_kill_focussed_view(struct e_desktop* desktop)
+static void e_commands_kill_focused_view(struct e_desktop* desktop)
 {
     struct e_seat* seat = desktop->seat;
 
     if (seat->focus_surface == NULL)
         return;
 
-    struct e_view* view = e_view_from_surface(desktop, seat->focus_surface);
+    struct e_view* view = e_seat_focused_view(desktop->seat);
 
     if (view != NULL)
     {
@@ -38,28 +38,28 @@ static void e_commands_kill_focussed_view(struct e_desktop* desktop)
     }
     else 
     {
-        e_log_info("failed to destroy focussed view");
+        e_log_info("failed to close focused view");
     }
 }
 
-static void e_commands_toggle_tiling_focussed_view(struct e_desktop* desktop)
+static void e_commands_toggle_tiling_focused_window(struct e_desktop* desktop)
 {
     struct e_seat* seat = desktop->seat;
 
     if (seat->focus_surface == NULL)
         return;
 
-    struct e_view* view = e_view_from_surface(desktop, seat->focus_surface);
+    struct e_window* window = e_seat_focused_window(desktop->seat);
 
-    if (view != NULL)
+    if (window != NULL)
     {
-        e_view_set_tiled(view, !view->tiled);
+        e_window_set_tiled(window, !window->tiled);
 
-        e_log_info("setted tiling of view, title: %s", view->title == NULL ? "no name" : view->title);
+        e_log_info("setted tiling of window, title: %s", window->title == NULL ? "no name" : window->title);
     }
     else 
     {
-        e_log_info("failed to destroy focussed view");
+        e_log_info("failed to set tiling of focused window");
     }
 }
 
@@ -72,12 +72,12 @@ static void e_commands_switch_tiling_mode(struct e_desktop* desktop)
     if (seat->focus_surface == NULL)
         return;
 
-    struct e_view* view = e_view_from_surface(desktop, seat->focus_surface);
+    struct e_window* window = e_seat_focused_window(desktop->seat);
 
-    if (view == NULL || view->container == NULL || view->container->base.parent == NULL)
+    if (window == NULL || window->base.parent == NULL)
         return;
 
-    struct e_tree_container* parent_container = view->container->base.parent;
+    struct e_tree_container* parent_container = window->base.parent;
 
     if (parent_container->tiling_mode == E_TILING_MODE_HORIZONTAL)
         parent_container->tiling_mode = E_TILING_MODE_VERTICAL;
@@ -87,7 +87,7 @@ static void e_commands_switch_tiling_mode(struct e_desktop* desktop)
     e_tree_container_arrange(parent_container);
 }
 
-static void e_commands_toggle_fullscreen_focussed_view(struct e_desktop* desktop)
+static void e_commands_toggle_fullscreen_focused_window(struct e_desktop* desktop)
 {
     struct e_seat* seat = desktop->seat;
 
@@ -157,16 +157,16 @@ void e_commands_parse(struct e_desktop* desktop, const char* command)
     //type is kill
     else if (strcmp(argument, "kill") == 0)
     {
-        e_commands_kill_focussed_view(desktop);
+        e_commands_kill_focused_view(desktop);
     }
     //TODO: toggle_fullscreen & toggle_tiling are currently placeholders
     else if (strcmp(argument, "toggle_fullscreen") == 0)
     {
-        e_commands_toggle_fullscreen_focussed_view(desktop);
+        e_commands_toggle_fullscreen_focused_window(desktop);
     }
     else if (strcmp(argument, "toggle_tiling") == 0)
     {
-        e_commands_toggle_tiling_focussed_view(desktop);
+        e_commands_toggle_tiling_focused_window(desktop);
     }
     //TODO: switch_tiling_mode is a placeholder name
     else if (strcmp(argument, "switch_tiling_mode") == 0)

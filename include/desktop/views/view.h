@@ -66,9 +66,6 @@ struct e_view
 
     struct
     {
-        // View's tiled state was set.
-        struct wl_signal set_tiled;
-        
         // View title was set.
         struct wl_signal set_title; //char* title
     } events;

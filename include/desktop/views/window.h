@@ -26,7 +26,6 @@ struct e_window
 
     struct e_container base;
 
-    struct wl_listener view_set_tiled;
     struct wl_listener view_set_title;
 };
 
