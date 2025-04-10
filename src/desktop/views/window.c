@@ -20,9 +20,6 @@
 
 #include "util/log.h"
 
-//TODO: window decoration
-//TODO: destroy function might be called recursively?
-
 //temporary value for border thickness in pixels
 #define BORDER_THICKNESS 3
 
@@ -286,22 +283,19 @@ uint32_t e_window_configure(struct e_window* window, int lx, int ly, int width, 
     assert(window);
 
     //Min size: border + 1 pixel
-    /*
     if (width <= BORDER_THICKNESS * 2)
         width = BORDER_THICKNESS * 2 + 1;
 
     if (height <= BORDER_THICKNESS * 2)
         height = BORDER_THICKNESS * 2 + 1;
-    */
 
     //Container
     e_window_set_position(window, lx, ly);
     window->base.area.width = width;
     window->base.area.height = height;
-    //wlr_scene_rect_set_size(window->background, width, height);
+    wlr_scene_rect_set_size(window->background, width, height);
 
-    //return e_view_configure(window->view, BORDER_THICKNESS, BORDER_THICKNESS, width - BORDER_THICKNESS * 2, height - BORDER_THICKNESS * 2);
-    return e_view_configure(window->view, 0, 0, width, height);
+    return e_view_configure(window->view, BORDER_THICKNESS, BORDER_THICKNESS, width - BORDER_THICKNESS * 2, height - BORDER_THICKNESS * 2);
 }
 
 uint32_t e_window_maximize(struct e_window* window)
