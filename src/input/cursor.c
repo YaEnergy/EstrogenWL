@@ -358,76 +358,52 @@ static void e_cursor_start_grab_window_mode(struct e_cursor* cursor, struct e_wi
 
 static void e_cursor_set_xcursor_resize(struct e_cursor* cursor, enum wlr_edges edges)
 {
-    int direction_i = 0;
-    char* direction = calloc(5, sizeof(*direction));
-
-    //alloc fail
-    if (direction == NULL)
-    {
-        e_log_error("e_cursor_set_xcursor_resize: failed to alloc char* direction");
-        return;
-    }
+    int i = 0;
+    char direction[5];
     
     if (edges & WLR_EDGE_TOP)
     {
-        direction[direction_i] = 'n';
-        direction_i++;
+        direction[i] = 'n';
+        i++;
     }
         
     if (edges & WLR_EDGE_BOTTOM)
     {
-        direction[direction_i] = 's';
-        direction_i++;
+        direction[i] = 's';
+        i++;
     }
 
     if (edges & WLR_EDGE_RIGHT)
     {
-        direction[direction_i] = 'e';
-        direction_i++;
+        direction[i] = 'e';
+        i++;
     }
         
     if (edges & WLR_EDGE_LEFT)
     {
-        direction[direction_i] = 'w';
-        direction_i++;
+        direction[i] = 'w';
+        i++;
     }
-
-    direction[direction_i] = '\0'; //null terminator
-    direction_i++;
     
     //no edges can be resized or more than 2 directions
-    if (direction_i <= 1 || direction_i >= 4)
+    if (i < 1 || i > 2)
     {
-        free(direction);
         wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "not-allowed");
         return;
     }
 
+    direction[i] = '\0'; //null terminator
+
     const int MAX_NAME_LENGTH = 11; // 2 direction chars + "-resize" + '\0'
-
-    char* resize_cursor_name = calloc(MAX_NAME_LENGTH, sizeof(*resize_cursor_name));
-
-    //alloc fail
-    if (resize_cursor_name == NULL)
-    {
-        free(direction);
-        e_log_error("e_cursor_set_xcursor_resize: failed to alloc char* resize_cursor_name");
-        return;
-    }
+    char resize_cursor_name[MAX_NAME_LENGTH];
 
     int length = snprintf(resize_cursor_name, MAX_NAME_LENGTH, "%s-resize", direction);
-    
-    free(direction);
 
     if (length > MAX_NAME_LENGTH)
-    {
-        free(resize_cursor_name);
         return;
-    }
 
+    //Resize cursor name is copied.
     wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, resize_cursor_name);
-
-    free(resize_cursor_name);
 }
 
 void e_cursor_start_window_resize(struct e_cursor* cursor, struct e_window* window, enum wlr_edges edges)
