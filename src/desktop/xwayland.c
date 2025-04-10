@@ -11,7 +11,7 @@
 
 #include <wlr/xwayland.h>
 
-#include "desktop/windows/xwayland_window.h"
+#include "desktop/views/xwayland_view.h"
 
 #include "util/log.h"
 
@@ -22,7 +22,7 @@ static void e_xwayland_new_surface(struct wl_listener* listener, void* data)
 
     e_log_info("new xwayland surface");
 
-    e_xwayland_window_create(xwayland->desktop, wlr_xwayland_surface);
+    e_xwayland_view_create(xwayland->desktop, wlr_xwayland_surface);
 }
 
 struct e_xwayland* e_xwayland_create(struct e_desktop* desktop, struct wl_display* display, struct wlr_compositor* compositor, struct wlr_seat* seat, bool lazy)

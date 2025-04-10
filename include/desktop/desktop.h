@@ -33,7 +33,7 @@ struct e_layer_trees
 };
 
 // main struct handling what is visible to the user (root tree, outputs) & input (seat).
-// basically for clients to make themselves visible and what windows/views and layer surfaces need to communicate with.
+// basically for clients to make themselves visible and what views and layer surfaces need to communicate with.
 struct e_desktop
 {
     struct e_config* config;
@@ -57,7 +57,7 @@ struct e_desktop
     // nodes that are waiting to be reparented
     struct wlr_scene_tree* pending;
 
-    struct wl_list windows; //struct e_window*
+    struct wl_list views; //struct e_view*
     struct wl_list layer_surfaces; //struct e_layer_surface*
 
     // collection & management of input devices: keyboard, mouse, ...

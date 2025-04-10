@@ -45,11 +45,11 @@ struct e_server
     // used by clients to create surfaces & regions
     struct wlr_compositor* compositor;
 
-    // handles xdg shell protocol for xdg application windows
+    // handles xdg shell protocol for xdg application views
     struct e_xdg_shell* xdg_shell;
     // handles wlr layer shell protocol for layer surfaces
     struct e_layer_shell* layer_shell;
-    // handles xwayland protocol, server and wm for xwayland application windows
+    // handles xwayland protocol, server and wm for xwayland application views
     struct e_xwayland* xwayland;
 
     // what the user interacts with

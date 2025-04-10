@@ -62,7 +62,7 @@ struct e_desktop* e_desktop_create(struct wl_display* display, struct wlr_compos
 
     e_desktop_init_scene(desktop);
     
-    wl_list_init(&desktop->windows);
+    wl_list_init(&desktop->views);
     wl_list_init(&desktop->layer_surfaces);
 
     //input device management
@@ -284,7 +284,7 @@ void e_desktop_destroy(struct e_desktop* desktop)
 
     wl_list_remove(&desktop->outputs);
 
-    wl_list_remove(&desktop->windows);
+    wl_list_remove(&desktop->views);
     wl_list_remove(&desktop->layer_surfaces);
 
     free(desktop);

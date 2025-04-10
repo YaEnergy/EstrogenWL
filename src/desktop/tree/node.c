@@ -33,14 +33,14 @@ struct e_node_desc* e_node_desc_create(struct wlr_scene_node* node, enum e_node_
 }
 
 //may return NULL
-struct e_window* e_window_try_from_e_node_desc(struct e_node_desc* node_desc) 
+struct e_view* e_view_try_from_e_node_desc(struct e_node_desc* node_desc) 
 {
     assert(node_desc);
 
-    if (node_desc->type != E_NODE_DESC_WINDOW)
+    if (node_desc->type != E_NODE_DESC_VIEW)
         return NULL;
 
-    return (struct e_window*)node_desc->data;
+    return (struct e_view*)node_desc->data;
 }
 
 //may return NULL

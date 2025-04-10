@@ -19,13 +19,21 @@ struct e_container_impl
     // Returns configure serial, returns 0 if no serial is given.
     uint32_t (*configure)(struct e_container* container, int lx, int ly, int width, int height);
 
-    // Destroy the container.
+    // Destroy the container and free its memory.
     void (*destroy)(struct e_container* container);
+};
+
+enum e_container_type
+{
+    E_CONTAINER_TREE = 1,
+    E_CONTAINER_WINDOW = 2
 };
 
 // A container for autoconfiguring data by its ancestor containers.
 struct e_container
 {
+    enum e_container_type type;
+
     // Data of this container, usually the struct implementing a container type.
     // May be NULL.
     void* data;
@@ -49,7 +57,7 @@ struct e_container
 
 enum e_tiling_mode
 {
-    E_TILING_MODE_NONE = 0, //Mainly used by window containers & root floating container, as they only have a window
+    E_TILING_MODE_NONE = 0, //Mainly used by root floating container, as it's not supposed to tile
     E_TILING_MODE_HORIZONTAL = 1, //Tile child containers horizontally
     E_TILING_MODE_VERTICAL = 2 //Tile child containers vertically
 };
@@ -69,7 +77,7 @@ struct e_tree_container
 };
 
 // Returns true on success, false on fail.
-bool e_container_init(struct e_container* container, struct wlr_scene_tree* parent, void* data);
+bool e_container_init(struct e_container* container, struct wlr_scene_tree* parent, enum e_container_type type, void* data);
 
 void e_container_fini(struct e_container* container);
 
@@ -83,6 +91,9 @@ void e_container_set_position(struct e_container* container, int lx, int ly);
 // Configure the container.
 // Returns configure serial, returns 0 if no serial was given.
 uint32_t e_container_configure(struct e_container* container, int lx, int ly, int width, int height);
+
+// Destroy the container and free its memory.
+void e_container_destroy(struct e_container* container);
 
 // Tree container functions
 

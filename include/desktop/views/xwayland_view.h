@@ -9,14 +9,14 @@
 
 #include <wlr/xwayland.h>
 
-#include "desktop/windows/window.h"
+#include "desktop/views/view.h"
 
 struct e_desktop;
 
-struct e_xwayland_window
+struct e_xwayland_view
 {
-    //base window
-    struct e_window base;
+    //base view
+    struct e_view base;
 
     struct wlr_xwayland_surface* xwayland_surface;
 
@@ -45,5 +45,5 @@ struct e_xwayland_window
     //TODO: request resize, fullscreen, ... events
 };
 
-//creates new xwayland window on desktop
-struct e_xwayland_window* e_xwayland_window_create(struct e_desktop* desktop, struct wlr_xwayland_surface* xwayland_surface);
+//creates new xwayland view on desktop
+struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct wlr_xwayland_surface* xwayland_surface);

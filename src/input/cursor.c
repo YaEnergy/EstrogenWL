@@ -20,13 +20,13 @@
 #include <wlr/util/edges.h>
 
 #include "desktop/tree/container.h"
-#include "desktop/windows/window_container.h"
+#include "desktop/views/window.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #include "input/seat.h"
 
 #include "desktop/desktop.h"
-#include "desktop/windows/window.h"
+#include "desktop/views/view.h"
 
 #include "util/log.h"
 
@@ -45,14 +45,14 @@ static void e_cursor_update_seat_focus(struct e_cursor* cursor, struct wlr_surfa
     struct e_desktop* desktop = cursor->seat->desktop;
     struct e_seat* seat = cursor->seat;
 
-    //focus on windows
+    //focus on views
 
     struct wlr_surface* root_surface = wlr_surface_get_root_surface(surface);
-    struct e_window* window = e_window_from_surface(desktop, root_surface);
+    struct e_view* view = e_view_from_surface(desktop, root_surface);
 
-    if (window != NULL && !e_seat_has_focus(seat, window->surface))
+    if (view != NULL && !e_seat_has_focus(seat, view->surface))
     {
-        e_seat_set_focus(seat, window->surface, false);
+        e_seat_set_focus(seat, view->surface, false);
         return;
     }
 
@@ -90,20 +90,20 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
     //is ALT modifier is pressed on keyboard? (for both cases within here, cursor mode should be in default mode)
     if (keyboard != NULL && (wlr_keyboard_get_modifiers(keyboard) & WLR_MODIFIER_ALT) && cursor->mode == E_CURSOR_MODE_DEFAULT)
     {
-        //right click is held, start resizing the focussed window (right & bottom edge)
+        //right click is held, start resizing the focussed view (right & bottom edge)
         if (event->button == E_POINTER_BUTTON_RIGHT && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
         {
-            struct e_window* focused_window = e_window_from_surface(cursor->seat->desktop, cursor->seat->focus_surface);
+            struct e_view* focused_view = e_view_from_surface(cursor->seat->desktop, cursor->seat->focus_surface);
 
-            e_cursor_start_window_resize(cursor, focused_window, WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT);
+            e_cursor_start_window_resize(cursor, focused_view->container, WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT);
             handled = true;
         }
-        //middle click is held, start moving the focussed window
+        //middle click is held, start moving the focussed view
         else if (event->button == E_POINTER_BUTTON_MIDDLE && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
         {
-            struct e_window* focused_window = e_window_from_surface(cursor->seat->desktop, cursor->seat->focus_surface);
+            struct e_view* focused_view = e_view_from_surface(cursor->seat->desktop, cursor->seat->focus_surface);
 
-            e_cursor_start_window_move(cursor, focused_window);
+            e_cursor_start_window_move(cursor, focused_view->container);
             handled = true;
         }
     }
@@ -122,9 +122,9 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
 
 static void e_cursor_handle_mode_move(struct e_cursor* cursor)
 {
-    if (cursor->grab_window == NULL || cursor->grab_window->tree == NULL || cursor->grab_window->container == NULL)
+    if (cursor->grab_window == NULL)
     {
-        e_log_error("Cursor move mode: window/window's scene tree grabbed by cursor is NULL");
+        e_log_error("Cursor move mode: window grabbed by cursor is NULL");
         e_cursor_reset_mode(cursor);
         return;
     }
@@ -137,37 +137,37 @@ static void e_cursor_handle_mode_move(struct e_cursor* cursor)
     else //floating
     {
         wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "all-scroll");
-        e_window_container_set_position(cursor->grab_window->container, cursor->wlr_cursor->x - cursor->grab_wcx, cursor->wlr_cursor->y - cursor->grab_wcy);
+        e_window_set_position(cursor->grab_window, cursor->wlr_cursor->x - cursor->grab_wx, cursor->wlr_cursor->y - cursor->grab_wy);
     }
 }
 
 static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
 {   
-    if (cursor->grab_window == NULL || cursor->grab_window->container == NULL)
+    if (cursor->grab_window == NULL)
     {
-        e_log_error("Cursor resize mode: window/window's container grabbed by cursor is NULL");
+        e_log_error("Cursor resize mode: window grabbed by cursor is NULL");
         e_cursor_reset_mode(cursor);
         return;
     }
 
     //TODO: most likely due to some imprecision of some kind (idk), there seems to be movement on the right edge and bottom edge when resizing their opposite edges
-    //TODO: wait for window to finish committing before resizing again
+    //TODO: wait for view to finish committing before resizing again
 
     if (cursor->grab_window->tiled)
     {
-        //TODO: allow resizing of tiled windows
+        //TODO: allow resizing of tiled views
         wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "not-allowed");
     }
     else //floating
     {
-        int left = cursor->grab_start_wcbox.x;
-        int right = cursor->grab_start_wcbox.x + cursor->grab_start_wcbox.width;
-        int top = cursor->grab_start_wcbox.y;
-        int bottom = cursor->grab_start_wcbox.y + cursor->grab_start_wcbox.height;
+        int left = cursor->grab_start_wbox.x;
+        int right = cursor->grab_start_wbox.x + cursor->grab_start_wbox.width;
+        int top = cursor->grab_start_wbox.y;
+        int bottom = cursor->grab_start_wbox.y + cursor->grab_start_wbox.height;
 
-        //delta x & delta y since start grab (pos x - (grab window container pos x + grabbed window container left border), y and top border for delta_y or grow_y)
-        int grow_x = cursor->wlr_cursor->x - cursor->grab_wcx - left;
-        int grow_y = cursor->wlr_cursor->y - cursor->grab_wcy - top;
+        //delta x & delta y since start grab (pos x - (grab window pos x + grabbed window left border), y and top border for delta_y or grow_y)
+        int grow_x = cursor->wlr_cursor->x - cursor->grab_wx - left;
+        int grow_y = cursor->wlr_cursor->y - cursor->grab_wy - top;
 
         //expand grabbed edges, while not letting them overlap the opposite edge, min 1 pixel
 
@@ -201,7 +201,7 @@ static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
                 bottom = top + 1;
         }
 
-        e_window_container_configure(cursor->grab_window->container, left, top, right - left, bottom - top);
+        e_window_configure(cursor->grab_window, left, top, right - left, bottom - top);
     }
 }
 
@@ -225,7 +225,7 @@ static void e_cursor_handle_move(struct e_cursor* cursor, uint32_t time_msec)
     double sx, sy;
     struct wlr_scene_node* hover_node;
     struct wlr_surface* hover_surface = e_desktop_wlr_surface_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_node, &sx, &sy);
-    struct e_window* window = (hover_node == NULL) ? NULL : e_window_try_from_node_ancestors(hover_node);
+    struct e_view* view = (hover_node == NULL) ? NULL : e_view_try_from_node_ancestors(hover_node);
 
     if (hover_surface != NULL)
     {
@@ -240,8 +240,8 @@ static void e_cursor_handle_move(struct e_cursor* cursor, uint32_t time_msec)
         wlr_seat_pointer_notify_clear_focus(seat->wlr_seat);
     }
 
-    //display default cursor when not hovering any WINDOWS (not just any surface)
-    if (window == NULL)
+    //display default cursor when not hovering any VIEWS (not just any surface)
+    if (view == NULL)
         wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
 }
 
@@ -338,21 +338,21 @@ void e_cursor_reset_mode(struct e_cursor* cursor)
 //start grabbing a window under the given mode, (should be RESIZE or MOVE)
 static void e_cursor_start_grab_window_mode(struct e_cursor* cursor, struct e_window* window, enum e_cursor_mode mode)
 {
-    if (window == NULL || window->container == NULL)
+    if (window == NULL)
         return;
 
     e_cursor_set_mode(cursor, mode);
 
     cursor->grab_window = window;
-    cursor->grab_wcx = cursor->wlr_cursor->x - window->container->base.tree->node.x;
-    cursor->grab_wcy = cursor->wlr_cursor->y - window->container->base.tree->node.y;
-    cursor->grab_start_wcbox = window->container->base.area;
+    cursor->grab_wx = cursor->wlr_cursor->x - window->base.tree->node.x;
+    cursor->grab_wy = cursor->wlr_cursor->y - window->base.tree->node.y;
+    cursor->grab_start_wbox = window->base.area;
 
     e_log_info("Grabbed window");
 
     #if E_VERBOSE
-    e_log_info("Window container grab position: XY(%f, %f)", cursor->grab_wcx, cursor->grab_wcy);
-    e_log_info("Container rect: XY(%i, %i); WH(%i, %i)", window->container->base.area.x, window->container->base.area.y, window->container->base.area.width, window->container->base.area.height);
+    e_log_info("Window grab position: XY(%f, %f)", cursor->grab_wx, cursor->grab_wy);
+    e_log_info("Container rect: XY(%i, %i); WH(%i, %i)", window->base.area.x, window->base.area.y, window->base.area.width, window->base.area.height);
     #endif
 }
 
@@ -432,7 +432,7 @@ static void e_cursor_set_xcursor_resize(struct e_cursor* cursor, enum wlr_edges 
 
 void e_cursor_start_window_resize(struct e_cursor* cursor, struct e_window* window, enum wlr_edges edges)
 {
-    if (window == NULL || window->container == NULL)
+    if (window == NULL)
         return;
 
     cursor->grab_edges = edges;
@@ -446,7 +446,7 @@ void e_cursor_start_window_move(struct e_cursor* cursor, struct e_window* window
 {
     assert(cursor);
 
-    if (window == NULL || window->tree == NULL)
+    if (window == NULL)
         return;
 
     e_cursor_start_grab_window_mode(cursor, window, E_CURSOR_MODE_MOVE);
@@ -464,7 +464,7 @@ void e_cursor_update_focus(struct e_cursor* cursor)
     double sx, sy;
     struct wlr_scene_node* hover_node;
     struct wlr_surface* hover_surface = e_desktop_wlr_surface_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_node, &sx, &sy);
-    struct e_window* window = (hover_node == NULL) ? NULL : e_window_try_from_node_ancestors(hover_node);
+    struct e_view* view = (hover_node == NULL) ? NULL : e_view_try_from_node_ancestors(hover_node);
 
     if (hover_surface != NULL)
     {
@@ -478,8 +478,8 @@ void e_cursor_update_focus(struct e_cursor* cursor)
         wlr_seat_pointer_notify_clear_focus(seat->wlr_seat);
     }
 
-    //display default cursor when not hovering any WINDOWS (not just any surface)
-    if (window == NULL)
+    //display default cursor when not hovering any VIEWS (not just any surface)
+    if (view == NULL)
         wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
 }
 

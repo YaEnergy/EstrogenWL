@@ -14,13 +14,14 @@
 #include "desktop/tree/node.h"
 #include "util/log.h"
 
-bool e_container_init(struct e_container* container, struct wlr_scene_tree* parent, void* data)
+bool e_container_init(struct e_container* container, struct wlr_scene_tree* parent, enum e_container_type type, void* data)
 {
     assert(container && parent && data);
 
     container->tree = wlr_scene_tree_create(parent);
     container->tree->node.data = e_node_desc_create(&container->tree->node, E_NODE_DESC_CONTAINER, container);
 
+    container->type = type;
     container->data = data;
 
     container->implementation.configure = NULL;
@@ -89,6 +90,14 @@ uint32_t e_container_configure(struct e_container* container, int lx, int ly, in
         return 0;
 }
 
+void e_container_destroy(struct e_container* container)
+{
+    assert(container);
+
+    if (container->implementation.destroy != NULL)
+        container->implementation.destroy(container);
+}
+
 // Tree container functions
 
 static uint32_t e_container_configure_tree_container(struct e_container* container, int lx, int ly, int width, int height)
@@ -125,7 +134,7 @@ struct e_tree_container* e_tree_container_create(struct wlr_scene_tree* parent, 
         return NULL;
     }
 
-    e_container_init(&tree_container->base, parent, tree_container);
+    e_container_init(&tree_container->base, parent, E_CONTAINER_TREE, tree_container);
     tree_container->tiling_mode = tiling_mode;
     wl_list_init(&tree_container->children);
 
@@ -258,7 +267,14 @@ void e_tree_container_destroy(struct e_tree_container* tree_container)
 
     tree_container->destroying = true;
 
-    //TODO: destroy children
+    //destroy children
+    struct e_container* container = NULL;
+    struct e_container* tmp = NULL;
+
+    wl_list_for_each_safe(container, tmp, &tree_container->children, link)
+    {
+        e_container_destroy(container);
+    }
     
     e_container_fini(&tree_container->base);
 

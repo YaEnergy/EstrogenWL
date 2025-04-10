@@ -12,8 +12,8 @@ struct e_xdg_shell
     struct wlr_xdg_shell* xdg_shell;
     struct e_desktop* desktop;
 
-    //clients create new top level window
-    struct wl_listener new_toplevel_window;
+    //clients create new top level view
+    struct wl_listener new_toplevel_view;
 
     struct wl_listener destroy;
 };

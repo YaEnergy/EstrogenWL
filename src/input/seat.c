@@ -18,7 +18,7 @@
 
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
-#include "desktop/windows/window.h"
+#include "desktop/views/view.h"
 
 #include "input/keyboard.h"
 #include "input/cursor.h"
@@ -177,10 +177,10 @@ void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface, bool ove
     seat->previous_focus_surface = seat->focus_surface;
     seat->focus_surface = surface;
 
-    struct e_window* window = e_window_from_surface(seat->desktop, surface);
+    struct e_view* view = e_view_from_surface(seat->desktop, surface);
     
-    if (window != NULL && window->tree != NULL)
-        wlr_scene_node_raise_to_top(&window->tree->node);
+    if (view != NULL && view->tree != NULL)
+        wlr_scene_node_raise_to_top(&view->tree->node);
 
     e_log_info("seat focus");
 }

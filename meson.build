@@ -70,10 +70,10 @@ estrogenwl_src = files(
     'src/desktop/layers/layer_surface.c',
     'src/desktop/layers/layer_popup.c',
 
-    'src/desktop/windows/window_container.c',
-    'src/desktop/windows/window.c',
-    'src/desktop/windows/toplevel_window.c',
-    'src/desktop/windows/xwayland_window.c',
+    'src/desktop/views/window.c',
+    'src/desktop/views/view.c',
+    'src/desktop/views/toplevel_view.c',
+    'src/desktop/views/xwayland_view.c',
 
     'src/input/seat.c',
     'src/input/keyboard.c',

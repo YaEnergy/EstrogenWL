@@ -207,7 +207,7 @@ int e_server_init(struct e_server* server)
         return 1;
     }
 
-    //xdg shell v6, protocol for application windows
+    //xdg shell v6, protocol for application views
     server->xdg_shell = e_xdg_shell_create(server->display, server->desktop);
     //protocol for layer surfaces
     server->layer_shell = e_layer_shell_create(server->display, server->desktop);
@@ -243,7 +243,11 @@ bool e_server_run(struct e_server* server)
 
     //set DISPLAY env var for xwayland server
     if (server->xwayland != NULL)
+    {
+        e_log_info("xwayland DISPLAY=%s", server->xwayland->wlr_xwayland->display_name);
         setenv("DISPLAY", server->xwayland->wlr_xwayland->display_name, true);
+    }
+        
 
     //running
     e_log_info("starting backend");
