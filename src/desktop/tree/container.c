@@ -12,6 +12,7 @@
 #include <wlr/util/box.h>
 
 #include "desktop/tree/node.h"
+#include "util/list.h"
 #include "util/log.h"
 
 bool e_container_init(struct e_container* container, struct wlr_scene_tree* parent, enum e_container_type type, void* data)
@@ -26,8 +27,6 @@ bool e_container_init(struct e_container* container, struct wlr_scene_tree* pare
 
     container->implementation.configure = NULL;
     container->implementation.destroy = NULL;
-
-    wl_list_init(&container->link);
 
     return true;
 }
@@ -49,10 +48,11 @@ void e_container_fini(struct e_container* container)
 }
 
 // Sets the parent of a container.
+// Parent may be NULL.
 // Returns true on success, false on fail.
 bool e_container_set_parent(struct e_container* container, struct e_tree_container* parent)
 {
-    assert(container && parent);
+    assert(container);
 
     //don't set to same parent
     if (container->parent == parent)
@@ -66,7 +66,10 @@ bool e_container_set_parent(struct e_container* container, struct e_tree_contain
             return false;
     }
 
-    return e_tree_container_add_container(parent, container);
+    if (parent != NULL)
+        return e_tree_container_add_container(parent, container);
+    else
+        return true;
 }
 
 void e_container_set_position(struct e_container* container, int lx, int ly)
@@ -134,9 +137,10 @@ struct e_tree_container* e_tree_container_create(struct wlr_scene_tree* parent, 
         return NULL;
     }
 
+    e_list_init(&tree_container->children, 5);
+
     e_container_init(&tree_container->base, parent, E_CONTAINER_TREE, tree_container);
     tree_container->tiling_mode = tiling_mode;
-    wl_list_init(&tree_container->children);
 
     tree_container->destroying = false;
 
@@ -164,15 +168,17 @@ bool e_tree_container_add_container(struct e_tree_container* tree_container, str
         return false;
     }
 
-    wl_list_insert(&tree_container->children, &container->link);
+    //add to children, return false on fail
+    if (!e_list_add(&tree_container->children, container))
+        return false;
+
     container->parent = tree_container;
     wlr_scene_node_reparent(&container->tree->node, tree_container->base.tree);
 
-    int num_containers = wl_list_length(&tree_container->children);
-    struct e_container* contained_container;
-    wl_list_for_each(contained_container, &tree_container->children, link)
+    for (int i = 0; i < tree_container->children.count; i++)
     {
-        contained_container->percentage = 1.0f / (float)num_containers;
+        struct e_container* container = e_list_at(&tree_container->children, i);
+        container->percentage = 1.0f / tree_container->children.count;
     }
 
     return true;
@@ -196,23 +202,18 @@ bool e_tree_container_remove_container(struct e_tree_container* tree_container, 
     }
 
     container->parent = NULL;
-    wl_list_remove(&container->link);
+    e_list_remove(&tree_container->children, container);
 
-    if (wl_list_empty(&tree_container->children))
+    if (tree_container->children.count == 0 && tree_container->base.parent != NULL)
     {
-        if (tree_container->base.parent != NULL)
-            e_tree_container_destroy(tree_container);
-        
+        e_tree_container_destroy(tree_container);
         return true;
     }
 
-    //distribute container's percentage evenly across the other children
-    
-    int num_containers = wl_list_length(&tree_container->children);
-    struct e_container* contained_container;
-    wl_list_for_each(contained_container, &tree_container->children, link)
+    for (int i = 0; i < tree_container->children.count; i++)
     {
-        contained_container->percentage += container->percentage / (float)num_containers;
+        struct e_container* container = e_list_at(&tree_container->children, i);
+        container->percentage = 1.0f / tree_container->children.count;
     }
 
     return true;
@@ -232,9 +233,9 @@ void e_tree_container_arrange(struct e_tree_container* tree_container)
 
     float percentageStart = 0.0f;
 
-    struct e_container* child_container;
-    wl_list_for_each(child_container, &tree_container->children, link)
+    for (int i = 0; i < tree_container->children.count; i++)
     {
+        struct e_container* child_container = e_list_at(&tree_container->children, i);
         struct wlr_box child_area = {0, 0, tree_container->base.area.width, tree_container->base.area.height};
 
         switch (tree_container->tiling_mode)
@@ -258,6 +259,24 @@ void e_tree_container_arrange(struct e_tree_container* tree_container)
     }
 }
 
+static void e_tree_container_clear_children(struct e_tree_container* tree_container)
+{
+    assert(tree_container);
+
+    //no children to destroy, lmao
+    if (tree_container->children.count == 0)
+        return;
+
+    struct e_list list = { 0 }; //struct e_container*
+    e_list_init(&list, tree_container->children.count);
+
+    for (int i = 0; i < tree_container->children.count; i++)
+        e_list_add(&list, e_list_at(&tree_container->children, i));
+
+    for (int i = 0; i < list.count; i++)
+        e_container_destroy(e_list_at(&list, i));
+}
+
 void e_tree_container_destroy(struct e_tree_container* tree_container)
 {
     assert(tree_container);
@@ -267,14 +286,9 @@ void e_tree_container_destroy(struct e_tree_container* tree_container)
 
     tree_container->destroying = true;
 
-    //destroy children
-    struct e_container* container = NULL;
-    struct e_container* tmp = NULL;
+    e_tree_container_clear_children(tree_container);
 
-    wl_list_for_each_safe(container, tmp, &tree_container->children, link)
-    {
-        e_container_destroy(container);
-    }
+    e_list_fini(&tree_container->children);
     
     e_container_fini(&tree_container->base);
 

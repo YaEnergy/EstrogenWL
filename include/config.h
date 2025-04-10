@@ -12,7 +12,7 @@ struct e_keyboard_config
     //TODO: keymap configuration
 
     // pressable keybinds
-    struct e_list* keybinds; //struct e_keybind*
+    struct e_list keybinds; //struct e_keybind*
 
     // amount of key repeats per second
     // default: 25 hz

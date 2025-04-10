@@ -10,6 +10,11 @@
 
 #include <wlr/util/box.h>
 
+#include <util/list.h>
+
+//TODO: function for shrinking the largest children in tree container to ensure enough space
+//TODO: function for getting the preferred percentage of space a container that hasn't been added yet should take up
+
 struct e_container;
 struct e_tree_container;
 
@@ -45,8 +50,6 @@ struct e_container
     // percentage of space this container takes up within parent container
     float percentage;
 
-    struct wl_list link; // e_tree_container::children
-
     // parent of this container, NULL if root container.
     // May be NULL.
     struct e_tree_container* parent;
@@ -69,7 +72,7 @@ struct e_tree_container
     // How this container should tile containers.
     enum e_tiling_mode tiling_mode;
 
-    struct wl_list children; //struct e_container*
+    struct e_list children; //struct e_container*
 
     struct e_container base;
 

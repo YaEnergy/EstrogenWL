@@ -15,21 +15,21 @@ struct e_list
     int capacity;
 };
 
-// Create a list for (capacity) items, starting capacity must be larger than 0.
-// Returns NULL on fail.
-struct e_list* e_list_create(int capacity);
+// Inits a list for (capacity) items, starting capacity must be larger than 0.
+// Returns true on success, false on fail.
+bool e_list_init(struct e_list* list, int capacity);
 
-// Returns item at index i in the list.
-// Returns NULL if index i is out of bounds.
-void* e_list_at(struct e_list* list, int i);
+// Returns item at index in the list.
+// Returns NULL if index is out of bounds.
+void* e_list_at(struct e_list* list, int index);
 
 // Adds an item to the end of the list.
-// Retruns true on success, false on fail.
+// Returns true on success, false on fail.
 bool e_list_add(struct e_list* list, void* item);
 
-// Inserts an item at index i into the list.
+// Inserts an item at index into the list.
 // Returns true on success, false on fail.
-bool e_list_insert(struct e_list* list, void* item, int i);
+bool e_list_insert(struct e_list* list, void* item, int index);
 
 // Returns the index of the first occurence of item in the list.
 // Returns -1 if not found.
@@ -39,9 +39,9 @@ int e_list_find_index(struct e_list* list, void* item);
 // Returns true on success, false on fail.
 bool e_list_remove(struct e_list* list, void* item);
 
-// Removes item at index i in the list.
+// Removes item at index in the list.
 // Returns true on success, false on fail.
-bool e_list_remove_index(struct e_list* list, int i);
+bool e_list_remove_index(struct e_list* list, int index);
 
 // Frees the list, and memory for holding the item pointers, but not the items themselves.
-void e_list_destroy(struct e_list* list);
+void e_list_fini(struct e_list* list);

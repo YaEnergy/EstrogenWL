@@ -24,7 +24,7 @@
 
 bool e_desktop_handle_keybind(struct e_desktop* desktop, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods)
 {
-    struct e_list* keybinds = desktop->config->keyboard.keybinds;
+    struct e_list* keybinds = &desktop->config->keyboard.keybinds;
 
     for (int i = 0; i < keybinds->count; i++)
     {

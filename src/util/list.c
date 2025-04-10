@@ -5,16 +5,11 @@
 
 #include "util/list.h"
 
-// Create a list for (capacity) items, starting capacity must be larger than 0.
-// Returns NULL on fail.
-struct e_list* e_list_create(int capacity)
+// Inits a list for (capacity) items, starting capacity must be larger than 0.
+// Returns true on success, false on fail.
+bool e_list_init(struct e_list* list, int capacity)
 {
-    assert(capacity > 0);
-
-    struct e_list* list = calloc(1, sizeof(*list));
-
-    if (list == NULL)
-        return NULL;
+    assert(list && capacity > 0);
 
     list->count = 0;
     list->capacity = capacity;
@@ -23,14 +18,16 @@ struct e_list* e_list_create(int capacity)
     if (list->items == NULL)
     {
         free(list);
-        return NULL;
+        return false;
     }
 
-    return list;
+    return true;
 }
 
 void* e_list_at(struct e_list* list, int i)
 {
+    assert(list);
+
     if (i < 0 || i >= list->count)
         return NULL;
 
@@ -42,10 +39,14 @@ static bool e_list_expand(struct e_list* list)
 {
     assert(list && list->capacity > 0);
 
-    void* new_items = realloc(list->items, sizeof(*list->items) * list->capacity * 2);
+    void** new_items = realloc(list->items, sizeof(*list->items) * list->capacity * 2);
 
     if (new_items == NULL)
         return false;
+
+    //fill new spots with NULL
+    for (int i = list->capacity; i < list->capacity * 2; i++)
+        new_items[i] = NULL;
 
     list->items = new_items;
     list->capacity *= 2;
@@ -57,23 +58,16 @@ bool e_list_add(struct e_list* list, void* item)
 {
     assert(list && item);    
 
-    if (list->count + 1 > list->capacity)
-    {
-        if (!e_list_expand(list))
-            return false;
-    }
-
-    list->items[list->count] = item;
-    list->count++;
+    e_list_insert(list, item, list->count);
 
     return true;
 }
 
-bool e_list_insert(struct e_list* list, void* item, int i)
+bool e_list_insert(struct e_list* list, void* item, int index)
 {
     assert(list && item);
 
-    if (i < 0 || i >= list->count)
+    if (index < 0 || index > list->count)
         return false;
 
     if (list->count + 1 > list->capacity)
@@ -82,10 +76,11 @@ bool e_list_insert(struct e_list* list, void* item, int i)
             return false;
     }
 
-    // move the items at and after out of the way to make space for this item
-    memmove(list->items[i + 1], list->items[i], (list->count - i) * sizeof(void*));
+    //shift items to the right by 1 space
+    for (int i = list->count - 1; i >= index; i--)
+        list->items[i + 1] = list->items[i];
 
-    list->items[i] = item;
+    list->items[index] = item;
     list->count++;
 
     return true;
@@ -119,28 +114,26 @@ bool e_list_remove(struct e_list* list, void* item)
     return false;
 }
 
-bool e_list_remove_index(struct e_list* list, int i)
+bool e_list_remove_index(struct e_list* list, int index)
 {
     assert(list);
 
-    if (i < 0 || i >= list->count)
+    if (index < 0 || index >= list->count)
         return false;
 
-    list->items[i] = NULL;
+    //Shift items in front of index to the left by 1 space, overwriting item at index
+    for (int i = index + 1; i < list->count; i++)
+        list->items[i - 1] = list->items[i];
+
+    list->items[list->count] = NULL;
     list->count--;
-    
-    // Shift items in front of the removed item back
-    if (list->count != i)
-        memmove(list->items[i], list->items[i + 1], (list->count - i) * sizeof(void*));
 
     return true;
 }
 
-void e_list_destroy(struct e_list* list)
+void e_list_fini(struct e_list* list)
 {
     assert(list);
 
     free(list->items);
-
-    free(list);
 }
