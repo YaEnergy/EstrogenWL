@@ -27,6 +27,8 @@ struct e_seat
 
     // surface that currently has focus
     struct wlr_surface* focus_surface;
+    struct wl_listener focus_surface_unmap;
+
     // surface that previously has focus
     struct wlr_surface* previous_focus_surface;
 

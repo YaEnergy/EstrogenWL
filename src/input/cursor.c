@@ -277,6 +277,16 @@ static void e_cursor_axis(struct wl_listener* listener, void* data)
     wlr_seat_pointer_notify_axis(cursor->seat->wlr_seat, event->time_msec, event->orientation, event->delta, event->delta_discrete, event->source, event->relative_direction);
 }
 
+// Grabbed window was destroyed, let go.
+static void e_cursor_grab_window_destroy(struct wl_listener* listener, void* data)
+{
+    struct e_cursor* cursor = wl_container_of(listener, cursor, grab_window_destroy);
+
+    e_log_info("grabbed window was destroyed");
+
+    e_cursor_reset_mode(cursor);
+}
+
 struct e_cursor* e_cursor_create(struct e_seat* seat, struct wlr_output_layout* output_layout)
 {
     assert(seat && output_layout);
@@ -318,6 +328,8 @@ struct e_cursor* e_cursor_create(struct e_seat* seat, struct wlr_output_layout* 
     cursor->axis.notify = e_cursor_axis;
     wl_signal_add(&cursor->wlr_cursor->events.axis, &cursor->axis);
 
+    cursor->grab_window_destroy.notify = e_cursor_grab_window_destroy;
+
     return cursor;
 }
 
@@ -330,14 +342,23 @@ void e_cursor_set_mode(struct e_cursor* cursor, enum e_cursor_mode mode)
 void e_cursor_reset_mode(struct e_cursor* cursor)
 {
     e_log_info("reset mode");
+
     cursor->mode = E_CURSOR_MODE_DEFAULT;
-    cursor->grab_window = NULL;
     wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
+
+    //let go of window
+    if (cursor->grab_window != NULL)
+    {
+        cursor->grab_window = NULL;
+        wl_list_remove(&cursor->grab_window_destroy.link);
+    }
 }
 
-//start grabbing a window under the given mode, (should be RESIZE or MOVE)
+// Start grabbing a window under the given mode. (should be RESIZE or MOVE)
 static void e_cursor_start_grab_window_mode(struct e_cursor* cursor, struct e_window* window, enum e_cursor_mode mode)
 {
+    assert(cursor);
+
     if (window == NULL)
         return;
 
@@ -347,6 +368,8 @@ static void e_cursor_start_grab_window_mode(struct e_cursor* cursor, struct e_wi
     cursor->grab_wx = cursor->wlr_cursor->x - window->base.tree->node.x;
     cursor->grab_wy = cursor->wlr_cursor->y - window->base.tree->node.y;
     cursor->grab_start_wbox = window->base.area;
+
+    wl_signal_add(&window->events.destroy, &cursor->grab_window_destroy);
 
     e_log_info("Grabbed window");
 

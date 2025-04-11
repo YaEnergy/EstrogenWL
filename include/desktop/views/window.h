@@ -27,6 +27,11 @@ struct e_window
     struct e_container base;
 
     struct wl_listener view_set_title;
+
+    struct
+    {
+        struct wl_signal destroy;
+    } events;
 };
 
 // Creates a window for a view.

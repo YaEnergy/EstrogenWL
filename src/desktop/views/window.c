@@ -268,6 +268,8 @@ struct e_window* e_window_create(struct e_view* view)
 
     e_window_init_view(window, view);
 
+    wl_signal_init(&window->events.destroy);
+
     return window;
 }
 
@@ -414,6 +416,8 @@ void e_window_destroy(struct e_window* window)
     #if E_VERBOSE
     e_log_info("window destroy");
     #endif
+
+    wl_signal_emit_mutable(&window->events.destroy, NULL);
 
     wl_list_remove(&window->view_set_title.link);
 

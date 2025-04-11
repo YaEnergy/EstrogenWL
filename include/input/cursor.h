@@ -42,6 +42,7 @@ struct e_cursor
 
     //grabbed window
     struct e_window* grab_window;
+    struct wl_listener grab_window_destroy;
     double grab_wx;
     double grab_wy;
     struct wlr_box grab_start_wbox;
