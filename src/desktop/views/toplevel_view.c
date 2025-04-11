@@ -113,9 +113,13 @@ static void e_toplevel_view_request_maximize(struct wl_listener* listener, void*
 static void e_toplevel_view_request_move(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, request_move);
-    //struct wlr_xdg_toplevel_move_event* event = data;
-
-    //TODO: any client can request this, verify button serials
+    struct wlr_xdg_toplevel_move_event* event = data;
+    
+    if (!wlr_seat_client_validate_event_serial(event->seat, event->serial))
+    {
+        e_log_error("e_toplevel_view_request_move: invalid event serial!");
+        return;
+    }
     
     struct e_desktop* desktop = toplevel_view->base.desktop;
     e_cursor_start_window_move(desktop->seat->cursor, toplevel_view->base.container);
@@ -126,7 +130,11 @@ static void e_toplevel_view_request_resize(struct wl_listener* listener, void* d
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, request_resize);
     struct wlr_xdg_toplevel_resize_event* event = data;
 
-    //TODO: any client can request this, verify buttons serial
+    if (!wlr_seat_client_validate_event_serial(event->seat, event->serial))
+    {
+        e_log_error("e_toplevel_view_request_resize: invalid event serial!");
+        return;
+    }
     
     struct e_desktop* desktop = toplevel_view->base.desktop;
     e_cursor_start_window_resize(desktop->seat->cursor, toplevel_view->base.container, event->edges);
