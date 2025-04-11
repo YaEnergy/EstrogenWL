@@ -122,9 +122,6 @@ static void e_seat_add_keyboard(struct e_seat* seat, struct wlr_input_device* in
     //add to seat
     wl_list_insert(&seat->keyboards, &keyboard->link);
     wlr_seat_set_keyboard(seat->wlr_seat, keyboard->wlr_keyboard);
-    
-    if (seat->focus_surface != NULL)
-        e_seat_set_focus(seat, seat->focus_surface, true);
 
     e_seat_update_capabilities(seat);
 }
@@ -155,37 +152,82 @@ void e_seat_add_input_device(struct e_seat* seat, struct wlr_input_device* input
 
 // focus
 
-void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface, bool override_exclusive)
+// Set seat focus on a surface.
+static void e_seat_set_focus_surface(struct e_seat* seat, struct wlr_surface* surface)
 {
-    struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
+    assert(seat && surface);
 
-    //Don't override focus of layer surfaces that request exclusive focus, unless requested
-    if (!override_exclusive && e_seat_has_exclusive_layer_focus(seat))
+    //already focused on surface
+    if (seat->focus_surface == surface)
         return;
+
+    if (seat->focus_surface != NULL)
+        e_seat_clear_focus(seat);
+
+    struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
 
     //set active keyboard focus to surface
     //only if there is an active keyboard and this keyboard doesn't already have focus on the surface
     if (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface != surface)
-    {
-        //leave currently focused surface
-        if (seat->wlr_seat->keyboard_state.focused_surface != NULL)
-            wlr_seat_keyboard_notify_clear_focus(seat->wlr_seat);
-
         wlr_seat_keyboard_notify_enter(seat->wlr_seat, surface, wlr_keyboard->keycodes, wlr_keyboard->num_keycodes, &wlr_keyboard->modifiers);
-    }
     
     seat->previous_focus_surface = seat->focus_surface;
     seat->focus_surface = surface;
 
-    struct e_view* view = e_view_from_surface(seat->desktop, surface);
-    
-    if (view != NULL && view->tree != NULL)
-        wlr_scene_node_raise_to_top(&view->tree->node);
-
-    e_log_info("seat focus");
 }
 
-//returns true if seat has focus on this surface
+// Set seat focus on a window if possible.
+void e_seat_set_focus_window(struct e_seat* seat, struct e_window* window)
+{
+    assert(seat && window);
+
+    //Don't override focus of layer surfaces that request exclusive focus
+    if (e_seat_has_exclusive_layer_focus(seat))
+        return;
+
+    #if E_VERBOSE
+    e_log_info("seat focus on window");
+    #endif
+
+    if (window->view == NULL)
+    {
+        e_log_error("e_seat_set_focus_window: window has no view!");
+        return;
+    }
+
+    if (window->view->surface == NULL)
+    {
+        e_log_error("e_seat_set_focus_window: window's view has no surface!");
+        return;
+    }
+
+    e_seat_set_focus_surface(seat, window->view->surface);
+    wlr_scene_node_raise_to_top(&window->base.tree->node);
+}
+
+// Set seat focus on a layer surface if possible.
+void e_seat_set_focus_layer_surface(struct e_seat* seat, struct wlr_layer_surface_v1* layer_surface)
+{
+    assert(seat && layer_surface);
+
+    //Don't override focus of layer surfaces that request exclusive focus
+    //Unless the new layer surface is on a higher layer and also requests exclusive focus
+    if (e_seat_has_exclusive_layer_focus(seat) && layer_surface->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE)
+    {
+        struct wlr_layer_surface_v1* focus_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(seat->focus_surface);
+
+        if (focus_layer_surface->current.layer >= layer_surface->current.layer)
+            return;
+    }
+
+    #if E_VERBOSE
+    e_log_info("seat focus on layer surface");
+    #endif
+
+    e_seat_set_focus_surface(seat, layer_surface->surface);
+}
+
+// Returns true if seat has focus on this surface.
 bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface)
 {
     if (seat->focus_surface != surface)
@@ -266,10 +308,15 @@ bool e_seat_has_exclusive_layer_focus(struct e_seat* seat)
 
 void e_seat_clear_focus(struct e_seat* seat)
 {
+    assert(seat);
+
+    if (seat->focus_surface == NULL)
+        return;
+
     struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
 
-    //if there is an active keyboard, clear its focus
-    if (wlr_keyboard != NULL)
+    //if there is an active keyboard (and is focused), clear its focus
+    if (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface != NULL)
         wlr_seat_keyboard_notify_clear_focus(seat->wlr_seat);
     
     seat->previous_focus_surface = seat->focus_surface;

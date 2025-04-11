@@ -124,7 +124,7 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
 
         //give exclusive focus if requested and allowed and doesn't have focus
         if (e_layer_surface_should_get_exclusive_focus(layer_surface) && !e_seat_has_focus(seat, wlr_layer_surface_v1->surface))
-            e_seat_set_focus(seat, wlr_layer_surface_v1->surface, true);
+            e_seat_set_focus_layer_surface(seat, wlr_layer_surface_v1);
         //clear focus if layer surface no longer wants focus and has focus
         else if (wlr_layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE && e_seat_has_focus(seat, wlr_layer_surface_v1->surface))
             e_seat_clear_focus(seat);
@@ -172,7 +172,7 @@ static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
     struct e_layer_surface* next_layer_surface = e_desktop_get_exclusive_topmost_layer_surface(unmapped_layer_surface->desktop);
 
     if (next_layer_surface != NULL)
-        e_seat_set_focus(next_layer_surface->desktop->seat, next_layer_surface->scene_layer_surface_v1->layer_surface->surface, true);
+        e_seat_set_focus_layer_surface(next_layer_surface->desktop->seat, next_layer_surface->scene_layer_surface_v1->layer_surface);
 }
 
 static void e_layer_surface_destroy(struct wl_listener* listener, void* data)

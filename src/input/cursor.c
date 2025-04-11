@@ -50,9 +50,9 @@ static void e_cursor_update_seat_focus(struct e_cursor* cursor, struct wlr_surfa
     struct wlr_surface* root_surface = wlr_surface_get_root_surface(surface);
     struct e_view* view = e_view_from_surface(desktop, root_surface);
 
-    if (view != NULL && !e_seat_has_focus(seat, view->surface))
+    if (view != NULL && view->container != NULL && !e_seat_has_focus(seat, view->surface))
     {
-        e_seat_set_focus(seat, view->surface, false);
+        e_seat_set_focus_window(seat, view->container);
         return;
     }
 
@@ -64,7 +64,7 @@ static void e_cursor_update_seat_focus(struct e_cursor* cursor, struct wlr_surfa
     if (hover_layer_surface != NULL && hover_layer_surface->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_ON_DEMAND)
     {
         if (!e_seat_has_focus(seat, hover_layer_surface->surface))
-            e_seat_set_focus(seat, hover_layer_surface->surface, false);    
+            e_seat_set_focus_layer_surface(seat, hover_layer_surface);    
 
         return;  
     }

@@ -112,31 +112,20 @@ void e_view_maximize(struct e_view* view)
         e_window_maximize(view->container);
 }
 
-static void e_view_create_container(struct e_view* view)
-{
-    assert(view && view->container == NULL);
-
-    #if E_VERBOSE
-    e_log_info("view create container tree");
-    #endif
-
-    //create container for view
-    view->container = e_window_create(view);
-}
-
+// Display view inside a window container.
 void e_view_map(struct e_view* view)
 {
     assert(view);
 
-    e_log_info("map");
+    e_log_info("view map");
 
     wl_list_insert(&view->desktop->views, &view->link);
 
-    e_view_create_container(view);
+    view->container = e_window_create(view);;
 
-    //set focus to this view's main surface
+    //set focus to this window container
     if (view->surface != NULL)
-        e_seat_set_focus(view->desktop->seat, view->surface, false);
+        e_seat_set_focus_window(view->desktop->seat, view->container);
 }
 
 static void e_view_destroy_container(struct e_view* view)
@@ -152,6 +141,7 @@ static void e_view_destroy_container(struct e_view* view)
         e_tree_container_arrange(parent);
 }
 
+// Stop displaying view inside a window container.
 void e_view_unmap(struct e_view* view)
 {   
     assert(view);

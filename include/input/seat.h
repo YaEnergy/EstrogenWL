@@ -7,6 +7,7 @@
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_seat.h>
 
+#include "desktop/views/window.h"
 #include "input/cursor.h"
 
 struct e_window;
@@ -24,15 +25,15 @@ struct e_seat
 
     struct e_cursor* cursor;
 
-    //surface that currently has focus
+    // surface that currently has focus
     struct wlr_surface* focus_surface;
-    //surface that previously has focus
+    // surface that previously has focus
     struct wlr_surface* previous_focus_surface;
 
-    //client requests to set the surface of the cursor
+    // client requests to set the surface of the cursor
     struct wl_listener request_set_cursor;
 
-    //user requests to set selection (copying data)
+    // user requests to set selection (copying data)
     struct wl_listener request_set_selection;
 
     struct wl_listener destroy;
@@ -41,12 +42,16 @@ struct e_seat
 // Returns NULL on fail.
 struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* desktop, struct wlr_output_layout* output_layout, const char* name);
 
+// Add a new input device to a seat.
 void e_seat_add_input_device(struct e_seat* seat, struct wlr_input_device* input);
 
-// only sets keyboard (if active) focus, pointer focus is only on hover
-void e_seat_set_focus(struct e_seat* seat, struct wlr_surface* surface, bool override_exclusive);
+// Set seat focus on a window if possible.
+void e_seat_set_focus_window(struct e_seat* seat, struct e_window* window);
 
-//returns true if seat has focus on this surface
+// Set seat focus on a layer surface if possible.
+void e_seat_set_focus_layer_surface(struct e_seat* seat, struct wlr_layer_surface_v1* layer_surface);
+
+// Returns true if seat has focus on this surface.
 bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface);
 
 // Returns view currently in focus.
