@@ -13,6 +13,13 @@
 
 #include "desktop/desktop.h"
 
+//TODO: add functions for states that view considers itself + implementation xdg toplevel & xwayland
+//      + editing window container
+//  - e_view_set_maximized
+//  - e_view_set_resizing
+//  - e_view_set_suspended
+//  - e_view_set_activated
+
 struct e_view;
 
 //type of an e_view
@@ -30,6 +37,10 @@ struct e_view_impl
     // Configure a view within given layout position and size
     // Returns configure serial, returns 0 if no serial is given
     uint32_t (*configure)(struct e_view* view, int lx, int ly, int width, int height);
+
+    // Should return true if the view's container or window should float.
+    // If it should tile instead then return false.
+    bool (*wants_floating)(struct e_view* view);
 
     // Request that this view closes
     void (*send_close)(struct e_view* view);

@@ -9,6 +9,7 @@
 
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_scene.h>
+#include <wlr/util/edges.h>
 
 #include "desktop/desktop.h"
 #include "desktop/xdg_popup.h"
@@ -18,12 +19,6 @@
 #include "input/cursor.h"
 
 #include "util/log.h"
-
-static bool e_toplevel_view_wants_floating(struct e_toplevel_view* toplevel_view)
-{
-    struct wlr_xdg_toplevel* xdg_toplevel = toplevel_view->xdg_toplevel;
-    return (xdg_toplevel->current.min_width > 0 || xdg_toplevel->current.min_height > 0) && (xdg_toplevel->current.min_width == xdg_toplevel->current.max_width || xdg_toplevel->current.min_height == xdg_toplevel->current.max_height);
-}
 
 //surface is ready to be displayed
 static void e_toplevel_view_map(struct wl_listener* listener, void* data)
@@ -43,7 +38,7 @@ static void e_toplevel_view_unmap(struct wl_listener* listener, void* data)
     e_view_unmap(&toplevel_view->base);
 }
 
-//new surface state got committed
+// New surface state got committed.
 static void e_toplevel_view_commit(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, commit);
@@ -54,19 +49,14 @@ static void e_toplevel_view_commit(struct wl_listener* listener, void* data)
         e_log_info("toplevel view initial commit");
         #endif
 
-        if (e_toplevel_view_wants_floating(toplevel_view))
-        {
-            e_log_info("toplevel view wants floating");
-
-            //0x0 size to let views configure their size themselves, instead of forcing min or max size
-            e_view_set_size(&toplevel_view->base, 0, 0);
-            e_view_set_tiled(&toplevel_view->base, false);
-        }
-        else
-        {
-            e_view_set_tiled(&toplevel_view->base, true);
-        }
+        //0x0 size to let views configure their size themselves, instead of forcing min or max size
+        wlr_xdg_toplevel_set_size(toplevel_view->xdg_toplevel, 0, 0);
+        //TODO: add wm capabilities
+        wlr_xdg_toplevel_set_wm_capabilities(toplevel_view->xdg_toplevel, 0);
     }
+
+    if (!toplevel_view->xdg_toplevel->base->surface->mapped)
+        return;
 
     toplevel_view->base.current.width = toplevel_view->xdg_toplevel->current.width;
     toplevel_view->base.current.height = toplevel_view->xdg_toplevel->current.height;
@@ -211,6 +201,17 @@ static uint32_t e_view_toplevel_configure(struct e_view* view, int lx, int ly, i
         return wlr_xdg_toplevel_set_size(toplevel_view->xdg_toplevel, width, height);
 }
 
+static bool e_view_toplevel_wants_floating(struct e_view* view)
+{
+    assert(view);
+
+    struct e_toplevel_view* toplevel_view = view->data;
+    struct wlr_xdg_toplevel* xdg_toplevel = toplevel_view->xdg_toplevel;
+    
+    //does surface force a specific size?
+    return (xdg_toplevel->current.min_width > 0 || xdg_toplevel->current.min_height > 0) && (xdg_toplevel->current.min_width == xdg_toplevel->current.max_width || xdg_toplevel->current.min_height == xdg_toplevel->current.max_height);
+}
+
 static void e_view_toplevel_send_close(struct e_view* view)
 {
     assert(view && view->data);
@@ -242,6 +243,7 @@ struct e_toplevel_view* e_toplevel_view_create(struct e_desktop* desktop, struct
 
     toplevel_view->base.implementation.set_tiled = e_view_toplevel_set_tiled;
     toplevel_view->base.implementation.configure = e_view_toplevel_configure;
+    toplevel_view->base.implementation.wants_floating = e_view_toplevel_wants_floating;
     toplevel_view->base.implementation.send_close = e_view_toplevel_send_close;
 
     e_toplevel_view_init_xdg_scene_tree(toplevel_view);

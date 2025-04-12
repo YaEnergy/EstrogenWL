@@ -1,5 +1,6 @@
 #include "desktop/views/xwayland_view.h"
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <assert.h>
@@ -10,6 +11,9 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/edges.h>
 #include <wlr/xwayland.h>
+
+#include <xcb/xcb_icccm.h>
+#include <xcb/xproto.h>
 
 #include "desktop/desktop.h"
 #include "desktop/tree/node.h"
@@ -23,7 +27,6 @@ static void e_xwayland_view_map(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, map);
 
-    e_view_set_tiled(&xwayland_view->base, !xwayland_view->xwayland_surface->override_redirect);
     e_view_map(&xwayland_view->base);
 }
 
@@ -190,6 +193,40 @@ static uint32_t e_view_xwayland_configure(struct e_view* view, int lx, int ly, i
     return 0;
 }
 
+static bool e_view_xwayland_wants_floating(struct e_view* view)
+{
+    assert(view);
+
+    struct e_xwayland_view* xwayland_view = view->data;
+    struct wlr_xwayland_surface* xwayland_surface = xwayland_view->xwayland_surface;
+
+    //does surface want to be above every window?
+    if (xwayland_surface->modal)
+        return true;
+
+    //does surface force a specific size?
+    xcb_size_hints_t* size_hints = xwayland_surface->size_hints;
+
+    if (size_hints != NULL && (size_hints->min_width > 0 || size_hints->min_height > 0) && (size_hints->min_width == size_hints->max_width|| size_hints->min_width == size_hints->max_width))
+        return true;
+
+    //TODO: does surface contain a window type xcb atom that should always float?
+    /*
+    for (size_t i = 0; i < xwayland_surface->window_type_len; i++)
+    {
+        xcb_atom_t window_type = xwayland_surface->window_type[i];
+        
+        ...
+    }
+    */
+
+    //FIXME: not all override redirect window should float, but this is the best we got right now as we can't check for atoms.
+    if (xwayland_surface->override_redirect)
+        return true;
+
+    return false;
+}
+
 static void e_view_xwayland_send_close(struct e_view* view)
 {
     assert(view && view->data);
@@ -221,6 +258,7 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct
     xwayland_view->base.title = xwayland_surface->title;
 
     xwayland_view->base.implementation.configure = e_view_xwayland_configure;
+    xwayland_view->base.implementation.wants_floating = e_view_xwayland_wants_floating;
     xwayland_view->base.implementation.send_close = e_view_xwayland_send_close;
 
     // events

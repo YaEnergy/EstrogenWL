@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <assert.h>
 
 #include <wayland-server-core.h>
@@ -50,6 +51,7 @@ void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_typ
 
     view->implementation.set_tiled = NULL;
     view->implementation.configure = NULL;
+    view->implementation.wants_floating = NULL;
     view->implementation.send_close = NULL;
 
     wl_signal_init(&view->events.set_title);
@@ -111,6 +113,21 @@ void e_view_maximize(struct e_view* view)
         e_window_maximize(view->container);
 }
 
+static bool e_view_wants_floating(struct e_view* view)
+{
+    assert(view);
+
+    if (view->implementation.wants_floating != NULL)
+    {
+        return view->implementation.wants_floating(view);
+    }
+    else
+    {
+        e_log_error("e_view_wants_floating: not implemented!");
+        return false;
+    }
+}
+
 // Display view inside a window container.
 void e_view_map(struct e_view* view)
 {
@@ -120,7 +137,23 @@ void e_view_map(struct e_view* view)
 
     wl_list_insert(&view->desktop->views, &view->link);
 
-    view->container = e_window_create(view);;
+    view->container = e_window_create(view);
+
+    if (view->container == NULL)
+    {
+        e_log_error("e_view_map: failed to create window container");
+        return;
+    }
+
+    if (e_view_wants_floating(view))
+    {
+        e_window_set_tiled(view->container, false);
+        //TODO: fit view
+    }
+    else 
+    {
+        e_window_set_tiled(view->container, true);
+    }
 
     //set focus to this window container
     if (view->surface != NULL)

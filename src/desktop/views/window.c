@@ -235,15 +235,6 @@ static void e_window_init_view(struct e_window* window, struct e_view* view)
 
     window->view_set_title.notify = e_window_view_set_title;
     wl_signal_add(&window->view->events.set_title, &window->view_set_title);
-
-    // tile or float window
-
-    window->tiled = view->tiled;
-
-    if (window->tiled)
-        e_window_tile(window);
-    else
-        e_window_float(window);
 }
 
 struct e_window* e_window_create(struct e_view* view)
@@ -260,6 +251,7 @@ struct e_window* e_window_create(struct e_view* view)
 
     e_container_init(&window->base, view->desktop->pending, E_CONTAINER_WINDOW, window);
     window->desktop = view->desktop;
+    window->tiled = false;
 
     //implementation
     
