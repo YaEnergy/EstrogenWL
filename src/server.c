@@ -279,4 +279,6 @@ void e_server_fini(struct e_server* server)
     wlr_renderer_destroy(server->renderer);
     wlr_backend_destroy(server->backend);
     wl_display_destroy(server->display);
+
+    e_config_fini(&server->config);
 }
