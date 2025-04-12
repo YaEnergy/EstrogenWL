@@ -20,7 +20,6 @@
 #include "desktop/views/window.h"
 
 #include "input/seat.h"
-#include "input/cursor.h"
 
 #include "util/log.h"
 
@@ -128,44 +127,27 @@ void e_view_map(struct e_view* view)
         e_seat_set_focus_window(view->desktop->seat, view->container);
 }
 
-static void e_view_destroy_container(struct e_view* view)
-{
-    assert(view && view->container);
-
-    struct e_tree_container* parent = view->container->base.parent;
-    
-    e_window_destroy(view->container);
-    view->container = NULL;
-
-    if (parent != NULL)
-        e_tree_container_arrange(parent);
-}
-
 // Stop displaying view inside a window container.
 void e_view_unmap(struct e_view* view)
 {   
     assert(view);
-
-    struct e_seat* seat = view->desktop->seat;
-
-    //if this view's surface had focus, clear it
-    if (view->surface != NULL && e_seat_has_focus(seat, view->surface))
-        e_seat_clear_focus(seat);
-
-    //if this view's window container was grabbed by the cursor make it let go
-    if (seat->cursor->grab_window == view->container)
-        e_cursor_reset_mode(seat->cursor);
 
     #if E_VERBOSE
     e_log_info("view unmap");
     #endif
 
     if (view->container != NULL)
-        e_view_destroy_container(view);
+    {
+        struct e_tree_container* parent = view->container->base.parent;
+    
+        e_window_destroy(view->container);
+        view->container = NULL;
+
+        if (parent != NULL)
+            e_tree_container_arrange(parent);
+    }
 
     wl_list_remove(&view->link);
-        
-    e_cursor_update_focus(seat->cursor);
 }
 
 struct e_view* e_view_from_surface(struct e_desktop* desktop, struct wlr_surface* surface)
@@ -268,11 +250,8 @@ void e_view_send_close(struct e_view* view)
 void e_view_fini(struct e_view* view)
 {
     if (view->container != NULL)
-        e_view_destroy_container(view);
+        e_view_unmap(view);
     
     if (view->tree != NULL)
         wlr_scene_node_destroy(&view->tree->node);
-
-    wl_list_init(&view->link);
-    wl_list_remove(&view->link);
 }
