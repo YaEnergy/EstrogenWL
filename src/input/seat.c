@@ -56,7 +56,7 @@ static void e_seat_focus_surface_unmap(struct wl_listener* listener, void* data)
 
     e_seat_clear_focus(seat);
 
-    e_cursor_update_focus(seat->cursor);
+    e_cursor_set_focus_hover(seat->cursor);
 }
 
 static void e_seat_destroy(struct wl_listener* listener, void* data)
@@ -244,6 +244,39 @@ void e_seat_set_focus_layer_surface(struct e_seat* seat, struct wlr_layer_surfac
     #endif
 
     e_seat_set_focus_surface(seat, layer_surface->surface);
+}
+
+// Gets the type of surface (window or layer surface) and sets seat focus.
+// This will do nothing if surface isn't of a type that should be focused on by the seat.
+void e_seat_set_focus_surface_type(struct e_seat* seat, struct wlr_surface* surface)
+{
+    assert(seat && surface);
+
+    struct e_desktop* desktop = seat->desktop;
+
+    //focus on views & windows
+
+    struct wlr_surface* root_surface = wlr_surface_get_root_surface(surface);
+    struct e_view* view = e_view_from_surface(desktop, root_surface);
+
+    if (view != NULL && view->container != NULL && !e_seat_has_focus(seat, view->surface))
+    {
+        e_seat_set_focus_window(seat, view->container);
+        return;
+    }
+
+    //focus on layer surfaces that request on demand interactivity
+
+    struct wlr_layer_surface_v1* hover_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(surface);
+
+    //is layer surface that requests on demand focus?
+    if (hover_layer_surface != NULL && hover_layer_surface->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_ON_DEMAND)
+    {
+        if (!e_seat_has_focus(seat, hover_layer_surface->surface))
+            e_seat_set_focus_layer_surface(seat, hover_layer_surface);    
+
+        return;  
+    }
 }
 
 // Returns true if seat has focus on this surface.

@@ -21,7 +21,6 @@
 
 #include "desktop/tree/container.h"
 #include "desktop/views/window.h"
-#include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #include "input/seat.h"
 
@@ -36,39 +35,6 @@
 #define E_POINTER_BUTTON_MIDDLE 0x112
 #define E_POINTER_BUTTON_RIGHT 0x111
 #define E_POINTER_BUTTON_LEFT 0x110
-
-//checks whether this surface should be focussed on by the seat, and sets the seat focus if necessary
-static void e_cursor_update_seat_focus(struct e_cursor* cursor, struct wlr_surface* surface)
-{
-    assert(cursor && surface);
-
-    struct e_desktop* desktop = cursor->seat->desktop;
-    struct e_seat* seat = cursor->seat;
-
-    //focus on views
-
-    struct wlr_surface* root_surface = wlr_surface_get_root_surface(surface);
-    struct e_view* view = e_view_from_surface(desktop, root_surface);
-
-    if (view != NULL && view->container != NULL && !e_seat_has_focus(seat, view->surface))
-    {
-        e_seat_set_focus_window(seat, view->container);
-        return;
-    }
-
-    //focus on layer surfaces that request on demand interactivity
-
-    struct wlr_layer_surface_v1* hover_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(surface);
-
-    //is layer surface that requests on demand focus?
-    if (hover_layer_surface != NULL && hover_layer_surface->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_ON_DEMAND)
-    {
-        if (!e_seat_has_focus(seat, hover_layer_surface->surface))
-            e_seat_set_focus_layer_surface(seat, hover_layer_surface);    
-
-        return;  
-    }
-}
 
 static void e_cursor_frame(struct wl_listener* listener, void* data)
 {
@@ -205,7 +171,7 @@ static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
     }
 }
 
-static void e_cursor_handle_move(struct e_cursor* cursor, uint32_t time_msec)
+static void e_cursor_handle_motion(struct e_cursor* cursor, uint32_t time_msec)
 {
     switch (cursor->mode)
     {
@@ -225,24 +191,11 @@ static void e_cursor_handle_move(struct e_cursor* cursor, uint32_t time_msec)
     double sx, sy;
     struct wlr_scene_node* hover_node;
     struct wlr_surface* hover_surface = e_desktop_wlr_surface_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_node, &sx, &sy);
-    struct e_view* view = (hover_node == NULL) ? NULL : e_view_try_from_node_ancestors(hover_node);
+
+    e_cursor_set_focus_hover(cursor);
 
     if (hover_surface != NULL)
-    {
-        wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface, sx, sy); //is only sent once
         wlr_seat_pointer_notify_motion(seat->wlr_seat, time_msec, sx, sy);
-
-        //sloppy focus
-        e_cursor_update_seat_focus(cursor, hover_surface);
-    }
-    else 
-    {
-        wlr_seat_pointer_notify_clear_focus(seat->wlr_seat);
-    }
-
-    //display default cursor when not hovering any VIEWS (not just any surface)
-    if (view == NULL)
-        wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
 }
 
 static void e_cursor_motion(struct wl_listener* listener, void* data)
@@ -253,7 +206,7 @@ static void e_cursor_motion(struct wl_listener* listener, void* data)
     //move & send to clients
     wlr_cursor_move(cursor->wlr_cursor, &event->pointer->base, event->delta_x, event->delta_y);
 
-    e_cursor_handle_move(cursor, event->time_msec);
+    e_cursor_handle_motion(cursor, event->time_msec);
 }
 
 static void e_cursor_motion_absolute(struct wl_listener* listener, void* data)
@@ -264,7 +217,7 @@ static void e_cursor_motion_absolute(struct wl_listener* listener, void* data)
     //move & send to clients
     wlr_cursor_warp_absolute(cursor->wlr_cursor, &event->pointer->base, event->x, event->y);
     
-    e_cursor_handle_move(cursor, event->time_msec);
+    e_cursor_handle_motion(cursor, event->time_msec);
 }
 
 //scroll event
@@ -451,7 +404,9 @@ void e_cursor_start_window_move(struct e_cursor* cursor, struct e_window* window
     e_cursor_start_grab_window_mode(cursor, window, E_CURSOR_MODE_MOVE);
 }
 
-void e_cursor_update_focus(struct e_cursor* cursor)
+// Sets seat focus to whatever surface is under cursor.
+// If nothing is under cursor, doesn't change seat focus.
+void e_cursor_set_focus_hover(struct e_cursor* cursor)
 {
     //only update focus in default mode
     if (cursor->mode != E_CURSOR_MODE_DEFAULT)
@@ -470,7 +425,7 @@ void e_cursor_update_focus(struct e_cursor* cursor)
         wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface, sx, sy); //is only sent once
 
         //sloppy focus
-        e_cursor_update_seat_focus(cursor, hover_surface);
+        e_seat_set_focus_surface_type(seat, hover_surface);
     }
     else 
     {

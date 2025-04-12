@@ -54,15 +54,17 @@ struct e_cursor* e_cursor_create(struct e_seat* seat, struct wlr_output_layout* 
 
 void e_cursor_set_mode(struct e_cursor* cursor, enum e_cursor_mode mode);
 
-//lets go of a possibly grabbed window, & sets cursor mode to default
+// Lets go of a possibly grabbed window, & sets cursor mode to default.
 void e_cursor_reset_mode(struct e_cursor* cursor);
 
-//starts grabbing a window under the resize mode, resizing along specified edges
+// Starts grabbing a window under the resize mode, resizing along specified edges/
 void e_cursor_start_window_resize(struct e_cursor* cursor, struct e_window* window, enum wlr_edges edges);
 
-//starts grabbing a window under the move mode
+// Starts grabbing a window under the move mode.
 void e_cursor_start_window_move(struct e_cursor* cursor, struct e_window* window);
 
-void e_cursor_update_focus(struct e_cursor* cursor);
+// Sets seat focus to whatever surface is under cursor.
+// If nothing is under cursor, doesn't change seat focus.
+void e_cursor_set_focus_hover(struct e_cursor* cursor);
 
 void e_cursor_destroy(struct e_cursor* cursor);

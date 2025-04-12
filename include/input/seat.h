@@ -53,6 +53,10 @@ void e_seat_set_focus_window(struct e_seat* seat, struct e_window* window);
 // Set seat focus on a layer surface if possible.
 void e_seat_set_focus_layer_surface(struct e_seat* seat, struct wlr_layer_surface_v1* layer_surface);
 
+// Gets the type of surface (window or layer surface) and sets seat focus.
+// This will do nothing if surface isn't of a type that should be focused on by the seat.
+void e_seat_set_focus_surface_type(struct e_seat* seat, struct wlr_surface* surface);
+
 // Returns true if seat has focus on this surface.
 bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface);
 
