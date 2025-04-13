@@ -18,6 +18,7 @@
 #include "desktop/desktop.h"
 #include "desktop/tree/node.h"
 #include "desktop/views/view.h"
+#include "desktop/xwayland.h"
 
 #include "input/cursor.h"
 
@@ -200,6 +201,8 @@ static bool e_view_xwayland_wants_floating(struct e_view* view)
     struct e_xwayland_view* xwayland_view = view->data;
     struct wlr_xwayland_surface* xwayland_surface = xwayland_view->xwayland_surface;
 
+    struct e_xwayland* xwayland = xwayland_view->xwayland;
+
     //does surface want to be above every window?
     if (xwayland_surface->modal)
         return true;
@@ -210,19 +213,26 @@ static bool e_view_xwayland_wants_floating(struct e_view* view)
     if (size_hints != NULL && (size_hints->min_width > 0 || size_hints->min_height > 0) && (size_hints->min_width == size_hints->max_width|| size_hints->min_width == size_hints->max_width))
         return true;
 
-    //TODO: does surface contain a window type xcb atom that should always float?
-    /*
+    //does surface contain a window type xcb atom that should always float?
+    //TODO: update when wlroots 0.19.0 releases to use wlr_xwayland_surface_has_window_type() instead
     for (size_t i = 0; i < xwayland_surface->window_type_len; i++)
     {
         xcb_atom_t window_type = xwayland_surface->window_type[i];
         
-        ...
+        //awesome if-statement
+        if (window_type == xwayland->atoms[E_NET_WM_WINDOW_TYPE_DIALOG] 
+            || window_type == xwayland->atoms[E_NET_WM_WINDOW_TYPE_DROPDOWN_MENU]
+            || window_type == xwayland->atoms[E_NET_WM_WINDOW_TYPE_POPUP_MENU]
+            || window_type == xwayland->atoms[E_NET_WM_WINDOW_TYPE_TOOLTIP]
+            || window_type == xwayland->atoms[E_NET_WM_WINDOW_TYPE_SPLASH]
+            || window_type == xwayland->atoms[E_NET_WM_WINDOW_TYPE_NOTIFICATION]
+            || window_type == xwayland->atoms[E_NET_WM_WINDOW_TYPE_TOOLBAR]
+            || window_type == xwayland->atoms[E_NET_WM_WINDOW_TYPE_MENU]
+            || window_type == xwayland->atoms[E_NET_WM_WINDOW_TYPE_COMBO])
+        {
+            return true;
+        }
     }
-    */
-
-    //FIXME: not all override redirect window should float, but this is the best we got right now as we can't check for atoms.
-    if (xwayland_surface->override_redirect)
-        return true;
 
     return false;
 }
@@ -237,7 +247,7 @@ static void e_view_xwayland_send_close(struct e_view* view)
 }
 
 //creates new xwayland view inside server
-struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct wlr_xwayland_surface* xwayland_surface)
+struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct e_xwayland* xwayland, struct wlr_xwayland_surface* xwayland_surface)
 {
     assert(desktop && xwayland_surface);
     
@@ -251,6 +261,7 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct
         return NULL;
     }
 
+    xwayland_view->xwayland = xwayland;
     xwayland_view->xwayland_surface = xwayland_surface;
 
     e_view_init(&xwayland_view->base, desktop, E_VIEW_XWAYLAND, xwayland_view);

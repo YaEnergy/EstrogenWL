@@ -10,11 +10,15 @@
 #include <wlr/xwayland.h>
 
 #include "desktop/views/view.h"
+#include "desktop/xwayland.h"
 
 struct e_desktop;
 
 struct e_xwayland_view
 {
+    // Xwayland server that created this view
+    struct e_xwayland* xwayland;
+
     //base view
     struct e_view base;
 
@@ -46,4 +50,4 @@ struct e_xwayland_view
 };
 
 //creates new xwayland view on desktop
-struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct wlr_xwayland_surface* xwayland_surface);
+struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct e_xwayland* xwayland, struct wlr_xwayland_surface* xwayland_surface);
