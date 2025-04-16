@@ -21,8 +21,7 @@ struct e_tree_container;
 struct e_container_impl
 {
     // Configure the container.
-    // Returns configure serial, returns 0 if no serial is given.
-    uint32_t (*configure)(struct e_container* container, int lx, int ly, int width, int height);
+    void (*configure)(struct e_container* container, int lx, int ly, int width, int height);
 
     // Destroy the container and free its memory.
     void (*destroy)(struct e_container* container);
@@ -31,7 +30,7 @@ struct e_container_impl
 enum e_container_type
 {
     E_CONTAINER_TREE = 1,
-    E_CONTAINER_WINDOW = 2
+    E_CONTAINER_VIEW = 2
 };
 
 // A container for autoconfiguring data by its ancestor containers.
@@ -53,9 +52,6 @@ struct e_container
     // parent of this container, NULL if root container.
     // May be NULL.
     struct e_tree_container* parent;
-
-    // container tree
-    struct wlr_scene_tree* tree;
 };
 
 enum e_tiling_mode
@@ -80,7 +76,7 @@ struct e_tree_container
 };
 
 // Returns true on success, false on fail.
-bool e_container_init(struct e_container* container, struct wlr_scene_tree* parent, enum e_container_type type, void* data);
+bool e_container_init(struct e_container* container, enum e_container_type type, void* data);
 
 void e_container_fini(struct e_container* container);
 
@@ -88,12 +84,8 @@ void e_container_fini(struct e_container* container);
 // Returns true on success, false on fail.
 bool e_container_set_parent(struct e_container* container, struct e_tree_container* parent);
 
-// Sets the position of container relative to the parent node.
-void e_container_set_position(struct e_container* container, int lx, int ly);
-
 // Configure the container.
-// Returns configure serial, returns 0 if no serial was given.
-uint32_t e_container_configure(struct e_container* container, int lx, int ly, int width, int height);
+void e_container_configure(struct e_container* container, int x, int y, int width, int height);
 
 // Destroy the container and free its memory.
 void e_container_destroy(struct e_container* container);
@@ -102,7 +94,7 @@ void e_container_destroy(struct e_container* container);
 
 // Creates a tree container.
 // Returns NULL on fail.
-struct e_tree_container* e_tree_container_create(struct wlr_scene_tree* parent, enum e_tiling_mode tiling_mode);
+struct e_tree_container* e_tree_container_create(enum e_tiling_mode tiling_mode);
 
 // Adds a container to a tree container.
 // Returns true on success, false on fail.

@@ -15,12 +15,9 @@
 #include "util/list.h"
 #include "util/log.h"
 
-bool e_container_init(struct e_container* container, struct wlr_scene_tree* parent, enum e_container_type type, void* data)
+bool e_container_init(struct e_container* container, enum e_container_type type, void* data)
 {
-    assert(container && parent && data);
-
-    container->tree = wlr_scene_tree_create(parent);
-    container->tree->node.data = e_node_desc_create(&container->tree->node, E_NODE_DESC_CONTAINER, container);
+    assert(container && data);
 
     container->type = type;
     container->data = data;
@@ -39,12 +36,6 @@ void e_container_fini(struct e_container* container)
         e_tree_container_remove_container(container->parent, container);
 
     container->implementation.configure = NULL;
-
-    if (container->tree != NULL)
-    {
-        wlr_scene_node_destroy(&container->tree->node);
-        container->tree = NULL;
-    }
 }
 
 // Sets the parent of a container.
@@ -72,25 +63,15 @@ bool e_container_set_parent(struct e_container* container, struct e_tree_contain
         return true;
 }
 
-void e_container_set_position(struct e_container* container, int lx, int ly)
-{
-    assert(container);
-
-    wlr_scene_node_set_position(&container->tree->node, lx, ly);
-    container->area.x = lx;
-    container->area.y = ly;
-}
-
 // Configure the container.
-// Returns configure serial, returns 0 if no serial was given.
-uint32_t e_container_configure(struct e_container* container, int lx, int ly, int width, int height)
+void e_container_configure(struct e_container* container, int x, int y, int width, int height)
 {
     assert(container);
 
     if (container->implementation.configure != NULL)
-        return container->implementation.configure(container, lx, ly, width, height);
+        container->implementation.configure(container, x, y, width, height);
     else
-        return 0;
+        e_log_error("e_container_configure: not implemented!");
 }
 
 void e_container_destroy(struct e_container* container)
@@ -103,17 +84,14 @@ void e_container_destroy(struct e_container* container)
 
 // Tree container functions
 
-static uint32_t e_container_configure_tree_container(struct e_container* container, int lx, int ly, int width, int height)
+static void e_container_configure_tree_container(struct e_container* container, int x, int y, int width, int height)
 {
     assert(container);
 
-    wlr_scene_node_set_position(&container->tree->node, lx, ly);
-    container->area = (struct wlr_box){lx, ly, width, height};
+    container->area = (struct wlr_box){x, y, width, height};
 
     struct e_tree_container* tree_container = container->data;
     e_tree_container_arrange(tree_container);
-
-    return 0;
 }
 
 static void e_container_destroy_tree_container(struct e_container* container)
@@ -125,10 +103,8 @@ static void e_container_destroy_tree_container(struct e_container* container)
 
 // Creates a tree container.
 // Returns NULL on fail.
-struct e_tree_container* e_tree_container_create(struct wlr_scene_tree* parent, enum e_tiling_mode tiling_mode)
+struct e_tree_container* e_tree_container_create(enum e_tiling_mode tiling_mode)
 {
-    assert(parent);
-
     struct e_tree_container* tree_container = calloc(1, sizeof(*tree_container));
 
     if (tree_container == NULL)
@@ -139,7 +115,7 @@ struct e_tree_container* e_tree_container_create(struct wlr_scene_tree* parent, 
 
     e_list_init(&tree_container->children, 5);
 
-    e_container_init(&tree_container->base, parent, E_CONTAINER_TREE, tree_container);
+    e_container_init(&tree_container->base, E_CONTAINER_TREE, tree_container);
     tree_container->tiling_mode = tiling_mode;
 
     tree_container->destroying = false;
@@ -173,7 +149,6 @@ bool e_tree_container_add_container(struct e_tree_container* tree_container, str
         return false;
 
     container->parent = tree_container;
-    wlr_scene_node_reparent(&container->tree->node, tree_container->base.tree);
 
     for (int i = 0; i < tree_container->children.count; i++)
     {
@@ -236,7 +211,7 @@ void e_tree_container_arrange(struct e_tree_container* tree_container)
     for (int i = 0; i < tree_container->children.count; i++)
     {
         struct e_container* child_container = e_list_at(&tree_container->children, i);
-        struct wlr_box child_area = {0, 0, tree_container->base.area.width, tree_container->base.area.height};
+        struct wlr_box child_area = {tree_container->base.area.x, tree_container->base.area.y, tree_container->base.area.width, tree_container->base.area.height};
 
         switch (tree_container->tiling_mode)
         {
@@ -275,6 +250,8 @@ static void e_tree_container_clear_children(struct e_tree_container* tree_contai
 
     for (int i = 0; i < list.count; i++)
         e_container_destroy(e_list_at(&list, i));
+
+    e_list_fini(&list);
 }
 
 void e_tree_container_destroy(struct e_tree_container* tree_container)

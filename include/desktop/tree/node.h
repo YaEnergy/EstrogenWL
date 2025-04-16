@@ -20,7 +20,6 @@ enum e_node_desc_type
     E_NODE_DESC_XDG_POPUP = 2, //struct e_xdg_popup*
     E_NODE_DESC_LAYER_SURFACE = 3, //struct e_layer_surface*
     E_NODE_DESC_LAYER_POPUP = 4, //struct e_layer_popup*
-    E_NODE_DESC_CONTAINER = 5 //struct e_container*
 };
 
 struct e_node_desc
@@ -45,7 +44,4 @@ struct e_layer_surface* e_layer_surface_try_from_e_node_desc(struct e_node_desc*
 
 //may return NULL
 struct e_layer_popup* e_layer_popup_try_from_e_node_desc(struct e_node_desc* node_desc);
-
-//may return NULL
-struct e_container* e_container_try_from_e_node_desc(struct e_node_desc* node_desc);
 

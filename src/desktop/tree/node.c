@@ -75,14 +75,3 @@ struct e_layer_popup* e_layer_popup_try_from_e_node_desc(struct e_node_desc* nod
 
     return (struct e_layer_popup*)node_desc->data;
 }
-
-//may return NULL
-struct e_container* e_container_try_from_e_node_desc(struct e_node_desc* node_desc)
-{
-    assert(node_desc);
-
-    if (node_desc->type != E_NODE_DESC_CONTAINER)
-        return NULL;
-
-    return (struct e_container*)node_desc->data;
-}
