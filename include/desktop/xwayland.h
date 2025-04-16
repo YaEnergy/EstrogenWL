@@ -48,4 +48,7 @@ struct e_xwayland
 // Returns NULL on fail.
 struct e_xwayland* e_xwayland_create(struct e_desktop* desktop, struct wl_display* display, struct wlr_compositor* compositor, struct wlr_seat* seat, bool lazy);
 
+// Update useable geometry not covered by panels, docks, etc.
+void e_xwayland_update_workarea(struct e_xwayland* xwayland);
+
 void e_xwayland_destroy(struct e_xwayland* xwayland);

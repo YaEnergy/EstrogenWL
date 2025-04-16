@@ -70,7 +70,6 @@ estrogenwl_src = files(
     'src/desktop/layers/layer_surface.c',
     'src/desktop/layers/layer_popup.c',
 
-    'src/desktop/views/window.c',
     'src/desktop/views/view.c',
     'src/desktop/views/toplevel_view.c',
     'src/desktop/views/xwayland_view.c',

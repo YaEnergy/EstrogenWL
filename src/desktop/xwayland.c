@@ -10,7 +10,9 @@
 #include <wayland-util.h>
 
 #include <wlr/types/wlr_compositor.h>
-
+#include <wlr/types/wlr_output.h>
+#include <wlr/types/wlr_output_layout.h>
+#include <wlr/util/box.h>
 #include <wlr/xwayland.h>
 
 #include <xcb/xcb.h>
@@ -19,6 +21,8 @@
 #include "desktop/views/xwayland_view.h"
 
 #include "input/seat.h"
+
+#include "output.h"
 
 #include "util/log.h"
 
@@ -40,7 +44,6 @@ const char* atom_names[] = {
     [E_NET_WM_WINDOW_TYPE_NORMAL] = "_NET_WM_WINDOW_TYPE_NORMAL"
 };
 
-
 static void e_xwayland_new_surface(struct wl_listener* listener, void* data)
 {
     struct e_xwayland* xwayland = wl_container_of(listener, xwayland, new_surface);
@@ -60,6 +63,8 @@ static void e_xwayland_ready(struct wl_listener* listener, void* data)
     struct e_xwayland* xwayland = wl_container_of(listener, xwayland, ready);
 
     e_log_info("xwayland is ready!");
+
+    e_xwayland_update_workarea(xwayland);
 
     // Get atom ids we need, so we can check for certain window types. (Useful for e_view_xwayland_wants_floating).
     // TODO: it seems like wlroots will soon have a way of checking the window type in 0.19.0 https://wlroots.pages.freedesktop.org/wlroots/wlr/xwayland/xwayland.h.html#func-wlr_xwayland_surface_has_window_type, making this soon redundant.
@@ -141,6 +146,50 @@ struct e_xwayland* e_xwayland_create(struct e_desktop* desktop, struct wl_displa
     wl_signal_add(&xwayland->wlr_xwayland->events.new_surface, &xwayland->new_surface);
 
     return xwayland;
+}
+
+// Update useable geometry not covered by panels, docks, etc.
+void e_xwayland_update_workarea(struct e_xwayland* xwayland)
+{
+    assert(xwayland);
+
+    //connection is not ready yet
+    if (xwayland->wlr_xwayland->xwm == NULL)
+        return;
+    
+    if (wl_list_empty(&xwayland->desktop->outputs))
+        return;
+
+    //TODO: use useable area for workarea only
+
+    struct wlr_output_layout* layout = xwayland->desktop->output_layout;
+
+    int left = 0;
+    int right = 0;
+    int top = 0;
+    int bottom = 0;
+
+    struct e_output* output = NULL;
+    wl_list_for_each(output, &xwayland->desktop->outputs, link)
+    {
+        struct wlr_box output_box;
+        wlr_output_layout_get_box(layout, output->wlr_output, &output_box);
+
+        if (output_box.x < left)
+            left = output_box.x;
+
+        if (output_box.x + output_box.width > right)
+            right = output_box.x + output_box.width;
+
+        if (output_box.y < top)
+            top = output_box.y;
+
+        if (output_box.y + output_box.height > bottom)
+            bottom = output_box.y + output_box.height;
+    }
+
+    struct wlr_box workarea = {left, top, right - left, bottom - top};
+    wlr_xwayland_set_workareas(xwayland->wlr_xwayland, &workarea, 1);
 }
 
 void e_xwayland_destroy(struct e_xwayland* xwayland)

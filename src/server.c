@@ -68,6 +68,9 @@ static void e_server_new_output(struct wl_listener* listener, void* data)
     struct e_output* output = e_output_create(server->desktop, wlr_output);
 
     e_desktop_add_output(server->desktop, output);
+
+    if (server->xwayland != NULL)
+        e_xwayland_update_workarea(server->xwayland);
 }
 
 static void e_server_backend_destroy(struct wl_listener* listener, void* data)
