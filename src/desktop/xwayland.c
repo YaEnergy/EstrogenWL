@@ -18,6 +18,8 @@
 
 #include "desktop/views/xwayland_view.h"
 
+#include "input/seat.h"
+
 #include "util/log.h"
 
 // All names for e_xcb_atom_type enum values
@@ -53,14 +55,14 @@ static void e_xwayland_new_surface(struct wl_listener* listener, void* data)
 }
 
 // Xwayland connection is valid.
-// Get atom ids we need, so we can check for certain window types. (Useful for e_view_xwayland_wants_floating).
-// TODO: it seems like wlroots will soon have a way of checking the window type in 0.19.0 https://wlroots.pages.freedesktop.org/wlroots/wlr/xwayland/xwayland.h.html#func-wlr_xwayland_surface_has_window_type, making this soon redundant.
 static void e_xwayland_ready(struct wl_listener* listener, void* data)
 {
     struct e_xwayland* xwayland = wl_container_of(listener, xwayland, ready);
 
     e_log_info("xwayland is ready!");
 
+    // Get atom ids we need, so we can check for certain window types. (Useful for e_view_xwayland_wants_floating).
+    // TODO: it seems like wlroots will soon have a way of checking the window type in 0.19.0 https://wlroots.pages.freedesktop.org/wlroots/wlr/xwayland/xwayland.h.html#func-wlr_xwayland_surface_has_window_type, making this soon redundant.
     //thanks Sway
 
     xcb_connection_t* xcb_connection = wlr_xwayland_get_xwm_connection(xwayland->wlr_xwayland);
@@ -79,7 +81,7 @@ static void e_xwayland_ready(struct wl_listener* listener, void* data)
         return;
     }
     
-    //get all intern atom cookies for the atoms we need
+    //request all intern atom cookies for the atoms we need
 
     xcb_intern_atom_cookie_t cookies[E_ATOMS_LEN];
 
@@ -127,6 +129,7 @@ struct e_xwayland* e_xwayland_create(struct e_desktop* desktop, struct wl_displa
     xwayland->desktop = desktop;
     xwayland->wlr_xwayland = wlr_xwayland_create(display, compositor, lazy);
 
+    //wlroots sets seat of connection when ready
     wlr_xwayland_set_seat(xwayland->wlr_xwayland, seat);
 
     //events
