@@ -18,13 +18,31 @@
 #include "desktop/tree/node.h"
 
 #include "desktop/tree/container.h"
-#include "desktop/views/window.h"
 
 #include "input/seat.h"
 
 #include "util/log.h"
 
 #include "output.h"
+
+static void e_container_configure_view(struct e_container* container, int lx, int ly, int width, int height)
+{
+    assert(container);
+
+    struct e_view* view = container->data;
+
+    e_view_configure(view, lx, ly, width, height);
+}
+
+static void e_container_destroy_view(struct e_container* container)
+{
+    assert(container);
+
+    struct e_view* view = container->data;
+
+    //TODO: doesn't destroy toplevel or xwayland data
+    e_view_fini(view);
+}
 
 //this function should only be called by the implementations of each view type. 
 //I mean it would be a bit weird to even call this function somewhere else.
@@ -36,59 +54,201 @@ void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_typ
     view->type = type;
     view->data = data;
 
-    view->tree = NULL;
-
-    view->container = NULL;
+    view->mapped = false;
     view->surface = NULL;
 
-    view->current.x = -1;
-    view->current.y = -1;
-    view->current.width = -1;
-    view->current.height = -1;
-
     view->title = NULL;
-    view->tiled = false;
+    
+    view->tree = wlr_scene_tree_create(desktop->pending);
+    wlr_scene_node_set_enabled(&view->tree->node, false);
+    e_node_desc_create(&view->tree->node, E_NODE_DESC_VIEW, view);
+
+    view->content_tree = NULL;
 
     view->implementation.set_tiled = NULL;
+    view->implementation.set_activated = NULL;
     view->implementation.configure = NULL;
+    view->implementation.create_content_tree = NULL;
     view->implementation.wants_floating = NULL;
     view->implementation.send_close = NULL;
 
-    wl_signal_init(&view->events.set_title);
+    e_container_init(&view->container, E_CONTAINER_VIEW, view);
+    view->container.implementation.configure = e_container_configure_view;
+    view->container.implementation.destroy = e_container_destroy_view;
 
     wl_list_init(&view->link);
 }
 
-void e_view_set_position(struct e_view* view, int lx, int ly)
+static void e_view_set_parent_container(struct e_view* view, struct e_tree_container* parent)
 {
-    assert(view && view->tree);
+    assert(view && parent);
 
-    e_view_configure(view, lx, ly, view->current.width, view->current.height);
+    struct e_tree_container* previous_parent = view->container.parent;
+
+    //parent container remains unchanged
+    if (parent == previous_parent)
+    {
+        e_log_info("window parent remains unchanged");
+        return;
+    }
+
+    #if E_VERBOSE
+    e_log_info("setting window parent...");
+    #endif
+
+    //remove from & rearrange previous container
+    if (previous_parent != NULL)
+    {
+        e_tree_container_remove_container(previous_parent, &view->container);
+        e_tree_container_arrange(previous_parent);
+    }
+
+    e_tree_container_add_container(parent, &view->container);
+    e_tree_container_arrange(parent);
 }
 
-uint32_t e_view_set_size(struct e_view* view, int width, int height)
-{
-    assert(view && view->tree);
-
-    return e_view_configure(view, view->tree->node.x, view->tree->node.y, width, height);
-}
-
-void e_view_set_tiled(struct e_view* view, bool tiled)
+static void e_view_tile(struct e_view* view)
 {
     assert(view);
 
-    e_log_info("setting tiling mode of view to %d...", tiled);
+    #if E_VERBOSE
+    e_log_info("view tile container");
+    #endif
 
-    if (view->tiled == tiled)
+    //if not focused, find current TILED focused view's parent container
+    // else if focused or if none, find previous TILED focused's parent container
+    //if none, then output 0's root tiling container
+    //add to container if found
+    //else give up
+
+    struct e_desktop* desktop = view->desktop;
+    struct e_seat* seat = desktop->seat;
+
+    struct wlr_surface* view_surface = view->surface;
+
+    struct e_tree_container* parent_container = NULL;
+
+    if (view_surface != NULL)
+    {
+        //if not focused, find current TILED focused view's parent container
+        if (!e_seat_has_focus(seat, view_surface) && seat->focus_surface != NULL)
+        {
+            struct e_view* focused_view = e_seat_focused_view(seat);
+
+            if (focused_view != NULL && focused_view->tiled && focused_view->container.parent != NULL)
+                parent_container = focused_view->container.parent;
+        }
+
+        //if focused or none, find previous TILED focused view's parent container
+        if ((parent_container == NULL || e_seat_has_focus(seat, view_surface)) && seat->previous_focus_surface != NULL)
+        {
+            struct e_view* prev_focused_view = e_seat_prev_focused_view(seat);
+
+            if (prev_focused_view != NULL && prev_focused_view->tiled && prev_focused_view->container.parent != NULL)
+                parent_container = prev_focused_view->container.parent;
+        }
+    }
+    
+    //if still none, then output 0's root tiling container
+    if (parent_container == NULL)
+    {
+        //Set to output 0's container
+        struct e_output* output = e_desktop_get_output(desktop, 0);
+
+        if (output != NULL && output->root_tiling_container != NULL)
+            parent_container = output->root_tiling_container;
+    }
+
+    if (parent_container == NULL)
+    {
+        e_log_error("Failed to set view's parent to a tiled container");
         return;
+    }
+    
+    e_view_set_parent_container(view, parent_container);
 
-    view->tiled = tiled;
-
-    if (view->implementation.set_tiled != NULL)
-        view->implementation.set_tiled(view, tiled);
+    wlr_scene_node_reparent(&view->tree->node, view->desktop->layers.tiling);
 }
 
-uint32_t e_view_configure(struct e_view* view, int lx, int ly, int width, int height)
+// Returns the view's first current output with a root floating container
+// May return NULL.
+static struct e_tree_container* e_view_first_output_floating_container(struct e_view* view)
+{
+    assert(view);
+
+    if (view->surface == NULL)
+        return NULL;
+
+    if (wl_list_empty(&view->surface->current_outputs))
+        return NULL;
+
+    //loop over surface outputs until output is found with a root floating container
+    struct wlr_surface_output* wlr_surface_output;
+    wl_list_for_each(wlr_surface_output, &view->surface->current_outputs, link)
+    {
+        //attempt to acquire output from it
+        if (wlr_surface_output->output != NULL && wlr_surface_output->output->data != NULL)
+        {
+            struct e_output* output = wlr_surface_output->output->data;
+
+            if (output->root_floating_container != NULL)
+                return output->root_floating_container;
+        }
+    }
+
+    //none found
+    return NULL;
+}
+
+static void e_view_float(struct e_view* view)
+{
+    assert(view);
+
+    #if E_VERBOSE
+    e_log_info("view float container");
+    #endif
+
+    //find first of current outputs root floating container
+    //if none, then output 0's root floating container
+    //add to container if found
+    //else give up
+
+    struct wlr_surface* view_surface = view->surface;
+
+    struct e_tree_container* parent_container = NULL;
+
+    if (view_surface != NULL)
+        parent_container = e_view_first_output_floating_container(view);
+
+    if (parent_container == NULL)
+    {
+        //Set to output 0's container
+        struct e_output* output = e_desktop_get_output(view->desktop, 0);
+
+        if (output != NULL && output->root_floating_container != NULL)
+            parent_container = output->root_floating_container;
+    }
+
+    if (parent_container == NULL)
+    {
+        e_log_error("Failed to set window's parent to a floating container");
+        return;
+    }
+
+    e_view_set_parent_container(view, parent_container);
+
+    wlr_scene_node_reparent(&view->tree->node, view->desktop->layers.floating);
+}
+
+// Set pending layout position of view.
+void e_view_set_position(struct e_view* view, int lx, int ly)
+{
+    assert(view);
+
+    e_view_configure(view, lx, ly, view->pending.width, view->pending.height);
+}
+
+void e_view_configure(struct e_view* view, int lx, int ly, int width, int height)
 {
     assert(view);
 
@@ -97,20 +257,70 @@ uint32_t e_view_configure(struct e_view* view, int lx, int ly, int width, int he
     #endif
 
     if (view->implementation.configure != NULL)
-        return view->implementation.configure(view, lx, ly, width, height);
+        view->implementation.configure(view, lx, ly, width, height);
     else
         e_log_error("e_view_configure: configure is not implemented!");
-
-    return 0;
 }
 
-void e_view_maximize(struct e_view* view)
+void e_view_set_tiled(struct e_view* view, bool tiled)
 {
     assert(view);
 
-    //can't maximize tiled views
-    if (!view->tiled && view->container != NULL)
-        e_window_maximize(view->container);
+    e_log_info("setting tiling mode of view to %d...", tiled);
+
+    view->tiled = tiled;
+
+    if (tiled)
+        e_view_tile(view);
+    else
+        e_view_float(view);
+
+    if (view->implementation.set_tiled != NULL)
+        view->implementation.set_tiled(view, tiled);
+}
+
+void e_view_set_activated(struct e_view* view, bool activated)
+{
+    assert(view);
+
+    if (view->implementation.set_activated != NULL)
+        view->implementation.set_activated(view, activated);
+    else
+        e_log_error("e_view_set_activated: not implemented!");
+}
+
+bool e_view_has_pending_changes(struct e_view* view)
+{
+    return !wlr_box_equal(&view->current, &view->pending) && !wlr_box_empty(&view->pending);
+}
+
+// Configure view using pending changes.
+void e_view_configure_pending(struct e_view* view)
+{
+    assert(view);
+
+    #if E_VERBOSE
+    e_log_info("view configure pending");
+    #endif
+
+    e_view_configure(view, view->pending.x, view->pending.y, view->pending.width, view->pending.height);
+}
+
+// Create a scene tree displaying this view's surfaces and subsurfaces.
+// Returns NULL on fail.
+static struct wlr_scene_tree* e_view_create_content_tree(struct e_view* view)
+{
+    assert(view);
+
+    if (view->implementation.create_content_tree != NULL)
+    {
+        return view->implementation.create_content_tree(view);
+    }
+    else
+    {
+        e_log_error("e_view_create_content_tree: create content tree not implemented!");
+        return NULL;
+    }
 }
 
 static bool e_view_wants_floating(struct e_view* view)
@@ -128,7 +338,7 @@ static bool e_view_wants_floating(struct e_view* view)
     }
 }
 
-// Display view inside a window container.
+// Display view.
 void e_view_map(struct e_view* view)
 {
     assert(view);
@@ -137,30 +347,30 @@ void e_view_map(struct e_view* view)
 
     wl_list_insert(&view->desktop->views, &view->link);
 
-    view->container = e_window_create(view);
+    view->content_tree = e_view_create_content_tree(view);
 
-    if (view->container == NULL)
+    if (view->content_tree == NULL)
     {
-        e_log_error("e_view_map: failed to create window container");
+        e_log_error("e_view_map: unable to map view, failed to create content tree!");
         return;
     }
 
-    if (e_view_wants_floating(view))
-    {
-        e_window_set_tiled(view->container, false);
-        //TODO: fit view
-    }
-    else 
-    {
-        e_window_set_tiled(view->container, true);
-    }
+    view->mapped = true;
 
-    //set focus to this window container
+    bool wants_floating = e_view_wants_floating(view);
+
+    e_view_set_tiled(view, !wants_floating);
+
+    wlr_scene_node_set_position(&view->tree->node, view->current.x, view->current.y);
+
+    wlr_scene_node_set_enabled(&view->tree->node, true);
+
+    //set focus to this view
     if (view->surface != NULL)
-        e_seat_set_focus_window(view->desktop->seat, view->container);
+        e_seat_set_focus_view(view->desktop->seat, view);
 }
 
-// Stop displaying view inside a window container.
+// Stop displaying view.
 void e_view_unmap(struct e_view* view)
 {   
     assert(view);
@@ -169,15 +379,17 @@ void e_view_unmap(struct e_view* view)
     e_log_info("view unmap");
     #endif
 
-    if (view->container != NULL)
-    {
-        struct e_tree_container* parent = view->container->base.parent;
-    
-        e_window_destroy(view->container);
-        view->container = NULL;
+    view->mapped = false;
+    wlr_scene_node_set_enabled(&view->tree->node, false);
+    wlr_scene_node_destroy(&view->content_tree->node);
+    view->content_tree = NULL;
 
-        if (parent != NULL)
-            e_tree_container_arrange(parent);
+    if (view->container.parent != NULL)
+    {
+        struct e_tree_container* parent = view->container.parent;
+    
+        e_tree_container_remove_container(parent, &view->container);
+        e_tree_container_arrange(parent);
     }
 
     wl_list_remove(&view->link);
@@ -282,9 +494,6 @@ void e_view_send_close(struct e_view* view)
 
 void e_view_fini(struct e_view* view)
 {
-    if (view->container != NULL)
+    if (view->mapped)
         e_view_unmap(view);
-    
-    if (view->tree != NULL)
-        wlr_scene_node_destroy(&view->tree->node);
 }

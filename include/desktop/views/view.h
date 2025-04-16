@@ -32,11 +32,18 @@ enum e_view_type
 // Implementation of view functions for different view types
 struct e_view_impl
 {
+    // Sets the tiled state of the view.
     void (*set_tiled)(struct e_view* view, bool tiled);
-    
-    // Configure a view within given layout position and size
-    // Returns configure serial, returns 0 if no serial is given
-    uint32_t (*configure)(struct e_view* view, int lx, int ly, int width, int height);
+
+    // Sets the activated state of the view.
+    void (*set_activated)(struct e_view* view, bool activated);
+    // Configure a view within given layout position and size.
+    void (*configure)(struct e_view* view, int lx, int ly, int width, int height);
+
+    // Create a scene tree displaying this view's surfaces and subsurfaces.
+    // Returns NULL on fail.
+    // Must be implemented.
+    struct wlr_scene_tree* (*create_content_tree)(struct e_view* view);
 
     // Should return true if the view's container or window should float.
     // If it should tile instead then return false.
@@ -46,7 +53,7 @@ struct e_view_impl
     void (*send_close)(struct e_view* view);
 };
 
-// a view: xdg toplevel or xwayland view
+// A view: xdg toplevel or xwayland view
 struct e_view
 {
     struct e_desktop* desktop;
@@ -58,29 +65,30 @@ struct e_view
 
     struct e_view_impl implementation;
 
-    // View's content tree
-    // May be NULL, if not created
-    struct wlr_scene_tree* tree;
-
     // View's main surface, may be NULL.
     struct wlr_surface* surface;
-    // View's current geometry
-    struct wlr_box current;
 
-    // Whether the view expects to be in a tiled or floating container.
+    // View's current surface geometry
+    struct wlr_box current;
+    // View's pending surface geometry
+    struct wlr_box pending;
+
+    // View's tree
+    struct wlr_scene_tree* tree;
+    // View's content tree inside main view tree, displaying its surfaces and subsurfaces.
+    // Should always be at position (0, 0), main tree should be moved instead.
+    struct wlr_scene_tree* content_tree;
+
+    // Is the view being displayed?
+    bool mapped;
+
     bool tiled;
 
-    // May be NULL, if not set
+    // View's title
     char* title;
 
-    // May be NULL, if not created
-    struct e_window* container;
-
-    struct
-    {
-        // View title was set.
-        struct wl_signal set_title; //char* title
-    } events;
+    // Base container
+    struct e_container container;
 
     struct wl_list link; //e_desktop::views
 };
@@ -90,29 +98,30 @@ struct e_view
 // I mean it would be a bit weird to even call this function somewhere else.
 void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_type type, void* data);
 
-// Set view's tree position, relative to container.
-void e_view_set_position(struct e_view* view, int lx, int ly);
-
-// Configures a view with the given size.
-// Returns configure serial, returns 0 if no serial is given.
-uint32_t e_view_set_size(struct e_view* view, int width, int height);
-
-// Sets whether the view thinks it should be tiled or not.
-// NOTE: Does not tile its container/window.
-void e_view_set_tiled(struct e_view* view, bool tiled);
-
-// Configures a view within given layout position and size
-// Returns configure serial, returns 0 if no serial is given
-uint32_t e_view_configure(struct e_view* view, int lx, int ly, int width, int height);
-
-// Maximizes view to fit within parent container, must be floating.
-void e_view_maximize(struct e_view* view);
-
-// Display view inside a window container.
+// Display view.
 void e_view_map(struct e_view* view);
 
-// Stop displaying view inside a window container.
+// Stop displaying view.
 void e_view_unmap(struct e_view* view);
+
+// Set pending position of view using layout coordinates.
+// Only use if you are moving the view and not resizing it in any way.
+void e_view_set_position(struct e_view* view, int lx, int ly);
+
+// Configures a view within given layout position and size.
+void e_view_configure(struct e_view* view, int lx, int ly, int width, int height);
+
+// Configure view using pending changes.
+void e_view_configure_pending(struct e_view* view);
+
+// Sets the tiled state of the view.
+void e_view_set_tiled(struct e_view* view, bool tiled);
+
+// Sets the activated state of the view.
+void e_view_set_activated(struct e_view* view, bool activated);
+
+
+bool e_view_has_pending_changes(struct e_view* view);
 
 // Finds the view which has this surface as its main surface.
 // Returns NULL on fail.

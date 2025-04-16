@@ -1,5 +1,6 @@
 #include "desktop/views/toplevel_view.h"
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <assert.h>
@@ -10,6 +11,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/edges.h>
+#include <wlr/util/box.h>
 
 #include "desktop/desktop.h"
 #include "desktop/xdg_popup.h"
@@ -19,6 +21,23 @@
 #include "input/cursor.h"
 
 #include "util/log.h"
+
+// Create a scene tree displaying this view's surfaces and subsurfaces.
+static struct wlr_scene_tree* e_view_toplevel_create_content_tree(struct e_view* view)
+{
+    assert(view);
+
+    struct e_toplevel_view* toplevel_view = view->data;
+
+    //create scene xdg surface for xdg toplevel and view, and set up view scene tree
+    struct wlr_scene_tree* tree = wlr_scene_xdg_surface_create(view->tree, toplevel_view->xdg_toplevel->base);
+    e_node_desc_create(&tree->node, E_NODE_DESC_VIEW, view);
+
+    //allows popup scene trees to add themselves to this view's scene tree
+    toplevel_view->xdg_toplevel->base->data = tree;
+
+    return tree;
+}
 
 //surface is ready to be displayed
 static void e_toplevel_view_map(struct wl_listener* listener, void* data)
@@ -38,6 +57,17 @@ static void e_toplevel_view_unmap(struct wl_listener* listener, void* data)
     e_view_unmap(&toplevel_view->base);
 }
 
+// The toplevel view has moved.
+static void e_toplevel_view_moved(struct e_toplevel_view* toplevel_view, int32_t x, int32_t y)
+{
+    assert(toplevel_view);
+
+    toplevel_view->base.current.x = x;
+    toplevel_view->base.current.y = y;
+
+    wlr_scene_node_set_position(&toplevel_view->base.tree->node, toplevel_view->base.current.x, toplevel_view->base.current.y);
+}
+
 // New surface state got committed.
 static void e_toplevel_view_commit(struct wl_listener* listener, void* data)
 {
@@ -53,15 +83,21 @@ static void e_toplevel_view_commit(struct wl_listener* listener, void* data)
         wlr_xdg_toplevel_set_size(toplevel_view->xdg_toplevel, 0, 0);
         //TODO: add wm capabilities
         wlr_xdg_toplevel_set_wm_capabilities(toplevel_view->xdg_toplevel, 0);
+        
+        return;
     }
 
     if (!toplevel_view->xdg_toplevel->base->surface->mapped)
         return;
 
+    e_toplevel_view_moved(toplevel_view, toplevel_view->scheduled_x, toplevel_view->scheduled_y);
+    
     toplevel_view->base.current.width = toplevel_view->xdg_toplevel->current.width;
     toplevel_view->base.current.height = toplevel_view->xdg_toplevel->current.height;
 
-    //TODO: handle toplevel_view->xdg_toplevel->requested if surface is mapped
+    //Now that we've finished the changes that were scheduled, we can schedule the next changes.
+    if (e_view_has_pending_changes(&toplevel_view->base))
+        e_view_configure_pending(&toplevel_view->base);
 }
 
 //new wlr_xdg_popup by toplevel view
@@ -94,40 +130,25 @@ static void e_toplevel_view_request_maximize(struct wl_listener* listener, void*
         return;
 
     //must always send empty configure to conform to xdg shell protocol if xdg surface is init, even if we don't do anything
-    if (toplevel_view->base.tiled)
-        wlr_xdg_surface_schedule_configure(toplevel_view->xdg_toplevel->base);
-    else
-        e_view_maximize(&toplevel_view->base);
+    //TODO: maximizing
+    wlr_xdg_surface_schedule_configure(toplevel_view->xdg_toplevel->base);
 }
 
 static void e_toplevel_view_request_move(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, request_move);
-    struct wlr_xdg_toplevel_move_event* event = data;
-    
-    if (!wlr_seat_client_validate_event_serial(event->seat, event->serial))
-    {
-        e_log_error("e_toplevel_view_request_move: invalid event serial!");
-        return;
-    }
-    
+
     struct e_desktop* desktop = toplevel_view->base.desktop;
-    e_cursor_start_window_move(desktop->seat->cursor, toplevel_view->base.container);
+    e_cursor_start_view_move(desktop->seat->cursor, &toplevel_view->base);
 }
 
 static void e_toplevel_view_request_resize(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, request_resize);
     struct wlr_xdg_toplevel_resize_event* event = data;
-
-    if (!wlr_seat_client_validate_event_serial(event->seat, event->serial))
-    {
-        e_log_error("e_toplevel_view_request_resize: invalid event serial!");
-        return;
-    }
     
     struct e_desktop* desktop = toplevel_view->base.desktop;
-    e_cursor_start_window_resize(desktop->seat->cursor, toplevel_view->base.container, event->edges);
+    e_cursor_start_view_resize(desktop->seat->cursor, &toplevel_view->base, event->edges);
 }
 
 static void e_toplevel_view_set_title(struct wl_listener* listener, void* data)
@@ -135,7 +156,6 @@ static void e_toplevel_view_set_title(struct wl_listener* listener, void* data)
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, set_title);
 
     toplevel_view->base.title = toplevel_view->xdg_toplevel->title;
-    wl_signal_emit(&toplevel_view->base.events.set_title, toplevel_view->xdg_toplevel->title);
 }
 
 //xdg_toplevel got destroyed
@@ -163,16 +183,7 @@ static void e_toplevel_view_destroy(struct wl_listener* listener, void* data)
     free(toplevel_view);
 }
 
-static void e_toplevel_view_init_xdg_scene_tree(struct e_toplevel_view* toplevel_view)
-{
-    //create scene xdg surface for xdg toplevel and view, and set up view scene tree
-    toplevel_view->base.tree = wlr_scene_xdg_surface_create(toplevel_view->base.desktop->pending, toplevel_view->xdg_toplevel->base);
-    e_node_desc_create(&toplevel_view->base.tree->node, E_NODE_DESC_VIEW, &toplevel_view->base);
-
-    //allows popup scene trees to add themselves to this view's scene tree
-    toplevel_view->xdg_toplevel->base->data = toplevel_view->base.tree;
-}
-
+// Set tiled state of the view.
 static void e_view_toplevel_set_tiled(struct e_view* view, bool tiled)
 {
     assert(view && view->data);
@@ -182,23 +193,54 @@ static void e_view_toplevel_set_tiled(struct e_view* view, bool tiled)
     wlr_xdg_toplevel_set_tiled(toplevel_view->xdg_toplevel, tiled ? WLR_EDGE_BOTTOM | WLR_EDGE_LEFT | WLR_EDGE_RIGHT | WLR_EDGE_TOP : WLR_EDGE_NONE);
 }
 
-static uint32_t e_view_toplevel_configure(struct e_view* view, int lx, int ly, int width, int height)
+// Set activated state of the view.
+static void e_view_toplevel_set_activated(struct e_view* view, bool activated)
 {
-    assert(view && view->tree && view->data);
+    assert(view);
 
     struct e_toplevel_view* toplevel_view = view->data;
 
-    wlr_scene_node_set_position(&view->tree->node, lx, ly);
+    wlr_xdg_toplevel_set_activated(toplevel_view->xdg_toplevel, activated);
+
+    if (activated)
+        wlr_scene_node_raise_to_top(&view->tree->node);
+}
+
+static bool toplevel_size_configure_is_scheduled(struct wlr_xdg_toplevel* xdg_toplevel)
+{
+    assert(xdg_toplevel);
+
+    return xdg_toplevel->scheduled.width != xdg_toplevel->current.width || xdg_toplevel->scheduled.height != xdg_toplevel->current.height;
+}
+
+static void e_view_toplevel_configure(struct e_view* view, int lx, int ly, int width, int height)
+{
+    assert(view && view->content_tree && view->data);
+
+    struct e_toplevel_view* toplevel_view = view->data;
 
     #if E_VERBOSE
     e_log_info("toplevel configure");
     #endif
+    
+    view->pending = (struct wlr_box){lx, ly, width, height};
 
-    //schedule empty configure if size remains the same
+    //configure is already scheduled, commit will start next one
+    if (toplevel_size_configure_is_scheduled(toplevel_view->xdg_toplevel))
+        return;
+
+    //if size remains the same then just move the container node
     if (view->current.width == width && view->current.height == height)
-        return wlr_xdg_surface_schedule_configure(toplevel_view->xdg_toplevel->base);
+    {
+        e_toplevel_view_moved(toplevel_view, lx, ly);
+    }
     else
-        return wlr_xdg_toplevel_set_size(toplevel_view->xdg_toplevel, width, height);
+    {
+        //wait until surface commit to apply x & y
+        toplevel_view->scheduled_x = lx;
+        toplevel_view->scheduled_y = ly;
+        wlr_xdg_toplevel_set_size(toplevel_view->xdg_toplevel, width, height);
+    }
 }
 
 static bool e_view_toplevel_wants_floating(struct e_view* view)
@@ -242,11 +284,11 @@ struct e_toplevel_view* e_toplevel_view_create(struct e_desktop* desktop, struct
     toplevel_view->base.surface = xdg_toplevel->base->surface;
 
     toplevel_view->base.implementation.set_tiled = e_view_toplevel_set_tiled;
+    toplevel_view->base.implementation.set_activated = e_view_toplevel_set_activated;
     toplevel_view->base.implementation.configure = e_view_toplevel_configure;
+    toplevel_view->base.implementation.create_content_tree = e_view_toplevel_create_content_tree;
     toplevel_view->base.implementation.wants_floating = e_view_toplevel_wants_floating;
     toplevel_view->base.implementation.send_close = e_view_toplevel_send_close;
-
-    e_toplevel_view_init_xdg_scene_tree(toplevel_view);
 
     // events
 

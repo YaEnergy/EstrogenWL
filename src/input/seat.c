@@ -195,33 +195,27 @@ static void e_seat_set_focus_surface(struct e_seat* seat, struct wlr_surface* su
     wl_signal_add(&surface->events.unmap, &seat->focus_surface_unmap);
 }
 
-// Set seat focus on a window if possible.
-void e_seat_set_focus_window(struct e_seat* seat, struct e_window* window)
+// Set seat focus on a view if possible.
+void e_seat_set_focus_view(struct e_seat* seat, struct e_view* view)
 {
-    assert(seat && window);
+    assert(seat && view);
 
     //Don't override focus of layer surfaces that request exclusive focus
     if (e_seat_has_exclusive_layer_focus(seat))
         return;
 
     #if E_VERBOSE
-    e_log_info("seat focus on window");
+    e_log_info("seat focus on view");
     #endif
 
-    if (window->view == NULL)
+    if (view->surface == NULL)
     {
-        e_log_error("e_seat_set_focus_window: window has no view!");
+        e_log_error("e_seat_set_focus_view: view has no surface!");
         return;
     }
 
-    if (window->view->surface == NULL)
-    {
-        e_log_error("e_seat_set_focus_window: window's view has no surface!");
-        return;
-    }
-
-    e_seat_set_focus_surface(seat, window->view->surface);
-    wlr_scene_node_raise_to_top(&window->base.tree->node);
+    e_seat_set_focus_surface(seat, view->surface);
+    e_view_set_activated(view, true);
 }
 
 // Set seat focus on a layer surface if possible.
@@ -259,9 +253,9 @@ void e_seat_set_focus_surface_type(struct e_seat* seat, struct wlr_surface* surf
     struct wlr_surface* root_surface = wlr_surface_get_root_surface(surface);
     struct e_view* view = e_view_from_surface(desktop, root_surface);
 
-    if (view != NULL && view->container != NULL && !e_seat_has_focus(seat, view->surface))
+    if (view != NULL && !e_seat_has_focus(seat, view->surface))
     {
-        e_seat_set_focus_window(seat, view->container);
+        e_seat_set_focus_view(seat, view);
         return;
     }
 
@@ -302,23 +296,6 @@ struct e_view* e_seat_focused_view(struct e_seat* seat)
     return e_view_from_surface(seat->desktop, seat->focus_surface);
 }
 
-// Returns window currently in focus.
-// Returns NULL if no window has focus.
-struct e_window* e_seat_focused_window(struct e_seat* seat)
-{
-    assert(seat);
-
-    if (seat->focus_surface == NULL)
-        return NULL;
-
-    struct e_view* view = e_seat_focused_view(seat);
-
-    if (view == NULL)
-        return NULL;
-    else
-        return view->container;
-}
-
 // Returns view previously in focus.
 // Returns NULL if no view had focus.
 struct e_view* e_seat_prev_focused_view(struct e_seat* seat)
@@ -329,23 +306,6 @@ struct e_view* e_seat_prev_focused_view(struct e_seat* seat)
         return NULL;
 
     return e_view_from_surface(seat->desktop, seat->previous_focus_surface);
-}
-
-// Returns window previously in focus.
-// Returns NULL if no window had focus.
-struct e_window* e_seat_prev_focused_window(struct e_seat* seat)
-{
-    assert(seat);
-
-    if (seat->previous_focus_surface == NULL)
-        return NULL;
-
-    struct e_view* view = e_seat_prev_focused_view(seat);
-
-    if (view == NULL)
-        return NULL;
-    else
-        return view->container;
 }
 
 bool e_seat_has_exclusive_layer_focus(struct e_seat* seat)
@@ -364,6 +324,15 @@ void e_seat_clear_focus(struct e_seat* seat)
 
     if (seat->focus_surface == NULL)
         return;
+
+    //deactivate focused view if focused surface is one
+
+    struct e_view* focused_view = e_seat_focused_view(seat);
+
+    if (focused_view != NULL)
+        e_view_set_activated(focused_view, false);
+
+    //clear keyboard focus
 
     struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
 

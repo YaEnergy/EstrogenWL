@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <stdbool.h>
 #include <assert.h>
 
@@ -24,11 +25,71 @@
 
 #include "util/log.h"
 
+// Create a scene tree displaying this view's surfaces and subsurfaces.
+static struct wlr_scene_tree* e_view_xwayland_create_content_tree(struct e_view* view)
+{
+    assert(view);
+
+    //add surface & subsurfaces to scene by creating a subsurface tree
+    struct wlr_scene_tree* tree = wlr_scene_subsurface_tree_create(view->tree, view->surface);
+    e_node_desc_create(&tree->node, E_NODE_DESC_VIEW, view);
+
+    return tree;
+}
+
+static void e_xwayland_view_map_request(struct wl_listener* listener, void* data)
+{
+    struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, map_request);
+
+    #if E_VERBOSE
+    e_log_info("xwayland view map request");
+    #endif
+
+    xwayland_view->base.pending.x = xwayland_view->xwayland_surface->x;
+    xwayland_view->base.pending.y = xwayland_view->xwayland_surface->y;
+
+    if (xwayland_view->xwayland_surface->size_hints != NULL)
+    {
+        xcb_size_hints_t* size_hints = xwayland_view->xwayland_surface->size_hints;
+
+        if (size_hints->flags & XCB_ICCCM_SIZE_HINT_P_POSITION || size_hints->flags & XCB_ICCCM_SIZE_HINT_US_POSITION)
+        {
+            xwayland_view->base.pending.x = size_hints->x;
+            xwayland_view->base.pending.y = size_hints->y;
+        }
+    }
+    
+    xwayland_view->base.pending.width = xwayland_view->xwayland_surface->width;
+    xwayland_view->base.pending.height = xwayland_view->xwayland_surface->height;
+
+    e_view_configure(&xwayland_view->base, xwayland_view->base.pending.x, xwayland_view->base.pending.y, xwayland_view->base.pending.width, xwayland_view->base.pending.height);
+}
+
+static void e_xwayland_view_commit(struct wl_listener* listener, void* data)
+{
+    struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, commit);
+
+    xwayland_view->base.current.x = xwayland_view->xwayland_surface->x;
+    xwayland_view->base.current.y = xwayland_view->xwayland_surface->y;
+
+    wlr_scene_node_set_position(&xwayland_view->base.tree->node, xwayland_view->base.current.x, xwayland_view->base.current.y);
+
+    xwayland_view->base.current.width = xwayland_view->xwayland_surface->width;
+    xwayland_view->base.current.height = xwayland_view->xwayland_surface->height;
+
+    if (e_view_has_pending_changes(&xwayland_view->base))
+        e_view_configure_pending(&xwayland_view->base);
+}
+
 static void e_xwayland_view_map(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, map);
 
     e_view_map(&xwayland_view->base);
+
+    // According to labwc, map and unmap can change the surface used
+    xwayland_view->commit.notify = e_xwayland_view_commit;
+    wl_signal_add(&xwayland_view->xwayland_surface->surface->events.commit, &xwayland_view->commit);
 }
 
 static void e_xwayland_view_unmap(struct wl_listener* listener, void* data)
@@ -36,25 +97,37 @@ static void e_xwayland_view_unmap(struct wl_listener* listener, void* data)
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, unmap);
 
     e_view_unmap(&xwayland_view->base);
+
+    /* According to labwc, map and unmap can change the surface used */
+    wl_list_remove(&xwayland_view->commit.link);
 }
 
-static void e_xwayland_view_commit(struct wl_listener* listener, void* data)
+// Set activated state of the view.
+static void e_view_xwayland_set_activated(struct e_view* view, bool activated)
 {
-    struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, commit);
+    assert(view);
 
-    xwayland_view->base.current.width = xwayland_view->xwayland_surface->width;
-    xwayland_view->base.current.height = xwayland_view->xwayland_surface->height;
+    struct e_xwayland_view* xwayland_view = view->data;
 
-    //TODO: implement e_xwayland_view_commit
+    wlr_xwayland_surface_activate(xwayland_view->xwayland_surface, activated);
+
+    if (activated)
+    {
+        wlr_scene_node_raise_to_top(&view->tree->node);
+        wlr_xwayland_surface_restack(xwayland_view->xwayland_surface, NULL, XCB_STACK_MODE_ABOVE);
+    }
 }
 
 static void e_xwayland_view_request_maximize(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, request_configure);
-    
+
+    #if E_VERBOSE
+    e_log_info("xwayland view request maximize");
+    #endif
+
+    //TODO: xwayland view request maximize
     //only maximize floating views
-    if (!xwayland_view->base.tiled)
-        e_view_maximize(&xwayland_view->base);
 }
 
 static void e_xwayland_view_request_configure(struct wl_listener* listener, void* data)
@@ -62,11 +135,15 @@ static void e_xwayland_view_request_configure(struct wl_listener* listener, void
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, request_configure);
     struct wlr_xwayland_surface_configure_event* event = data;
     
+    #if E_VERBOSE
+    e_log_info("xwayland view request configure");
+    #endif
+
+    //respect configure request if view is floating, otherwise don't
     if (!xwayland_view->base.tiled)
-    {
-        e_view_set_position(&xwayland_view->base, event->x, event->y);
-        e_view_set_size(&xwayland_view->base, event->width, event->height);
-    }
+        e_view_configure(&xwayland_view->base, event->x, event->y, event->width, event->height);
+    else
+        e_view_configure_pending(&xwayland_view->base);
 }
 
 static void e_xwayland_view_request_move(struct wl_listener* listener, void* data)
@@ -74,7 +151,7 @@ static void e_xwayland_view_request_move(struct wl_listener* listener, void* dat
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, request_move);
     
     struct e_desktop* desktop = xwayland_view->base.desktop;
-    e_cursor_start_window_move(desktop->seat->cursor, xwayland_view->base.container);
+    e_cursor_start_view_move(desktop->seat->cursor, &xwayland_view->base);
 }
 
 static void e_xwayland_view_request_resize(struct wl_listener* listener, void* data)
@@ -83,7 +160,7 @@ static void e_xwayland_view_request_resize(struct wl_listener* listener, void* d
     struct wlr_xwayland_resize_event* event = data;
     
     struct e_desktop* desktop = xwayland_view->base.desktop;
-    e_cursor_start_window_resize(desktop->seat->cursor, xwayland_view->base.container, event->edges);
+    e_cursor_start_view_resize(desktop->seat->cursor, &xwayland_view->base, event->edges);
 }
 
 static void e_xwayland_view_set_title(struct wl_listener* listener, void* data)
@@ -91,10 +168,9 @@ static void e_xwayland_view_set_title(struct wl_listener* listener, void* data)
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, set_title);
 
     xwayland_view->base.title = xwayland_view->xwayland_surface->title;
-    wl_signal_emit(&xwayland_view->base.events.set_title, xwayland_view->xwayland_surface->title);
 }
 
-//surface becomes valid, like me!
+// Surface becomes valid, like me!
 static void e_xwayland_view_associate(struct wl_listener* listener, void* data)
 {
     //surface is valid
@@ -111,39 +187,11 @@ static void e_xwayland_view_associate(struct wl_listener* listener, void* data)
 
     xwayland_view->unmap.notify = e_xwayland_view_unmap;
     wl_signal_add(&xwayland_view->xwayland_surface->surface->events.unmap, &xwayland_view->unmap);
-
-    xwayland_view->commit.notify = e_xwayland_view_commit;
-    wl_signal_add(&xwayland_view->xwayland_surface->surface->events.commit, &xwayland_view->commit);
-
-    // requests
-
-    xwayland_view->request_maximize.notify = e_xwayland_view_request_maximize;
-    wl_signal_add(&xwayland_view->xwayland_surface->events.request_maximize, &xwayland_view->request_maximize);
-
-    xwayland_view->request_configure.notify = e_xwayland_view_request_configure;
-    wl_signal_add(&xwayland_view->xwayland_surface->events.request_configure, &xwayland_view->request_configure);
-
-    xwayland_view->request_move.notify = e_xwayland_view_request_move;
-    wl_signal_add(&xwayland_view->xwayland_surface->events.request_move, &xwayland_view->request_move);
-    
-    xwayland_view->request_resize.notify = e_xwayland_view_request_resize;
-    wl_signal_add(&xwayland_view->xwayland_surface->events.request_resize, &xwayland_view->request_resize);
-
-    // other events
-
-    xwayland_view->set_title.notify = e_xwayland_view_set_title;
-    wl_signal_add(&xwayland_view->xwayland_surface->events.set_title, &xwayland_view->set_title);
-
-    //add surface & subsurfaces to scene by creating a subsurface tree
-    struct e_desktop* desktop = xwayland_view->base.desktop;
-    xwayland_view->base.tree = wlr_scene_subsurface_tree_create(desktop->pending, xwayland_view->xwayland_surface->surface);
-    e_node_desc_create(&xwayland_view->base.tree->node, E_NODE_DESC_VIEW, &xwayland_view->base);
 }
 
-//surface becomes invalid
+// Surface becomes invalid.
 static void e_xwayland_view_dissociate(struct wl_listener* listener, void* data)
 {
-    //surface is now invalid
     e_log_info("dissociate: xwayland view surface is now invalid");
 
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, dissociate);
@@ -152,17 +200,6 @@ static void e_xwayland_view_dissociate(struct wl_listener* listener, void* data)
 
     wl_list_remove(&xwayland_view->map.link);
     wl_list_remove(&xwayland_view->unmap.link);
-    wl_list_remove(&xwayland_view->commit.link);
-
-    wl_list_remove(&xwayland_view->request_maximize.link);
-    wl_list_remove(&xwayland_view->request_configure.link);
-    wl_list_remove(&xwayland_view->request_move.link);
-    wl_list_remove(&xwayland_view->request_resize.link);
-
-    wl_list_remove(&xwayland_view->set_title.link);
-
-    xwayland_view->base.tree = NULL;
-    wlr_scene_node_destroy(&xwayland_view->base.tree->node);
 }
 
 //destruction...
@@ -171,6 +208,13 @@ static void e_xwayland_view_destroy(struct wl_listener* listener, void* data)
     //remove associate & dissociate listener lists & free
 
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, destroy);
+
+    wl_list_remove(&xwayland_view->set_title.link);
+    wl_list_remove(&xwayland_view->map_request.link);
+    wl_list_remove(&xwayland_view->request_maximize.link);
+    wl_list_remove(&xwayland_view->request_configure.link);
+    wl_list_remove(&xwayland_view->request_move.link);
+    wl_list_remove(&xwayland_view->request_resize.link);
 
     wl_list_remove(&xwayland_view->associate.link);
     wl_list_remove(&xwayland_view->dissociate.link);
@@ -181,17 +225,30 @@ static void e_xwayland_view_destroy(struct wl_listener* listener, void* data)
     free(xwayland_view);
 }
 
-static uint32_t e_view_xwayland_configure(struct e_view* view, int lx, int ly, int width, int height)
+//FIXME: i'm unsure of this actually works, should probably check that
+static bool xwayland_surface_geo_configure_is_scheduled(struct wlr_xwayland_surface* xwayland_surface)
 {
-    assert(view && view->tree);
+    assert(xwayland_surface);
 
-    wlr_scene_node_set_position(&view->tree->node, lx, ly);
+    if (xwayland_surface->surface == NULL)
+        return false;
+
+    return xwayland_surface->surface->current.width != xwayland_surface->surface->pending.width && xwayland_surface->surface->current.height != xwayland_surface->surface->pending.height;
+}
+
+static void e_view_xwayland_configure(struct e_view* view, int lx, int ly, int width, int height)
+{
+    assert(view);
 
     struct e_xwayland_view* xwayland_view = view->data;
 
-    wlr_xwayland_surface_configure(xwayland_view->xwayland_surface, lx, ly, (uint16_t)width, (uint16_t)height);
+    view->pending = (struct wlr_box){lx, ly, width, height};
 
-    return 0;
+    //configure is already scheduled, commit will start next one
+    if (xwayland_surface_geo_configure_is_scheduled(xwayland_view->xwayland_surface))
+        return;
+    
+    wlr_xwayland_surface_configure(xwayland_view->xwayland_surface, lx, ly, (uint16_t)width, (uint16_t)height);
 }
 
 static bool e_view_xwayland_wants_floating(struct e_view* view)
@@ -268,7 +325,9 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct
 
     xwayland_view->base.title = xwayland_surface->title;
 
+    xwayland_view->base.implementation.set_activated = e_view_xwayland_set_activated;
     xwayland_view->base.implementation.configure = e_view_xwayland_configure;
+    xwayland_view->base.implementation.create_content_tree = e_view_xwayland_create_content_tree;
     xwayland_view->base.implementation.wants_floating = e_view_xwayland_wants_floating;
     xwayland_view->base.implementation.send_close = e_view_xwayland_send_close;
 
@@ -282,6 +341,24 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct
 
     xwayland_view->destroy.notify = e_xwayland_view_destroy;
     wl_signal_add(&xwayland_surface->events.destroy, &xwayland_view->destroy);
+
+    xwayland_view->set_title.notify = e_xwayland_view_set_title;
+    wl_signal_add(&xwayland_view->xwayland_surface->events.set_title, &xwayland_view->set_title);
+
+    xwayland_view->map_request.notify = e_xwayland_view_map_request;
+    wl_signal_add(&xwayland_view->xwayland_surface->events.map_request, &xwayland_view->map_request);
+
+    xwayland_view->request_maximize.notify = e_xwayland_view_request_maximize;
+    wl_signal_add(&xwayland_view->xwayland_surface->events.request_maximize, &xwayland_view->request_maximize);
+
+    xwayland_view->request_configure.notify = e_xwayland_view_request_configure;
+    wl_signal_add(&xwayland_view->xwayland_surface->events.request_configure, &xwayland_view->request_configure);
+
+    xwayland_view->request_move.notify = e_xwayland_view_request_move;
+    wl_signal_add(&xwayland_view->xwayland_surface->events.request_move, &xwayland_view->request_move);
+    
+    xwayland_view->request_resize.notify = e_xwayland_view_request_resize;
+    wl_signal_add(&xwayland_view->xwayland_surface->events.request_resize, &xwayland_view->request_resize);
 
     return xwayland_view;
 }

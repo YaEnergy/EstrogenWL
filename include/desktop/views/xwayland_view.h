@@ -19,23 +19,25 @@ struct e_xwayland_view
     // Xwayland server that created this view
     struct e_xwayland* xwayland;
 
-    //base view
+    // Base view.
     struct e_view base;
 
     struct wlr_xwayland_surface* xwayland_surface;
 
-    //surface becomes valid
+    // Surface becomes valid.
     struct wl_listener associate;
-    //surface becomes invalid
+    // Surface becomes invalid.
     struct wl_listener dissociate;
 
-    //surface is ready to be displayed
+    // Surface is ready to be displayed.
     struct wl_listener map;
-    //surface no longer wants to be displayed
+    // Surface no longer wants to be displayed.
     struct wl_listener unmap;
-    //new surface state got committed
+    // New surface state got committed.
     struct wl_listener commit;
 
+    // Surface wants to be mapped.
+    struct wl_listener map_request;
     struct wl_listener request_maximize;
     struct wl_listener request_configure;
     struct wl_listener request_move;

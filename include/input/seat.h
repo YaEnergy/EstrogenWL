@@ -6,8 +6,8 @@
 #include <wlr/backend.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_seat.h>
+#include <wlr/types/wlr_layer_shell_v1.h>
 
-#include "desktop/views/window.h"
 #include "input/cursor.h"
 
 struct e_window;
@@ -47,13 +47,13 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
 // Add a new input device to a seat.
 void e_seat_add_input_device(struct e_seat* seat, struct wlr_input_device* input);
 
-// Set seat focus on a window if possible.
-void e_seat_set_focus_window(struct e_seat* seat, struct e_window* window);
+// Set seat focus on a view if possible.
+void e_seat_set_focus_view(struct e_seat* seat, struct e_view* view);
 
 // Set seat focus on a layer surface if possible.
 void e_seat_set_focus_layer_surface(struct e_seat* seat, struct wlr_layer_surface_v1* layer_surface);
 
-// Gets the type of surface (window or layer surface) and sets seat focus.
+// Gets the type of surface (view or layer surface) and sets seat focus.
 // This will do nothing if surface isn't of a type that should be focused on by the seat.
 void e_seat_set_focus_surface_type(struct e_seat* seat, struct wlr_surface* surface);
 
@@ -64,17 +64,9 @@ bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface);
 // Returns NULL if no view has focus.
 struct e_view* e_seat_focused_view(struct e_seat* seat);
 
-// Returns window currently in focus.
-// Returns NULL if no window has focus.
-struct e_window* e_seat_focused_window(struct e_seat* seat);
-
 // Returns view previously in focus.
 // Returns NULL if no view had focus.
 struct e_view* e_seat_prev_focused_view(struct e_seat* seat);
-
-// Returns window previously in focus.
-// Returns NULL if no window had focus.
-struct e_window* e_seat_prev_focused_window(struct e_seat* seat);
 
 //returns true if seat has focus on a layer surface with exclusive interactivity
 bool e_seat_has_exclusive_layer_focus(struct e_seat* seat);
