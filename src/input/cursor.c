@@ -49,8 +49,25 @@ static void start_grab_resize_focused_view(struct e_cursor* cursor)
     if (focused_view == NULL)
         return;
 
-    //TODO: grab edges of view closest to cursor
-    e_cursor_start_view_resize(cursor, focused_view, WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT);
+    enum wlr_edges edges = WLR_EDGE_NONE;
+
+    //get closest edges to cursor
+    
+    double mid_x = (double)focused_view->current.x + (double)focused_view->current.width / 2.0;
+    
+    if (cursor->wlr_cursor->x < mid_x)
+        edges = WLR_EDGE_LEFT;
+    else
+        edges = WLR_EDGE_RIGHT;
+
+    double mid_y = (double)focused_view->current.y + (double)focused_view->current.height / 2.0;
+
+    if (cursor->wlr_cursor->y < mid_y)
+        edges |= WLR_EDGE_TOP;
+    else
+        edges |= WLR_EDGE_BOTTOM;
+
+    e_cursor_start_view_resize(cursor, focused_view, edges);
 }
 
 static void start_grab_move_focused_view(struct e_cursor* cursor)
