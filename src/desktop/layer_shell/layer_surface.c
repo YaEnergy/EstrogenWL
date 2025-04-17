@@ -53,23 +53,6 @@ static struct wlr_scene_tree* e_desktop_get_layer_tree(struct e_desktop* desktop
     }
 }
 
-//adds this layer surface to the layer surface it wants
-static void e_layer_surface_add_to_desired_layer(struct e_layer_surface* layer_surface, struct wlr_layer_surface_v1* wlr_layer_surface_v1)
-{
-    struct wlr_scene_tree* layer_tree = e_desktop_get_layer_tree(layer_surface->desktop, wlr_layer_surface_v1->current.layer);
-
-    if (layer_tree == NULL)
-    {
-        e_log_error("e_layer_surface_add_to_desired_layer: no layer tree for layer");
-        return;
-    }
-
-    layer_surface->scene_layer_surface_v1 = wlr_scene_layer_surface_v1_create(layer_tree, wlr_layer_surface_v1);
-
-    layer_surface->scene_tree = layer_surface->scene_layer_surface_v1->tree;
-    e_node_desc_create(&layer_surface->scene_tree->node, E_NODE_DESC_LAYER_SURFACE, layer_surface);
-}
-
 static void e_layer_surface_commit(struct wl_listener* listener, void* data)
 {
     struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, commit);
@@ -157,7 +140,9 @@ static void e_layer_surface_map(struct wl_listener* listener, void* data)
     //append to end of list
     wl_list_insert(layer_surface->desktop->layer_surfaces.prev, &layer_surface->link);
     
-    e_output_arrange(layer_surface->output);    
+    e_output_arrange(layer_surface->output);
+
+    wlr_scene_node_set_enabled(&layer_surface->scene_tree->node, true);
 
     //give focus if requests exclusive focus
     if (layer_surface->scene_layer_surface_v1->layer_surface->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE)
@@ -168,6 +153,8 @@ static void e_layer_surface_map(struct wl_listener* listener, void* data)
 static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
 {
     struct e_layer_surface* unmapped_layer_surface = wl_container_of(listener, unmapped_layer_surface, unmap);
+
+    wlr_scene_node_set_enabled(&unmapped_layer_surface->scene_tree->node, false);
 
     wl_list_remove(&unmapped_layer_surface->link);
     e_output_arrange(unmapped_layer_surface->output);
@@ -206,6 +193,14 @@ struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct
         return NULL;
     }
 
+    struct wlr_scene_tree* layer_tree = e_desktop_get_layer_tree(desktop, wlr_layer_surface_v1->current.layer);
+
+    if (layer_tree == NULL)
+    {
+        e_log_error("e_layer_surface_create: no layer tree for layer surface");
+        return NULL;
+    }
+
     struct e_layer_surface* layer_surface = calloc(1, sizeof(*layer_surface));
 
     if (layer_surface == NULL)
@@ -215,12 +210,14 @@ struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct
     }
 
     layer_surface->desktop = desktop;
-
     layer_surface->output = wlr_layer_surface_v1->output->data;
-    
-    wl_list_init(&layer_surface->link);
 
-    e_layer_surface_add_to_desired_layer(layer_surface, wlr_layer_surface_v1);
+    layer_surface->scene_layer_surface_v1 = wlr_scene_layer_surface_v1_create(layer_tree, wlr_layer_surface_v1);
+    layer_surface->scene_tree = layer_surface->scene_layer_surface_v1->tree;
+    e_node_desc_create(&layer_surface->scene_tree->node, E_NODE_DESC_LAYER_SURFACE, layer_surface);
+    wlr_scene_node_set_enabled(&layer_surface->scene_tree->node, false);
+
+    wl_list_init(&layer_surface->link);
     
     //allows popups to attach themselves this layer surface's scene tree
     wlr_layer_surface_v1->data = layer_surface->scene_tree;
