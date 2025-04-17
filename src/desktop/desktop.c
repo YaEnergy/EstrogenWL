@@ -77,14 +77,6 @@ static void e_desktop_init_output(struct e_desktop* desktop, struct e_output* ou
 {
     assert(desktop && output && output->layout);
 
-    //give output some pointers to the scene's layers
-    output->layers.background = desktop->layers.background;
-    output->layers.bottom = desktop->layers.bottom;
-    output->layers.tiling = desktop->layers.tiling;
-    output->layers.floating = desktop->layers.floating;
-    output->layers.top = desktop->layers.top;
-    output->layers.overlay = desktop->layers.overlay;
-
     //create output's root container
     if (output->root_tiling_container == NULL)
         output->root_tiling_container = e_tree_container_create(E_TILING_MODE_HORIZONTAL);
@@ -150,13 +142,6 @@ static void e_desktop_remove_output(struct e_desktop* desktop, struct e_output* 
         e_tree_container_destroy(output->root_floating_container);
         output->root_floating_container = NULL;
     }
-
-    output->layers.background = NULL;
-    output->layers.bottom = NULL;
-    output->layers.tiling = NULL;
-    output->layers.floating = NULL;
-    output->layers.top = NULL;
-    output->layers.overlay = NULL;
 
     wlr_output_layout_remove(desktop->output_layout, output->wlr_output);
 

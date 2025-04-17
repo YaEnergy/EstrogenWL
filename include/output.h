@@ -21,23 +21,6 @@ struct e_output
 
     struct wlr_output_layout* layout;
 
-    //see: wlr-layer-shell-unstable-v1-protocol.h @ enum zwlr_layer_shell_v1_layer
-    struct
-    {
-        //desktop background
-        struct wlr_scene_tree* background;
-        //layer shell surfaces unders views
-        struct wlr_scene_tree* bottom;
-        //tiled views
-        struct wlr_scene_tree* tiling;
-        //floating views
-        struct wlr_scene_tree* floating; 
-        //layer shell surfaces above views
-        struct wlr_scene_tree* top;
-        //layer shell surfaces that display above everything
-        struct wlr_scene_tree* overlay;
-    } layers;
-
     // Area tiled views are allowed to use.
     struct wlr_box usable_area;
 

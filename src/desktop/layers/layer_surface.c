@@ -35,20 +35,22 @@ static void e_layer_surface_new_popup(struct wl_listener* listener, void* data)
     e_layer_popup_create(xdg_popup, wlr_layer_surface_v1);   
 }
 
-static struct wlr_scene_tree* e_output_get_layer_tree(struct e_output* output, enum zwlr_layer_shell_v1_layer layer)
+static struct wlr_scene_tree* e_desktop_get_layer_tree(struct e_desktop* desktop, enum zwlr_layer_shell_v1_layer layer)
 {
+    assert(desktop);
+
     switch(layer)
     {
         case ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND:
-            return output->layers.background;
+            return desktop->layers.background;
         case ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM:
-            return output->layers.bottom;
+            return desktop->layers.bottom;
         case ZWLR_LAYER_SHELL_V1_LAYER_TOP:
-            return output->layers.top;
+            return desktop->layers.top;
         case ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY:
-            return output->layers.overlay;
+            return desktop->layers.overlay;
         default:
-            e_log_error("no layer tree for layer");
+            e_log_error("e_desktop_get_layer_tree: no layer tree for layer (%i)", layer);
             return NULL;
     }
 }
@@ -56,7 +58,7 @@ static struct wlr_scene_tree* e_output_get_layer_tree(struct e_output* output, e
 //adds this layer surface to the layer surface it wants
 static void e_layer_surface_add_to_desired_layer(struct e_layer_surface* layer_surface, struct wlr_layer_surface_v1* wlr_layer_surface_v1)
 {
-    struct wlr_scene_tree* layer_tree = e_output_get_layer_tree(layer_surface->output, wlr_layer_surface_v1->current.layer);
+    struct wlr_scene_tree* layer_tree = e_desktop_get_layer_tree(layer_surface->desktop, wlr_layer_surface_v1->current.layer);
 
     if (layer_tree == NULL)
     {
@@ -93,7 +95,7 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
     //committed layer
     if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_LAYER)
     {
-        struct wlr_scene_tree* layer_tree = e_output_get_layer_tree(layer_surface->output, wlr_layer_surface_v1->current.layer);
+        struct wlr_scene_tree* layer_tree = e_desktop_get_layer_tree(layer_surface->desktop, wlr_layer_surface_v1->current.layer);
 
         if (layer_tree != NULL)
             wlr_scene_node_reparent(&layer_surface->scene_tree->node, layer_tree);
