@@ -11,7 +11,7 @@
 #include <wlr/types/wlr_output_layout.h>
 
 #include "desktop/desktop.h"
-#include "desktop/layers/layer_shell.h"
+#include "desktop/layer_shell.h"
 #include "desktop/xdg_shell.h"
 #include "desktop/xwayland.h"
 

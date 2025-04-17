@@ -12,7 +12,8 @@
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #include "input/seat.h"
-#include "desktop/layers/layer_surface.h"
+
+#include "desktop/layer_shell.h"
 
 #include "util/log.h"
 

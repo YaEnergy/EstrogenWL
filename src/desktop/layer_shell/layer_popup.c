@@ -1,4 +1,4 @@
-#include "desktop/layers/layer_popup.h"
+#include "desktop/layer_shell.h"
 
 #include <stdlib.h>
 #include <assert.h>
@@ -11,7 +11,7 @@
 #include "desktop/tree/node.h"
 #include "desktop/xdg_popup.h"
 
-//another xdg_popup? oh woaw
+// New xdg popup.
 static void e_layer_popup_new_popup(struct wl_listener* listener, void* data)
 {
     struct e_xdg_popup* popup = wl_container_of(listener, popup, new_popup);
@@ -20,7 +20,7 @@ static void e_layer_popup_new_popup(struct wl_listener* listener, void* data)
     e_xdg_popup_create(new_xdg_popup, popup->xdg_popup->base);
 }
 
-//new surface state got committed
+// New surface state got committed.
 static void e_layer_popup_commit(struct wl_listener* listener, void* data)
 {
     struct e_layer_popup* popup = wl_container_of(listener, popup, commit);
@@ -32,7 +32,7 @@ static void e_layer_popup_commit(struct wl_listener* listener, void* data)
     }
 }
 
-//xdg_popup got destroyed
+// Layer popup got destroyed.
 static void e_layer_popup_destroy(struct wl_listener* listener, void* data)
 {
     struct e_layer_popup* popup = wl_container_of(listener, popup, destroy);
@@ -44,6 +44,8 @@ static void e_layer_popup_destroy(struct wl_listener* listener, void* data)
     free(popup);
 }
 
+// Creates new layer popup for layer surface.
+// Returns NULL on fail.
 struct e_layer_popup* e_layer_popup_create(struct wlr_xdg_popup* xdg_popup, struct wlr_layer_surface_v1* layer_surface_v1)
 {
     assert(xdg_popup && layer_surface_v1);

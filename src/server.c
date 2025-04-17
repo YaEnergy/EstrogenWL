@@ -21,6 +21,8 @@
 #include <wlr/types/wlr_viewporter.h>
 
 #include "desktop/desktop.h"
+#include "desktop/layer_shell.h"
+#include "desktop/xdg_shell.h"
 #include "desktop/xwayland.h"
 #include "util/log.h"
 

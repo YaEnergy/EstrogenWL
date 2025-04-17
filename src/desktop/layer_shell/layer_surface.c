@@ -1,4 +1,4 @@
-#include "desktop/layers/layer_surface.h"
+#include "desktop/layer_shell.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -16,8 +16,6 @@
 
 #include "desktop/desktop.h"
 #include "desktop/tree/node.h"
-#include "desktop/layers/layer_shell.h"
-#include "desktop/layers/layer_popup.h"
 
 #include "input/seat.h"
 
@@ -25,7 +23,7 @@
 
 #include "util/log.h"
 
-//new xdg_popup
+// New layer popup.
 static void e_layer_surface_new_popup(struct wl_listener* listener, void* data)
 {
     struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, commit);
@@ -195,6 +193,9 @@ static void e_layer_surface_destroy(struct wl_listener* listener, void* data)
     free(layer_surface);
 }
 
+// Create a layer surface for the given desktop.
+// wlr_layer_surface_v1's output should not be NULL.
+// Returns NULL on fail.
 struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct wlr_layer_surface_v1* wlr_layer_surface_v1)
 {
     assert(desktop && wlr_layer_surface_v1);
@@ -244,19 +245,25 @@ struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct
     return layer_surface;
 }
 
-//configures an e_layer_surface's layout, updates remaining area
+// Configures an e_layer_surface's layout, updates remaining area.
 void e_layer_surface_configure(struct e_layer_surface* layer_surface, struct wlr_box* full_area, struct wlr_box* remaining_area)
 {
+    assert(layer_surface && full_area && remaining_area);
+
     //updates remaining area
     wlr_scene_layer_surface_v1_configure(layer_surface->scene_layer_surface_v1, full_area, remaining_area);
 }
 
+// Returns this layer surface's layer.
 enum zwlr_layer_shell_v1_layer e_layer_surface_get_layer(struct e_layer_surface* layer_surface)
 {
+    assert(layer_surface);
     return layer_surface->scene_layer_surface_v1->layer_surface->current.layer;
 }
 
+// Returns this layer surface's wlr output.
 struct wlr_output* e_layer_surface_get_wlr_output(struct e_layer_surface* layer_surface)
 {
+    assert(layer_surface);
     return layer_surface->scene_layer_surface_v1->layer_surface->output;
 }

@@ -1,4 +1,4 @@
-#include "desktop/layers/layer_shell.h"
+#include "desktop/layer_shell.h"
 
 #include <stdlib.h>
 #include <assert.h>
@@ -9,12 +9,11 @@
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_scene.h>
 
-#include "desktop/layers/layer_surface.h"
 #include "util/log.h"
 
 #include "desktop/desktop.h"
 
-//new wlr_layer_surface_v1 that has been configured by client to configure and commit
+// New wlr_layer_surface_v1.
 static void e_layer_shell_new_surface(struct wl_listener* listener, void* data)
 {
     struct e_layer_shell* layer_shell = wl_container_of(listener, layer_shell, new_surface);
@@ -49,8 +48,12 @@ static void e_layer_shell_destroy(struct wl_listener* listener, void* data)
     free(layer_shell);
 }
 
+// Create a layer shell.
+// Returns NULL on fail.
 struct e_layer_shell* e_layer_shell_create(struct wl_display* display, struct e_desktop* desktop)
 {
+    assert(display && desktop);
+
     struct e_layer_shell* layer_shell = calloc(1, sizeof(*layer_shell));
 
     if (layer_shell == NULL)
