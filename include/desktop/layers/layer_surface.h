@@ -24,12 +24,14 @@ struct e_layer_surface
 
     struct wlr_scene_tree* scene_tree;
     
-    //new xdg popup
+    // New xdg popup
     struct wl_listener new_popup;
 
-    //new surface state got committed
+    // New surface state got committed
     struct wl_listener commit;
-
+    // Surface is ready to be displayed.
+    struct wl_listener map;
+    // Surface no longer wants to be displayed.
     struct wl_listener unmap;
 
     struct wl_listener destroy;
@@ -37,17 +39,22 @@ struct e_layer_surface
     struct wl_list link; //e_desktop::layer_surfaces
 };
 
+// Create a layer surface for the given desktop.
+// wlr_layer_surface_v1's output should not be NULL.
+// Returns NULL on fail.
 struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct wlr_layer_surface_v1* wlr_layer_surface_v1);
 
-//configures an e_layer_surface's layout, updates remaining area
+// Configures an e_layer_surface's layout, updates remaining area.
 void e_layer_surface_configure(struct e_layer_surface* layer_surface, struct wlr_box* full_area, struct wlr_box* remaining_area);
 
-//some helper getter functions
+/* some helper getter functions */
 
-//returns this layer surface's layer
+// Returns this layer surface's layer.
 enum zwlr_layer_shell_v1_layer e_layer_surface_get_layer(struct e_layer_surface* layer_surface);
 
-//returns this layer surface's wlr output
+// Returns this layer surface's wlr output.
 struct wlr_output* e_layer_surface_get_wlr_output(struct e_layer_surface* layer_surface);
 
+// Finds the layer surface which has this surface.
+// Returns NULL on fail.
 struct e_layer_surface* e_layer_surface_from_surface(struct wlr_surface* surface);

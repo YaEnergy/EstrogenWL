@@ -60,8 +60,8 @@ static void e_layer_surface_add_to_desired_layer(struct e_layer_surface* layer_s
 
     if (layer_tree == NULL)
     {
-        e_log_error("no layer tree for layer");
-        abort();
+        e_log_error("e_layer_surface_add_to_desired_layer: no layer tree for layer");
+        return;
     }
 
     layer_surface->scene_layer_surface_v1 = wlr_scene_layer_surface_v1_create(layer_tree, wlr_layer_surface_v1);
@@ -100,9 +100,14 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
     //configure on initial commit
     if (wlr_layer_surface_v1->initial_commit)
     {
-        wl_list_insert(&layer_surface->desktop->layer_surfaces, &layer_surface->link);
+        struct e_output* output = layer_surface->output;
 
-        update_arrangement = true;
+        struct wlr_box output_full_area = {0, 0, 0, 0};
+        wlr_output_layout_get_box(output->layout, output->wlr_output, &output_full_area);
+
+        struct wlr_box output_remaining_area = output->usable_area;
+
+        wlr_scene_layer_surface_v1_configure(layer_surface->scene_layer_surface_v1, &output_full_area, &output_remaining_area);
     }
 
     //committed layer
@@ -157,15 +162,35 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
     }
 
     if (update_arrangement)
-        e_desktop_arrange_layer(layer_surface->desktop, layer_surface->output->wlr_output, e_layer_surface_get_layer(layer_surface));
+        e_output_arrange(layer_surface->output);
 }
 
+// Surface is ready to be displayed.
+static void e_layer_surface_map(struct wl_listener* listener, void* data)
+{
+    struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, map);
+
+    #if E_VERBOSE
+    e_log_info("layer surface mapped!");
+    #endif
+
+    //append to end of list
+    wl_list_insert(layer_surface->desktop->layer_surfaces.prev, &layer_surface->link);
+    
+    e_output_arrange(layer_surface->output);    
+
+    //give focus if requests exclusive focus
+    if (e_layer_surface_should_get_exclusive_focus(layer_surface))
+        e_seat_set_focus_layer_surface(layer_surface->desktop->seat, layer_surface->scene_layer_surface_v1->layer_surface);
+}
+
+// Surface no longer wants to be displayed.
 static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
 {
     struct e_layer_surface* unmapped_layer_surface = wl_container_of(listener, unmapped_layer_surface, unmap);
 
     wl_list_remove(&unmapped_layer_surface->link);
-    e_desktop_arrange_layer(unmapped_layer_surface->desktop, e_layer_surface_get_wlr_output(unmapped_layer_surface), e_layer_surface_get_layer(unmapped_layer_surface));
+    e_output_arrange(unmapped_layer_surface->output);
 
     //get next topmost layer surface that requests exclusive focus, and focus on it
 
@@ -181,6 +206,7 @@ static void e_layer_surface_destroy(struct wl_listener* listener, void* data)
 
     wl_list_remove(&layer_surface->new_popup.link);
     wl_list_remove(&layer_surface->commit.link);
+    wl_list_remove(&layer_surface->map.link);
     wl_list_remove(&layer_surface->unmap.link);
     wl_list_remove(&layer_surface->destroy.link);
 
@@ -189,9 +215,22 @@ static void e_layer_surface_destroy(struct wl_listener* listener, void* data)
 
 struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct wlr_layer_surface_v1* wlr_layer_surface_v1)
 {
-    assert(desktop && wlr_layer_surface_v1 && wlr_layer_surface_v1->output);
+    assert(desktop && wlr_layer_surface_v1);
 
-    struct e_layer_surface* layer_surface = calloc(1, sizeof(struct e_layer_surface));
+    if (wlr_layer_surface_v1->output == NULL)
+    {
+        e_log_error("e_layer_surface_create: given wlr_layer_surface_v1 has no output");
+        return NULL;
+    }
+
+    struct e_layer_surface* layer_surface = calloc(1, sizeof(*layer_surface));
+
+    if (layer_surface == NULL)
+    {
+        e_log_error("e_layer_surface_create: failed to alloc e_layer_surface");
+        return NULL;
+    }
+
     layer_surface->desktop = desktop;
 
     layer_surface->output = wlr_layer_surface_v1->output->data;
@@ -210,6 +249,9 @@ struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct
 
     layer_surface->commit.notify = e_layer_surface_commit;
     wl_signal_add(&wlr_layer_surface_v1->surface->events.commit, &layer_surface->commit);
+
+    layer_surface->map.notify = e_layer_surface_map;
+    wl_signal_add(&wlr_layer_surface_v1->surface->events.map, &layer_surface->map);
 
     layer_surface->unmap.notify = e_layer_surface_unmap;
     wl_signal_add(&wlr_layer_surface_v1->surface->events.unmap, &layer_surface->unmap);

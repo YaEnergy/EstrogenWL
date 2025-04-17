@@ -191,34 +191,31 @@ struct wlr_surface* e_desktop_wlr_surface_at(struct wlr_scene_node* node, double
 
 /* layers */
 
-void e_desktop_arrange_layer(struct e_desktop* desktop, struct wlr_output* wlr_output, enum zwlr_layer_shell_v1_layer layer)
+void e_desktop_arrange_layer(struct e_desktop* desktop, struct wlr_output* wlr_output, enum zwlr_layer_shell_v1_layer layer, struct wlr_box* full_area, struct wlr_box* remaining_area)
 {
-    assert(desktop && wlr_output);
+    assert(desktop && wlr_output && full_area && remaining_area);
 
-    struct wlr_box full_area = {0, 0, 0, 0};
-    wlr_output_effective_resolution(wlr_output, &full_area.width, &full_area.height);
-
-    struct wlr_box remaining_area = {full_area.x, full_area.y, full_area.width, full_area.height};
+    if (wl_list_empty(&desktop->layer_surfaces))
+        return;
 
     //configure each layer surface in this output & layer
-    //TODO: remaining area might become too small, I'm not sure what to do in those edge cases yet
     struct e_layer_surface* layer_surface;
     wl_list_for_each(layer_surface, &desktop->layer_surfaces, link)
     {
         //is this surface on this output & layer? if so, then configure and update remaining area
         if (e_layer_surface_get_wlr_output(layer_surface) == wlr_output && e_layer_surface_get_layer(layer_surface) == layer)
-            e_layer_surface_configure(layer_surface, &full_area, &remaining_area);
+            e_layer_surface_configure(layer_surface, full_area, remaining_area);
     }
 }
 
-void e_desktop_arrange_all_layers(struct e_desktop* desktop, struct wlr_output* wlr_output)
+void e_desktop_arrange_all_layers(struct e_desktop* desktop, struct wlr_output* wlr_output, struct wlr_box* full_area, struct wlr_box* remaining_area)
 {
-    assert(desktop && wlr_output);
+    assert(desktop && wlr_output && full_area && remaining_area);
 
-    e_desktop_arrange_layer(desktop, wlr_output, ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND);
-    e_desktop_arrange_layer(desktop, wlr_output, ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM);
-    e_desktop_arrange_layer(desktop, wlr_output, ZWLR_LAYER_SHELL_V1_LAYER_TOP);
-    e_desktop_arrange_layer(desktop, wlr_output, ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY);
+    e_desktop_arrange_layer(desktop, wlr_output, ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, full_area, remaining_area);
+    e_desktop_arrange_layer(desktop, wlr_output, ZWLR_LAYER_SHELL_V1_LAYER_TOP, full_area, remaining_area);
+    e_desktop_arrange_layer(desktop, wlr_output, ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM, full_area, remaining_area);
+    e_desktop_arrange_layer(desktop, wlr_output, ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND, full_area, remaining_area);
 }
 
 //get topmost layer surface that requests exclusive focus, may be NULL

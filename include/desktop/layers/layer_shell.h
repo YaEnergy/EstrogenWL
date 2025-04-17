@@ -5,6 +5,8 @@
 
 #include <wlr/types/wlr_layer_shell_v1.h>
 
+#define E_LAYER_SHELL_VERSION 4
+
 struct e_desktop;
 
 struct e_layer_shell

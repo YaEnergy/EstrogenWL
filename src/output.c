@@ -106,16 +106,25 @@ void e_output_arrange(struct e_output* output)
 {
     assert(output && output->root_tiling_container && output->root_floating_container && output->layout);
 
-    struct wlr_box useable_area = (struct wlr_box){0, 0, 0, 0};
-    wlr_output_layout_get_box(output->layout, output->wlr_output, &useable_area);
+    struct wlr_box full_area = (struct wlr_box){0, 0, 0, 0};
+    wlr_output_layout_get_box(output->layout, output->wlr_output, &full_area);
 
-    //TODO: account for output's useable area after layer shell arrangement
+    //FIXME: remaining area can become too small, I'm not sure what to do in those edge cases yet
+    struct wlr_box remaining_area = full_area;
+
     if (output->desktop != NULL)
-        e_desktop_arrange_all_layers(output->desktop, output->wlr_output);
+        e_desktop_arrange_all_layers(output->desktop, output->wlr_output, &full_area, &remaining_area);
 
     if (output->root_tiling_container != NULL)
-        e_container_configure(&output->root_tiling_container->base, useable_area.x, useable_area.y, useable_area.width, useable_area.height);
+        e_container_configure(&output->root_tiling_container->base, remaining_area.x, remaining_area.y, remaining_area.width, remaining_area.height);
     
     if (output->root_floating_container != NULL)
-        e_container_configure(&output->root_floating_container->base, useable_area.x, useable_area.y, useable_area.width, useable_area.height);
+        e_container_configure(&output->root_floating_container->base, remaining_area.x, remaining_area.y, remaining_area.width, remaining_area.height);
+
+    #if E_VERBOSE
+    e_log_info("full area: (%i, %i) %ix%i", full_area.x, full_area.y, full_area.width, full_area.height);
+    e_log_info("remaining area: (%i, %i) %ix%i", remaining_area.x, remaining_area.y, remaining_area.width, remaining_area.height);
+    #endif
+
+    output->usable_area = remaining_area;
 }

@@ -20,13 +20,13 @@ struct e_layer_trees
 {
     //desktop background
     struct wlr_scene_tree* background;
-    //shell surfaces unders windows
+    //layer shell surfaces unders views
     struct wlr_scene_tree* bottom;
-    //tiled windows
+    //tiled views
     struct wlr_scene_tree* tiling;
-    //floating windows
+    //floating views
     struct wlr_scene_tree* floating; 
-    //shell surfaces above windows
+    //layer shell surfaces above views
     struct wlr_scene_tree* top;
     //layer shell surfaces that display above everything
     struct wlr_scene_tree* overlay;
@@ -84,9 +84,9 @@ struct wlr_surface* e_desktop_wlr_surface_at(struct wlr_scene_node* node, double
 
 /* layers */
 
-void e_desktop_arrange_layer(struct e_desktop* desktop, struct wlr_output* wlr_output, enum zwlr_layer_shell_v1_layer layer);
+void e_desktop_arrange_layer(struct e_desktop* desktop, struct wlr_output* wlr_output, enum zwlr_layer_shell_v1_layer layer, struct wlr_box* full_area, struct wlr_box* remaining_area);
 
-void e_desktop_arrange_all_layers(struct e_desktop* desktop, struct wlr_output* wlr_output);
+void e_desktop_arrange_all_layers(struct e_desktop* desktop, struct wlr_output* wlr_output, struct wlr_box* full_area, struct wlr_box* remaining_area);
 
 //get topmost layer surface that requests exclusive focus, may be NULL
 struct e_layer_surface* e_desktop_get_exclusive_topmost_layer_surface(struct e_desktop* desktop);

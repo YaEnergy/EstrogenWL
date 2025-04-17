@@ -26,17 +26,20 @@ struct e_output
     {
         //desktop background
         struct wlr_scene_tree* background;
-        //shell surfaces unders windows
+        //layer shell surfaces unders views
         struct wlr_scene_tree* bottom;
-        //tiled windows
+        //tiled views
         struct wlr_scene_tree* tiling;
-        //floating windows
+        //floating views
         struct wlr_scene_tree* floating; 
-        //shell surfaces above windows
+        //layer shell surfaces above views
         struct wlr_scene_tree* top;
         //layer shell surfaces that display above everything
         struct wlr_scene_tree* overlay;
     } layers;
+
+    // Area tiled views are allowed to use.
+    struct wlr_box usable_area;
 
     //container for tiled containers
     struct e_tree_container* root_tiling_container;
