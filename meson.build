@@ -66,9 +66,9 @@ estrogenwl_src = files(
     'src/desktop/tree/container.c',
     'src/desktop/tree/node.c',
 
-    'src/desktop/layers/layer_shell.c',
-    'src/desktop/layers/layer_surface.c',
-    'src/desktop/layers/layer_popup.c',
+    'src/desktop/layer_shell/layer_shell.c',
+    'src/desktop/layer_shell/layer_surface.c',
+    'src/desktop/layer_shell/layer_popup.c',
 
     'src/desktop/views/view.c',
     'src/desktop/views/toplevel_view.c',
