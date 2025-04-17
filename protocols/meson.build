@@ -1,5 +1,5 @@
 wayland_protocols_dir = wayland_protocols.get_variable('pkgdatadir')
-wayland_scanner = find_program('wayland-scanner')
+wayland_scanner = find_program('wayland-scanner', required: true)
 
 wayland_server_protocols = [
     wayland_protocols_dir / 'stable/xdg-shell/xdg-shell.xml',

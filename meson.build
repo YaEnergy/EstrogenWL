@@ -7,48 +7,13 @@ project(
     ],
 )
 
-add_project_arguments(
-    [
-        '-DWLR_USE_UNSTABLE',
-        '-DE_VERBOSE',
-        '-Wno-unused-parameter',
-    ],
-    language: 'c',
-)
-
-cc = meson.get_compiler('c')
-
-wlroots = dependency('wlroots-0.18')
-
-wayland_server = dependency('wayland-server')
-wayland_cursor = dependency('wayland-cursor')
-wayland_protocols = dependency('wayland-protocols')
-
-xkbcommon = dependency('xkbcommon')
-
-pixman = dependency('pixman-1')
-libdrm = dependency('libdrm')
-libudev = dependency('libudev')
-libinput = dependency('libinput')
-
-xcb = dependency('xcb')
-
-deps = [
-    wlroots,
-    wayland_server,
-    wayland_cursor,
-    wayland_protocols,
-    xkbcommon,
-    pixman,
-    libdrm,
-    xcb,
-    libudev,
-    libinput,
+arguments = [
+    '-DWLR_USE_UNSTABLE',
+    '-DE_VERBOSE',
+    '-Wno-unused-parameter',
 ]
 
 estrogenwl_includedir = include_directories('include')
-
-subdir('protocols')
 
 estrogenwl_src = files(
     'src/main.c',
@@ -60,7 +25,6 @@ estrogenwl_src = files(
     'src/desktop/desktop.c',
     'src/desktop/xdg_shell.c',
     'src/desktop/xdg_popup.c',
-    'src/desktop/xwayland.c',
     'src/desktop/gamma_control_manager.c',
 
     'src/desktop/tree/container.c',
@@ -72,7 +36,6 @@ estrogenwl_src = files(
 
     'src/desktop/views/view.c',
     'src/desktop/views/toplevel_view.c',
-    'src/desktop/views/xwayland_view.c',
 
     'src/input/seat.c',
     'src/input/keyboard.c',
@@ -82,6 +45,57 @@ estrogenwl_src = files(
     'src/util/filesystem.c',
     'src/util/list.c',
     'src/util/log.c',
+)
+
+cc = meson.get_compiler('c')
+
+# main dependancies
+
+wlroots = dependency('wlroots-0.18', required: true)
+
+wayland_server = dependency('wayland-server', required: true)
+wayland_cursor = dependency('wayland-cursor', required: true)
+wayland_protocols = dependency('wayland-protocols', required: true)
+
+xkbcommon = dependency('xkbcommon', required: true)
+
+pixman = dependency('pixman-1', required: true)
+libdrm = dependency('libdrm', required: true)
+libudev = dependency('libudev', required: true)
+libinput = dependency('libinput', required: true)
+
+deps = [
+    wlroots,
+    wayland_server,
+    wayland_cursor,
+    wayland_protocols,
+    xkbcommon,
+    pixman,
+    libdrm,
+    libudev,
+    libinput,
+]
+
+# xwayland support dependancies
+
+xcb = dependency('xcb', required: false)
+
+if xcb.found()
+    message('xwayland is supported')
+
+    arguments += '-DE_XWAYLAND_SUPPORT'
+    deps += xcb
+
+    estrogenwl_src += ['src/desktop/xwayland.c', 'src/desktop/views/xwayland_view.c']
+endif
+
+# executable
+
+subdir('protocols')
+
+add_project_arguments(
+    arguments,
+    language: 'c',
 )
 
 exe = executable('EstrogenWL', sources: estrogenwl_src + protocol_src, dependencies: [ deps ], include_directories: [ estrogenwl_includedir ])

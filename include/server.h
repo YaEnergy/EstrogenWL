@@ -13,7 +13,9 @@
 #include "desktop/desktop.h"
 #include "desktop/layer_shell.h"
 #include "desktop/xdg_shell.h"
+#if E_XWAYLAND_SUPPORT
 #include "desktop/xwayland.h"
+#endif
 
 #include "config.h"
 
@@ -49,8 +51,11 @@ struct e_server
     struct e_xdg_shell* xdg_shell;
     // handles wlr layer shell protocol for layer surfaces
     struct e_layer_shell* layer_shell;
+
+#if E_XWAYLAND_SUPPORT
     // handles xwayland protocol, server and wm for xwayland application views
     struct e_xwayland* xwayland;
+#endif
 
     // what the user interacts with
     struct e_desktop* desktop;

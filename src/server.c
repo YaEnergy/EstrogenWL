@@ -23,7 +23,10 @@
 #include "desktop/desktop.h"
 #include "desktop/layer_shell.h"
 #include "desktop/xdg_shell.h"
+#if E_XWAYLAND_SUPPORT
 #include "desktop/xwayland.h"
+#endif
+
 #include "util/log.h"
 
 #include "desktop/gamma_control_manager.h"
@@ -71,8 +74,10 @@ static void e_server_new_output(struct wl_listener* listener, void* data)
 
     e_desktop_add_output(server->desktop, output);
 
+#if E_XWAYLAND_SUPPORT
     if (server->xwayland != NULL)
         e_xwayland_update_workarea(server->xwayland);
+#endif
 }
 
 static void e_server_backend_destroy(struct wl_listener* listener, void* data)
@@ -216,8 +221,11 @@ int e_server_init(struct e_server* server)
     server->xdg_shell = e_xdg_shell_create(server->display, server->desktop);
     //protocol for layer surfaces
     server->layer_shell = e_layer_shell_create(server->display, server->desktop);
+
+    #if E_XWAYLAND_SUPPORT
     //create & start xwayland server, xwayland shell protocol
     server->xwayland = e_xwayland_create(server->desktop, server->display, server->compositor, server->desktop->seat->wlr_seat, server->config.xwayland_lazy); 
+    #endif
 
     //protocol to describe output regions, seems to be fully implemented by wlroots already
     wlr_xdg_output_manager_v1_create(server->display, server->desktop->output_layout);
@@ -246,13 +254,14 @@ bool e_server_run(struct e_server* server)
     //set WAYLAND_DISPLAY env var
     setenv("WAYLAND_DISPLAY", socket, true);
 
+#if E_XWAYLAND_SUPPORT
     //set DISPLAY env var for xwayland server
     if (server->xwayland != NULL)
     {
         e_log_info("xwayland DISPLAY=%s", server->xwayland->wlr_xwayland->display_name);
         setenv("DISPLAY", server->xwayland->wlr_xwayland->display_name, true);
     }
-        
+#endif
 
     //running
     e_log_info("starting backend");
@@ -274,7 +283,9 @@ void e_server_fini(struct e_server* server)
 {
     wl_list_remove(&server->renderer_lost.link);
 
+#if E_XWAYLAND_SUPPORT
     e_xwayland_destroy(server->xwayland);
+#endif
 
     wl_display_destroy_clients(server->display);
 

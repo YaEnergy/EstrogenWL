@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef E_XWAYLAND_SUPPORT
+#error "Add -DE_XWAYLAND_SUPPORT to enable xwayland support"
+#endif
+
 #include <stdbool.h>
 
 #include <wayland-server-core.h>
