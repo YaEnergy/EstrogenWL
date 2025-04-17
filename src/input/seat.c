@@ -263,8 +263,8 @@ void e_seat_set_focus_surface_type(struct e_seat* seat, struct wlr_surface* surf
 
     struct wlr_layer_surface_v1* hover_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(surface);
 
-    //is layer surface that requests on demand focus?
-    if (hover_layer_surface != NULL && hover_layer_surface->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_ON_DEMAND)
+    //is layer surface that allows focus?
+    if (hover_layer_surface != NULL && hover_layer_surface->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE)
     {
         if (!e_seat_has_focus(seat, hover_layer_surface->surface))
             e_seat_set_focus_layer_surface(seat, hover_layer_surface);    

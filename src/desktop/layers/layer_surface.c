@@ -70,26 +70,6 @@ static void e_layer_surface_add_to_desired_layer(struct e_layer_surface* layer_s
     e_node_desc_create(&layer_surface->scene_tree->node, E_NODE_DESC_LAYER_SURFACE, layer_surface);
 }
 
-//if this layer surface requests exclusive focus, and is on a higher layer than or a layer equal to the current focused exclusive layer surface
-static bool e_layer_surface_should_get_exclusive_focus(struct e_layer_surface* layer_surface)
-{
-    struct e_seat* seat = layer_surface->desktop->seat;
-
-    struct wlr_layer_surface_v1* wlr_layer_surface_v1 = layer_surface->scene_layer_surface_v1->layer_surface;
-
-    //can't get exclusive focus if it doesn't request exclusive focus, duh
-    if (wlr_layer_surface_v1->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE)
-        return false;
-
-    if (seat->focus_surface == NULL)
-        return true;
-
-    struct wlr_layer_surface_v1* focused_layer_surface_v1 = wlr_layer_surface_v1_try_from_wlr_surface(seat->focus_surface);
-
-    //Should get exclusive focus, current focused surface is not a layer surface, or on lower layer, or doesn't request exclusive focus
-    return (focused_layer_surface_v1 == NULL || wlr_layer_surface_v1->current.layer >= focused_layer_surface_v1->current.layer || focused_layer_surface_v1->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE);
-}
-
 static void e_layer_surface_commit(struct wl_listener* listener, void* data)
 {
     struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, commit);
@@ -128,7 +108,7 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
         struct e_seat* seat = layer_surface->desktop->seat;
 
         //give exclusive focus if requested and allowed and doesn't have focus
-        if (e_layer_surface_should_get_exclusive_focus(layer_surface) && !e_seat_has_focus(seat, wlr_layer_surface_v1->surface))
+        if (wlr_layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE && !e_seat_has_focus(seat, wlr_layer_surface_v1->surface))
             e_seat_set_focus_layer_surface(seat, wlr_layer_surface_v1);
         //clear focus if layer surface no longer wants focus and has focus
         else if (wlr_layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE && e_seat_has_focus(seat, wlr_layer_surface_v1->surface))
@@ -180,7 +160,7 @@ static void e_layer_surface_map(struct wl_listener* listener, void* data)
     e_output_arrange(layer_surface->output);    
 
     //give focus if requests exclusive focus
-    if (e_layer_surface_should_get_exclusive_focus(layer_surface))
+    if (layer_surface->scene_layer_surface_v1->layer_surface->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE)
         e_seat_set_focus_layer_surface(layer_surface->desktop->seat, layer_surface->scene_layer_surface_v1->layer_surface);
 }
 
