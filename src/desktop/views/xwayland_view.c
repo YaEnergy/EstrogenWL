@@ -1,4 +1,4 @@
-#include "desktop/views/xwayland_view.h"
+#include "desktop/xwayland.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -19,7 +19,6 @@
 #include "desktop/desktop.h"
 #include "desktop/tree/node.h"
 #include "desktop/views/view.h"
-#include "desktop/xwayland.h"
 
 #include "input/cursor.h"
 

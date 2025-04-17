@@ -10,8 +10,6 @@
 
 #include "util/log.h"
 
-#include "desktop/views/toplevel_view.h"
-
 static void e_xdg_shell_new_toplevel_view(struct wl_listener* listener, void* data)
 {
     struct e_xdg_shell* shell = wl_container_of(listener, shell, new_toplevel_view);
@@ -49,8 +47,8 @@ struct e_xdg_shell* e_xdg_shell_create(struct wl_display* display, struct e_desk
     //give the shell a pointer to the desktop
     shell->desktop = desktop;
 
-    //create xdg shell v6 for this display
-    shell->xdg_shell = wlr_xdg_shell_create(display, 6);
+    //create xdg shell for this display
+    shell->xdg_shell = wlr_xdg_shell_create(display, E_XDG_WM_BASE_VERSION);
 
     //events
 

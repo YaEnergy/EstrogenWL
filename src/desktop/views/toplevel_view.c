@@ -1,4 +1,4 @@
-#include "desktop/views/toplevel_view.h"
+#include "desktop/xdg_shell.h"
 
 #include <stdint.h>
 #include <stdlib.h>

@@ -18,8 +18,6 @@
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
 
-#include "desktop/views/xwayland_view.h"
-
 #include "input/seat.h"
 
 #include "output.h"
