@@ -18,7 +18,6 @@
 //  - e_view_set_maximized
 //  - e_view_set_resizing
 //  - e_view_set_suspended
-//  - e_view_set_activated
 
 struct e_view;
 

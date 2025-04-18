@@ -1,6 +1,6 @@
 #include "output.h"
 
-#include <bits/time.h>
+#include <time.h>
 #include <stdlib.h>
 #include <assert.h>
 

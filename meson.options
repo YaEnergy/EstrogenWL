@@ -1,0 +1,2 @@
+option('xwayland', type: 'feature', value: 'auto', description: 'Enable support for X11 applications')
+option('verbose', type: 'boolean', value: false, description: 'Enable printing very specific logs mainly for debugging')

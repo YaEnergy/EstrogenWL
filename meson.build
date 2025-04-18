@@ -1,16 +1,20 @@
 project(
     'EstrogenWL',
     'c',
+    version: '1.0.0',
+    meson_version: '>=1.1',
     default_options: [
+        'c_std=c11', #wlroots uses c11
         'warning_level=2',
         'werror=true',
     ],
 )
 
 arguments = [
+    '-D_POSIX_C_SOURCE=200809L',
     '-DWLR_USE_UNSTABLE',
-    '-DE_VERBOSE',
     '-Wno-unused-parameter',
+    '-Wmissing-include-dirs',
 ]
 
 estrogenwl_includedir = include_directories('include')
@@ -78,7 +82,7 @@ deps = [
 
 # xwayland support dependancies
 
-xcb = dependency('xcb', required: false)
+xcb = dependency('xcb', required: get_option('xwayland'))
 
 if xcb.found()
     message('xwayland is supported')
@@ -93,6 +97,10 @@ endif
 
 subdir('protocols')
 
+if (get_option('verbose'))
+    arguments += '-DE_VERBOSE'
+endif
+
 add_project_arguments(
     arguments,
     language: 'c',
@@ -101,3 +109,8 @@ add_project_arguments(
 exe = executable('EstrogenWL', sources: estrogenwl_src + protocol_src, dependencies: [ deps ], include_directories: [ estrogenwl_includedir ])
 
 test('basic', exe)
+
+summary({
+    'xwayland': xcb.found(),
+    'verbose': get_option('verbose'),
+})
