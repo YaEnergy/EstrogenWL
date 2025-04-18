@@ -7,9 +7,11 @@
 #include <stdbool.h>
 
 #include <wayland-server-core.h>
+#include <wayland-util.h>
 
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_seat.h>
+#include <wlr/types/wlr_scene.h>
 
 #include <wlr/xwayland.h>
 
@@ -88,6 +90,37 @@ struct e_xwayland_view
     //TODO: request resize, fullscreen, ... events
 };
 
+// Xwayland surface that doesn't want to be managed as a view. (Override redirect = true)
+// We should let these do their thing.
+struct e_xwayland_unmanaged
+{
+    struct e_desktop* desktop;
+
+    struct wlr_xwayland_surface* xwayland_surface;
+
+    struct wlr_scene_tree* tree;
+
+    // Xwayland surface wants to be configured in a specific way.
+    struct wl_listener request_configure;
+
+    // Surface becomes valid.
+    struct wl_listener associate;
+    // Surface becomes invalid.
+    struct wl_listener dissociate;
+
+    // Surface is ready to be displayed.
+    struct wl_listener map;
+    // Surface no longer wants to be displayed.
+    struct wl_listener unmap;
+    // New surface state got committed.
+    struct wl_listener commit;
+    
+    // Xwayland surface is destroyed.
+    struct wl_listener destroy;
+
+    struct wl_list link; //desktop::unmanaged_surfaces
+};
+
 /* xwayland functions */
 
 // Returns NULL on fail.
@@ -102,3 +135,9 @@ void e_xwayland_destroy(struct e_xwayland* xwayland);
 
 //creates new xwayland view on desktop
 struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct e_xwayland* xwayland, struct wlr_xwayland_surface* xwayland_surface);
+
+/* xwayland unmanaged functions */
+
+// Creates new xwayland unmanaged surface on desktop.
+// Returns NULL on fail.
+struct e_xwayland_unmanaged* e_xwayland_unmanaged_create(struct e_desktop* desktop, struct wlr_xwayland_surface* xwayland_surface);

@@ -49,10 +49,16 @@ static void e_xwayland_new_surface(struct wl_listener* listener, void* data)
 
     e_log_info("new xwayland surface");
 
-    if (!wlr_xwayland_surface->override_redirect)
-        e_xwayland_view_create(xwayland->desktop, xwayland, wlr_xwayland_surface);
+    if (wlr_xwayland_surface->override_redirect)
+    {
+        e_xwayland_unmanaged_create(xwayland->desktop, wlr_xwayland_surface);
+        e_log_info("new xwayland unmanaged surface!");
+    }
     else
-        e_log_error("e_xwayland_new_surface: no support for unmanaged surfaces yet! (override redirect)");
+    {
+        e_xwayland_view_create(xwayland->desktop, xwayland, wlr_xwayland_surface);
+        e_log_info("new xwayland view!");
+    }
 }
 
 // Xwayland connection is valid.

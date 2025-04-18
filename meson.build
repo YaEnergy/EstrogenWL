@@ -90,7 +90,7 @@ if xcb.found()
     arguments += '-DE_XWAYLAND_SUPPORT'
     deps += xcb
 
-    estrogenwl_src += ['src/desktop/xwayland.c', 'src/desktop/views/xwayland_view.c']
+    estrogenwl_src += ['src/desktop/xwayland.c', 'src/desktop/views/xwayland_view.c', 'src/desktop/xwayland_unmanaged.c']
 endif
 
 # executable

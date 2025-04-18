@@ -307,8 +307,6 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct
 {
     assert(desktop && xwayland_surface);
     
-    e_log_info("new xwayland view");
-
     struct e_xwayland_view* xwayland_view = calloc(1, sizeof(*xwayland_view));
 
     if (xwayland_view == NULL)
