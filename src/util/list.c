@@ -125,7 +125,8 @@ bool e_list_remove_index(struct e_list* list, int index)
     for (int i = index + 1; i < list->count; i++)
         list->items[i - 1] = list->items[i];
 
-    list->items[list->count] = NULL;
+    //set last item (count - 1) to NULL, as it's now at (count - 2) [before decrement count]
+    list->items[list->count - 1] = NULL;
     list->count--;
 
     return true;
