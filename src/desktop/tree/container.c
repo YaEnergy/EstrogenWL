@@ -128,6 +128,38 @@ struct e_tree_container* e_tree_container_create(enum e_tiling_mode tiling_mode)
     return tree_container;
 }
 
+// Inserts a container in tree container at given index.
+// Returns true on success, false on fail.
+bool e_tree_container_insert_container(struct e_tree_container* tree_container, struct e_container* container, int index)
+{
+    assert(tree_container && container);
+
+    #if E_VERBOSE
+    e_log_info("tree container insert container at index %i", index);
+    #endif
+
+    if (container->parent != NULL)
+    {
+        e_log_error("container is already inside a tree container!");
+        return false;
+    }
+
+    //add to children, return false on fail
+    if (!e_list_insert(&tree_container->children, container, index))
+        return false;
+
+    container->parent = tree_container;
+
+    //TODO: allow having containers of different percentages
+    for (int i = 0; i < tree_container->children.count; i++)
+    {
+        struct e_container* container = e_list_at(&tree_container->children, i);
+        container->percentage = 1.0f / tree_container->children.count;
+    }
+
+    return true;
+}
+
 // Adds a container to a tree container.
 // Returns true on success, false on fail.
 bool e_tree_container_add_container(struct e_tree_container* tree_container, struct e_container* container)
@@ -150,6 +182,7 @@ bool e_tree_container_add_container(struct e_tree_container* tree_container, str
 
     container->parent = tree_container;
 
+    //TODO: allow having containers of different percentages
     for (int i = 0; i < tree_container->children.count; i++)
     {
         struct e_container* container = e_list_at(&tree_container->children, i);
@@ -185,6 +218,7 @@ bool e_tree_container_remove_container(struct e_tree_container* tree_container, 
         return true;
     }
 
+    //TODO: allow having containers of different percentages
     for (int i = 0; i < tree_container->children.count; i++)
     {
         struct e_container* container = e_list_at(&tree_container->children, i);

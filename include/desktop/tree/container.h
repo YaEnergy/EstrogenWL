@@ -96,6 +96,10 @@ void e_container_destroy(struct e_container* container);
 // Returns NULL on fail.
 struct e_tree_container* e_tree_container_create(enum e_tiling_mode tiling_mode);
 
+// Inserts a container in tree container at given index.
+// Returns true on success, false on fail.
+bool e_tree_container_insert_container(struct e_tree_container* tree_container, struct e_container* container, int index);
+
 // Adds a container to a tree container.
 // Returns true on success, false on fail.
 bool e_tree_container_add_container(struct e_tree_container* tree_container, struct e_container* container);
