@@ -10,7 +10,6 @@
 
 #include "input/cursor.h"
 
-struct e_window;
 struct e_view;
 struct e_desktop;
 
@@ -68,7 +67,7 @@ struct e_view* e_seat_focused_view(struct e_seat* seat);
 // Returns NULL if no view had focus.
 struct e_view* e_seat_prev_focused_view(struct e_seat* seat);
 
-//returns true if seat has focus on a layer surface with exclusive interactivity
+// Returns true if seat has focus on a layer surface with exclusive interactivity.
 bool e_seat_has_exclusive_layer_focus(struct e_seat* seat);
 
 void e_seat_clear_focus(struct e_seat* seat);

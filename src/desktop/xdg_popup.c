@@ -9,7 +9,9 @@
 #include <wlr/types/wlr_xdg_shell.h>
 
 #include "desktop/tree/node.h"
+
 #include "util/log.h"
+#include "util/wl_macros.h"
 
 //another xdg_popup? oh woaw
 static void e_xdg_popup_new_popup(struct wl_listener* listener, void* data)
@@ -37,9 +39,9 @@ static void e_xdg_popup_destroy(struct wl_listener* listener, void* data)
 {
     struct e_xdg_popup* popup = wl_container_of(listener, popup, destroy);
 
-    wl_list_remove(&popup->new_popup.link);
-    wl_list_remove(&popup->commit.link);
-    wl_list_remove(&popup->destroy.link);
+    SIGNAL_DISCONNECT(popup->new_popup);
+    SIGNAL_DISCONNECT(popup->commit);
+    SIGNAL_DISCONNECT(popup->destroy);
 
     free(popup);
 }
@@ -69,14 +71,10 @@ struct e_xdg_popup* e_xdg_popup_create(struct wlr_xdg_popup* xdg_popup, struct w
     xdg_popup->base->data = popup->scene_tree;
 
     //events
-    popup->new_popup.notify = e_xdg_popup_new_popup;
-    wl_signal_add(&xdg_popup->base->events.new_popup, &popup->new_popup);
 
-    popup->commit.notify = e_xdg_popup_commit;
-    wl_signal_add(&xdg_popup->base->surface->events.commit, &popup->commit);
-
-    popup->destroy.notify = e_xdg_popup_destroy;
-    wl_signal_add(&xdg_popup->events.destroy, &popup->destroy);
+    SIGNAL_CONNECT(xdg_popup->base->events.new_popup, popup->new_popup, e_xdg_popup_new_popup);
+    SIGNAL_CONNECT(xdg_popup->base->surface->events.commit, popup->commit, e_xdg_popup_commit);
+    SIGNAL_CONNECT(xdg_popup->events.destroy, popup->destroy, e_xdg_popup_destroy);
 
     return popup;
 }

@@ -18,6 +18,7 @@
 #include "desktop/desktop.h"
 
 #include "util/log.h"
+#include "util/wl_macros.h"
 
 static void e_output_frame(struct wl_listener* listener, void* data)
 {
@@ -69,9 +70,10 @@ static void e_output_destroy(struct wl_listener* listener, void* data)
 
     wl_list_init(&output->link);
     wl_list_remove(&output->link);
-    wl_list_remove(&output->frame.link);
-    wl_list_remove(&output->request_state.link);
-    wl_list_remove(&output->destroy.link);
+
+    SIGNAL_DISCONNECT(output->frame);
+    SIGNAL_DISCONNECT(output->request_state);
+    SIGNAL_DISCONNECT(output->destroy);
     
     free(output);
 }
@@ -79,25 +81,28 @@ static void e_output_destroy(struct wl_listener* listener, void* data)
 struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* wlr_output)
 {
     struct e_output* output = calloc(1, sizeof(*output));
+
+    if (output == NULL)
+    {
+        e_log_error("e_output_create: failed to alloc e_output");
+        return NULL;
+    }
+
     output->wlr_output = wlr_output;
     output->desktop = desktop;
 
     output->root_tiling_container = NULL;
     output->root_floating_container = NULL;
 
-    //add signals
     wl_list_init(&output->link);
 
-    output->frame.notify = e_output_frame;
-    wl_signal_add(&wlr_output->events.frame, &output->frame);
-
-    output->request_state.notify = e_output_request_state;
-    wl_signal_add(&wlr_output->events.request_state, &output->request_state);
-
-    output->destroy.notify = e_output_destroy;
-    wl_signal_add(&wlr_output->events.destroy, &output->destroy);
-
     wlr_output->data = output;
+
+    // events
+
+    SIGNAL_CONNECT(wlr_output->events.frame, output->frame, e_output_frame);
+    SIGNAL_CONNECT(wlr_output->events.request_state, output->request_state, e_output_request_state);
+    SIGNAL_CONNECT(wlr_output->events.destroy, output->destroy, e_output_destroy);
 
     return output;
 }

@@ -27,7 +27,7 @@ static void e_commands_kill_focused_view(struct e_desktop* desktop)
     if (seat->focus_surface == NULL)
         return;
 
-    struct e_view* view = e_seat_focused_view(desktop->seat);
+    struct e_view* view = e_seat_focused_view(seat);
 
     if (view != NULL)
     {

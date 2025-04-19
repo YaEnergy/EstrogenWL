@@ -9,6 +9,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 
 #include "util/log.h"
+#include "util/wl_macros.h"
 
 static void e_xdg_shell_new_toplevel_view(struct wl_listener* listener, void* data)
 {
@@ -26,8 +27,8 @@ static void e_xdg_shell_destroy(struct wl_listener* listener, void* data)
 {
     struct e_xdg_shell* shell = wl_container_of(listener, shell, destroy);
     
-    wl_list_remove(&shell->new_toplevel_view.link);
-    wl_list_remove(&shell->destroy.link);
+    SIGNAL_DISCONNECT(shell->new_toplevel_view);
+    SIGNAL_DISCONNECT(shell->destroy);
 
     free(shell);
 }
@@ -52,12 +53,8 @@ struct e_xdg_shell* e_xdg_shell_create(struct wl_display* display, struct e_desk
 
     //events
 
-    //listen for new top level views
-    shell->new_toplevel_view.notify = e_xdg_shell_new_toplevel_view;
-    wl_signal_add(&shell->xdg_shell->events.new_toplevel, &shell->new_toplevel_view);
-
-    shell->destroy.notify = e_xdg_shell_destroy;
-    wl_signal_add(&shell->xdg_shell->events.destroy, &shell->destroy);
+    SIGNAL_CONNECT(shell->xdg_shell->events.new_toplevel, shell->new_toplevel_view, e_xdg_shell_new_toplevel_view);
+    SIGNAL_CONNECT(shell->xdg_shell->events.destroy, shell->destroy, e_xdg_shell_destroy);
 
     return shell;
 }

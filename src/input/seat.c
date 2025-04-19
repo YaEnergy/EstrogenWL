@@ -24,6 +24,7 @@
 #include "input/cursor.h"
 
 #include "util/log.h"
+#include "util/wl_macros.h"
 
 //2024-12-18 22:29:22 | starting to be able to do this more on my own now, I feel like I'm learning a lot :3
 
@@ -67,9 +68,9 @@ static void e_seat_destroy(struct wl_listener* listener, void* data)
 
     wl_list_remove(&seat->keyboards);
 
-    wl_list_remove(&seat->request_set_cursor.link);
-    wl_list_remove(&seat->request_set_selection.link);
-    wl_list_remove(&seat->destroy.link);
+    SIGNAL_DISCONNECT(seat->request_set_cursor);
+    SIGNAL_DISCONNECT(seat->request_set_selection);
+    SIGNAL_DISCONNECT(seat->destroy);
 
     free(seat);
 }
@@ -100,16 +101,9 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
 
     // events
 
-    seat->request_set_cursor.notify = e_seat_request_set_cursor;
-    wl_signal_add(&wlr_seat->events.request_set_cursor, &seat->request_set_cursor);
-
-    seat->request_set_selection.notify = e_seat_request_set_selection;
-    wl_signal_add(&wlr_seat->events.request_set_selection, &seat->request_set_selection);
-
-    seat->destroy.notify = e_seat_destroy;
-    wl_signal_add(&wlr_seat->events.destroy, &seat->destroy);
-
-    seat->focus_surface_unmap.notify = e_seat_focus_surface_unmap;
+    SIGNAL_CONNECT(wlr_seat->events.request_set_cursor, seat->request_set_cursor, e_seat_request_set_cursor);
+    SIGNAL_CONNECT(wlr_seat->events.request_set_selection, seat->request_set_selection, e_seat_request_set_selection);
+    SIGNAL_CONNECT(wlr_seat->events.destroy, seat->destroy, e_seat_destroy);
 
     return seat;
 }
@@ -192,7 +186,7 @@ static void e_seat_set_focus_surface(struct e_seat* seat, struct wlr_surface* su
     seat->focus_surface = surface;
 
     //clear focus on surface unmap
-    wl_signal_add(&surface->events.unmap, &seat->focus_surface_unmap);
+    SIGNAL_CONNECT(surface->events.unmap, seat->focus_surface_unmap, e_seat_focus_surface_unmap);
 }
 
 // Set seat focus on a view if possible.
@@ -340,7 +334,7 @@ void e_seat_clear_focus(struct e_seat* seat)
     if (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface != NULL)
         wlr_seat_keyboard_notify_clear_focus(seat->wlr_seat);
     
-    wl_list_remove(&seat->focus_surface_unmap.link);
+    SIGNAL_DISCONNECT(seat->focus_surface_unmap);
     
     seat->previous_focus_surface = seat->focus_surface;
     seat->focus_surface = NULL;

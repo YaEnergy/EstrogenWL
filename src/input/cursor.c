@@ -28,6 +28,7 @@
 
 #include "util/list.h"
 #include "util/log.h"
+#include "util/wl_macros.h"
 
 //xcursor names: https://www.freedesktop.org/wiki/Specifications/cursor-spec/
 
@@ -376,22 +377,11 @@ struct e_cursor* e_cursor_create(struct e_seat* seat, struct wlr_output_layout* 
 
     // events
 
-    cursor->frame.notify = e_cursor_frame;
-    wl_signal_add(&cursor->wlr_cursor->events.frame, &cursor->frame);
-
-    cursor->button.notify = e_cursor_button;
-    wl_signal_add(&cursor->wlr_cursor->events.button, &cursor->button);
-
-    cursor->motion.notify = e_cursor_motion;
-    wl_signal_add(&cursor->wlr_cursor->events.motion, &cursor->motion);
-
-    cursor->motion_absolute.notify = e_cursor_motion_absolute;
-    wl_signal_add(&cursor->wlr_cursor->events.motion_absolute, &cursor->motion_absolute);
-
-    cursor->axis.notify = e_cursor_axis;
-    wl_signal_add(&cursor->wlr_cursor->events.axis, &cursor->axis);
-
-    cursor->grab_view_unmap.notify = e_cursor_grab_view_unmap;
+    SIGNAL_CONNECT(cursor->wlr_cursor->events.frame, cursor->frame, e_cursor_frame);
+    SIGNAL_CONNECT(cursor->wlr_cursor->events.button, cursor->button, e_cursor_button);
+    SIGNAL_CONNECT(cursor->wlr_cursor->events.motion, cursor->motion, e_cursor_motion);
+    SIGNAL_CONNECT(cursor->wlr_cursor->events.motion_absolute, cursor->motion_absolute, e_cursor_motion_absolute);
+    SIGNAL_CONNECT(cursor->wlr_cursor->events.axis, cursor->axis, e_cursor_axis);
 
     return cursor;
 }
@@ -413,7 +403,7 @@ void e_cursor_reset_mode(struct e_cursor* cursor)
     if (cursor->grab_view != NULL)
     {
         cursor->grab_view = NULL;
-        wl_list_remove(&cursor->grab_view_unmap.link);
+        SIGNAL_DISCONNECT(cursor->grab_view_unmap);
     }
 }
 
@@ -432,7 +422,7 @@ static void e_cursor_start_grab_view_mode(struct e_cursor* cursor, struct e_view
     cursor->grab_vy = cursor->wlr_cursor->y - view->current.y;
     cursor->grab_start_vbox = view->current;
 
-    wl_signal_add(&view->surface->events.unmap, &cursor->grab_view_unmap);
+    SIGNAL_CONNECT(view->surface->events.unmap, cursor->grab_view_unmap, e_cursor_grab_view_unmap);
 
     e_log_info("Grabbed view");
 
@@ -548,11 +538,17 @@ void e_cursor_set_focus_hover(struct e_cursor* cursor)
 
 void e_cursor_destroy(struct e_cursor* cursor)
 {
-    wl_list_remove(&cursor->frame.link);
-    wl_list_remove(&cursor->button.link);
-    wl_list_remove(&cursor->motion.link);
-    wl_list_remove(&cursor->motion_absolute.link);
-    wl_list_remove(&cursor->axis.link);
+    assert(cursor);
+
+    //let go of view
+    if (cursor->grab_view != NULL)
+        e_cursor_reset_mode(cursor);
+
+    SIGNAL_DISCONNECT(cursor->frame);
+    SIGNAL_DISCONNECT(cursor->button);
+    SIGNAL_DISCONNECT(cursor->motion);
+    SIGNAL_DISCONNECT(cursor->motion_absolute);
+    SIGNAL_DISCONNECT(cursor->axis);
 
     wlr_xcursor_manager_destroy(cursor->xcursor_manager);
     wlr_cursor_destroy(cursor->wlr_cursor);

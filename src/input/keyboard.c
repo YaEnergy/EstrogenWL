@@ -18,6 +18,7 @@
 
 #include "util/list.h"
 #include "util/log.h"
+#include "util/wl_macros.h"
 
 #include "config.h"
 #include "commands.h"
@@ -88,9 +89,10 @@ static void e_keyboard_destroy(struct wl_listener* listener, void* data)
     struct e_keyboard* keyboard = wl_container_of(listener, keyboard, destroy);
 
     wl_list_remove(&keyboard->link);
-    wl_list_remove(&keyboard->key.link);
-    wl_list_remove(&keyboard->modifiers.link);
-    wl_list_remove(&keyboard->destroy.link);
+
+    SIGNAL_DISCONNECT(keyboard->key);
+    SIGNAL_DISCONNECT(keyboard->modifiers);
+    SIGNAL_DISCONNECT(keyboard->destroy);
 
     free(keyboard);
 }
@@ -112,7 +114,7 @@ struct e_keyboard* e_keyboard_create(struct wlr_input_device* input, struct e_se
     keyboard->seat = seat;
     keyboard->wlr_keyboard = wlr_keyboard;
 
-    //TODO: allow configuring of keyboard xkb keymaps
+    //TODO: allow configuring of keyboard xkb keymaps -> environment file
     //set up keymap (DEFAULT: US)
 
     struct xkb_context* xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
@@ -129,15 +131,11 @@ struct e_keyboard* e_keyboard_create(struct wlr_input_device* input, struct e_se
     wl_list_init(&keyboard->link);
     
     //keyboard events
-    keyboard->key.notify = e_keyboard_key;
-    wl_signal_add(&wlr_keyboard->events.key, &keyboard->key);
-
-    keyboard->modifiers.notify = e_keyboard_modifiers;
-    wl_signal_add(&wlr_keyboard->events.modifiers, &keyboard->modifiers);
+    SIGNAL_CONNECT(wlr_keyboard->events.key, keyboard->key, e_keyboard_key);
+    SIGNAL_CONNECT(wlr_keyboard->events.modifiers, keyboard->modifiers, e_keyboard_modifiers);
 
     //input device events
-    keyboard->destroy.notify = e_keyboard_destroy;
-    wl_signal_add(&wlr_keyboard->base.events.destroy, &keyboard->destroy);
+    SIGNAL_CONNECT(wlr_keyboard->base.events.destroy, keyboard->destroy, e_keyboard_destroy);
 
     return keyboard;
 }

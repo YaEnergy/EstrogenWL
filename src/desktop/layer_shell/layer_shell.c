@@ -10,6 +10,7 @@
 #include <wlr/types/wlr_scene.h>
 
 #include "util/log.h"
+#include "util/wl_macros.h"
 
 #include "desktop/desktop.h"
 
@@ -42,8 +43,8 @@ static void e_layer_shell_destroy(struct wl_listener* listener, void* data)
 {
     struct e_layer_shell* layer_shell = wl_container_of(listener, layer_shell, destroy);
 
-    wl_list_remove(&layer_shell->new_surface.link);
-    wl_list_remove(&layer_shell->destroy.link);
+    SIGNAL_DISCONNECT(layer_shell->new_surface);
+    SIGNAL_DISCONNECT(layer_shell->destroy);
 
     free(layer_shell);
 }
@@ -68,11 +69,8 @@ struct e_layer_shell* e_layer_shell_create(struct wl_display* display, struct e_
 
     //events
 
-    layer_shell->new_surface.notify = e_layer_shell_new_surface;
-    wl_signal_add(&layer_shell->wlr_layer_shell_v1->events.new_surface, &layer_shell->new_surface);
-
-    layer_shell->destroy.notify = e_layer_shell_destroy;
-    wl_signal_add(&layer_shell->wlr_layer_shell_v1->events.destroy, &layer_shell->destroy);
+    SIGNAL_CONNECT(layer_shell->wlr_layer_shell_v1->events.new_surface, layer_shell->new_surface, e_layer_shell_new_surface);
+    SIGNAL_CONNECT(layer_shell->wlr_layer_shell_v1->events.destroy, layer_shell->destroy, e_layer_shell_destroy);
 
     return layer_shell;
 }

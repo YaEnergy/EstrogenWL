@@ -21,6 +21,7 @@
 #include <wlr/types/wlr_viewporter.h>
 
 #include "desktop/desktop.h"
+#include "desktop/gamma_control_manager.h"
 #include "desktop/layer_shell.h"
 #include "desktop/xdg_shell.h"
 #if E_XWAYLAND_SUPPORT
@@ -28,8 +29,7 @@
 #endif
 
 #include "util/log.h"
-
-#include "desktop/gamma_control_manager.h"
+#include "util/wl_macros.h"
 
 #include "input/seat.h"
 
@@ -84,9 +84,9 @@ static void e_server_backend_destroy(struct wl_listener* listener, void* data)
 {
     struct e_server* server = wl_container_of(listener, server, backend_destroy);
 
-    wl_list_remove(&server->new_input.link);
-    wl_list_remove(&server->new_output.link);
-    wl_list_remove(&server->backend_destroy.link);
+    SIGNAL_DISCONNECT(server->new_input);
+    SIGNAL_DISCONNECT(server->new_output);
+    SIGNAL_DISCONNECT(server->backend_destroy);
 }
 
 // GPU lost, destroy and recreate renderer
@@ -100,7 +100,7 @@ static void e_server_renderer_lost(struct wl_listener* listener, void* data)
 
     wlr_allocator_destroy(server->allocator);
 
-    wl_list_remove(&server->renderer_lost.link);
+    SIGNAL_DISCONNECT(server->renderer_lost);
 
     wlr_renderer_destroy(server->renderer);
 
@@ -120,7 +120,7 @@ static void e_server_renderer_lost(struct wl_listener* listener, void* data)
         return;
     }
 
-    wl_signal_add(&server->renderer->events.lost, &server->renderer_lost);
+    SIGNAL_CONNECT(server->renderer->events.lost, server->renderer_lost, e_server_renderer_lost);
 
     // recreate allocator
 
@@ -161,14 +161,9 @@ int e_server_init(struct e_server* server)
     }
 
     //backend events
-    server->new_input.notify = e_server_new_input;
-    wl_signal_add(&server->backend->events.new_input, &server->new_input);
-
-    server->new_output.notify = e_server_new_output;
-    wl_signal_add(&server->backend->events.new_output, &server->new_output);
-
-    server->backend_destroy.notify = e_server_backend_destroy;
-    wl_signal_add(&server->backend->events.destroy, &server->backend_destroy);
+    SIGNAL_CONNECT(server->backend->events.new_input, server->new_input, e_server_new_input);
+    SIGNAL_CONNECT(server->backend->events.new_output, server->new_output, e_server_new_output);
+    SIGNAL_CONNECT(server->backend->events.destroy, server->backend_destroy, e_server_backend_destroy);
 
     //renderer handles rendering
     e_log_info("creating renderer...");
@@ -186,8 +181,7 @@ int e_server_init(struct e_server* server)
         return 1;
     }
 
-    server->renderer_lost.notify = e_server_renderer_lost;
-    wl_signal_add(&server->renderer->events.lost, &server->renderer_lost);
+    SIGNAL_CONNECT(server->renderer->events.lost, server->renderer_lost, e_server_renderer_lost);
 
     //allocates memory for pixel buffers 
     server->allocator = wlr_allocator_autocreate(server->backend, server->renderer);
@@ -213,7 +207,7 @@ int e_server_init(struct e_server* server)
 
     if (server->desktop == NULL)
     {
-        e_log_error("failed to create desktop");
+        e_log_error("e_server_init: failed to create desktop");
         return 1;
     }
 
@@ -234,6 +228,7 @@ int e_server_init(struct e_server* server)
     wlr_viewporter_create(server->display);
 
     //gamma control manager for output, does everything it needs to on its own
+    //TODO: wlroots 0.19 will introduce wlr_scene_set_gamma_control_manager_v1, a helper that will remove the need for my implementation.
     e_gamma_control_manager_create(server->display);
 
     return 0;
@@ -281,7 +276,7 @@ bool e_server_run(struct e_server* server)
 
 void e_server_fini(struct e_server* server)
 {
-    wl_list_remove(&server->renderer_lost.link);
+    SIGNAL_DISCONNECT(server->renderer_lost);
 
 #if E_XWAYLAND_SUPPORT
     e_xwayland_destroy(server->xwayland);

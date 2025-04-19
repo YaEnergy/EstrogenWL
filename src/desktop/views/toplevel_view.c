@@ -21,6 +21,7 @@
 #include "input/cursor.h"
 
 #include "util/log.h"
+#include "util/wl_macros.h"
 
 // Create a scene tree displaying this view's surfaces and subsurfaces.
 static struct wlr_scene_tree* e_view_toplevel_create_content_tree(struct e_view* view)
@@ -163,20 +164,19 @@ static void e_toplevel_view_destroy(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, destroy);
 
-    wl_list_remove(&toplevel_view->map.link);
-    wl_list_remove(&toplevel_view->unmap.link);
-    wl_list_remove(&toplevel_view->commit.link);
+    SIGNAL_DISCONNECT(toplevel_view->map);
+    SIGNAL_DISCONNECT(toplevel_view->unmap);
+    SIGNAL_DISCONNECT(toplevel_view->commit);
 
-    wl_list_remove(&toplevel_view->new_popup.link);
+    SIGNAL_DISCONNECT(toplevel_view->new_popup);
 
-    wl_list_remove(&toplevel_view->request_fullscreen.link);
-    wl_list_remove(&toplevel_view->request_maximize.link);
-    wl_list_remove(&toplevel_view->request_move.link);
-    wl_list_remove(&toplevel_view->request_resize.link);
-    
-    wl_list_remove(&toplevel_view->set_title.link);
+    SIGNAL_DISCONNECT(toplevel_view->request_fullscreen);
+    SIGNAL_DISCONNECT(toplevel_view->request_maximize);
+    SIGNAL_DISCONNECT(toplevel_view->request_move);
+    SIGNAL_DISCONNECT(toplevel_view->request_resize);
+    SIGNAL_DISCONNECT(toplevel_view->set_title);
 
-    wl_list_remove(&toplevel_view->destroy.link);
+    SIGNAL_DISCONNECT(toplevel_view->destroy);
 
     e_view_fini(&toplevel_view->base);
 
@@ -294,42 +294,23 @@ struct e_toplevel_view* e_toplevel_view_create(struct e_desktop* desktop, struct
 
     // surface events
 
-    toplevel_view->map.notify = e_toplevel_view_map;
-    wl_signal_add(&xdg_toplevel->base->surface->events.map, &toplevel_view->map);
-
-    toplevel_view->unmap.notify = e_toplevel_view_unmap;
-    wl_signal_add(&xdg_toplevel->base->surface->events.unmap, &toplevel_view->unmap);
-
-    toplevel_view->commit.notify = e_toplevel_view_commit;
-    wl_signal_add(&xdg_toplevel->base->surface->events.commit, &toplevel_view->commit);
+    SIGNAL_CONNECT(xdg_toplevel->base->surface->events.map, toplevel_view->map, e_toplevel_view_map);
+    SIGNAL_CONNECT(xdg_toplevel->base->surface->events.unmap, toplevel_view->unmap, e_toplevel_view_unmap);
+    SIGNAL_CONNECT(xdg_toplevel->base->surface->events.commit, toplevel_view->commit, e_toplevel_view_commit);
 
     // xdg surface events
 
-    toplevel_view->new_popup.notify = e_toplevel_view_new_popup;
-    wl_signal_add(&xdg_toplevel->base->events.new_popup, &toplevel_view->new_popup);
+    SIGNAL_CONNECT(xdg_toplevel->base->events.new_popup, toplevel_view->new_popup, e_toplevel_view_new_popup);
 
     // xdg toplevel events
 
-    toplevel_view->request_fullscreen.notify = e_toplevel_view_request_fullscreen;
-    wl_signal_add(&xdg_toplevel->events.request_fullscreen, &toplevel_view->request_fullscreen);
+    SIGNAL_CONNECT(xdg_toplevel->events.request_fullscreen, toplevel_view->request_fullscreen, e_toplevel_view_request_fullscreen);
+    SIGNAL_CONNECT(xdg_toplevel->events.request_maximize, toplevel_view->request_maximize, e_toplevel_view_request_maximize);
+    SIGNAL_CONNECT(xdg_toplevel->events.request_move, toplevel_view->request_move, e_toplevel_view_request_move);
+    SIGNAL_CONNECT(xdg_toplevel->events.request_resize, toplevel_view->request_resize, e_toplevel_view_request_resize);
+    SIGNAL_CONNECT(xdg_toplevel->events.set_title, toplevel_view->set_title, e_toplevel_view_set_title);
 
-    toplevel_view->request_maximize.notify = e_toplevel_view_request_maximize;
-    wl_signal_add(&xdg_toplevel->events.request_maximize, &toplevel_view->request_maximize);
-
-    toplevel_view->request_move.notify = e_toplevel_view_request_move;
-    wl_signal_add(&xdg_toplevel->events.request_move, &toplevel_view->request_move);
-
-    toplevel_view->request_resize.notify = e_toplevel_view_request_resize;
-    wl_signal_add(&xdg_toplevel->events.request_resize, &toplevel_view->request_resize);
-
-    toplevel_view->set_title.notify = e_toplevel_view_set_title;
-    wl_signal_add(&xdg_toplevel->events.set_title, &toplevel_view->set_title);
-
-    //view destroy event
-    toplevel_view->destroy.notify = e_toplevel_view_destroy;
-    wl_signal_add(&xdg_toplevel->events.destroy, &toplevel_view->destroy);
-    
-    //TODO: request resize, fullscreen, ... events
+    SIGNAL_CONNECT(xdg_toplevel->events.destroy, toplevel_view->destroy, e_toplevel_view_destroy);
 
     return toplevel_view;
 }

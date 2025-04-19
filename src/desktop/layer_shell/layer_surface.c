@@ -22,6 +22,7 @@
 #include "output.h"
 
 #include "util/log.h"
+#include "util/wl_macros.h"
 
 // New layer popup.
 static void e_layer_surface_new_popup(struct wl_listener* listener, void* data)
@@ -171,11 +172,13 @@ static void e_layer_surface_destroy(struct wl_listener* listener, void* data)
 {
     struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, destroy);
 
-    wl_list_remove(&layer_surface->new_popup.link);
-    wl_list_remove(&layer_surface->commit.link);
-    wl_list_remove(&layer_surface->map.link);
-    wl_list_remove(&layer_surface->unmap.link);
-    wl_list_remove(&layer_surface->destroy.link);
+    SIGNAL_DISCONNECT(layer_surface->new_popup);
+
+    SIGNAL_DISCONNECT(layer_surface->commit);
+    SIGNAL_DISCONNECT(layer_surface->map);
+    SIGNAL_DISCONNECT(layer_surface->unmap);
+
+    SIGNAL_DISCONNECT(layer_surface->destroy);
 
     free(layer_surface);
 }
@@ -224,20 +227,13 @@ struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct
 
     //events
 
-    layer_surface->new_popup.notify = e_layer_surface_new_popup;
-    wl_signal_add(&wlr_layer_surface_v1->events.new_popup, &layer_surface->new_popup);
+    SIGNAL_CONNECT(wlr_layer_surface_v1->events.new_popup, layer_surface->new_popup, e_layer_surface_new_popup);
 
-    layer_surface->commit.notify = e_layer_surface_commit;
-    wl_signal_add(&wlr_layer_surface_v1->surface->events.commit, &layer_surface->commit);
+    SIGNAL_CONNECT(wlr_layer_surface_v1->surface->events.commit, layer_surface->commit, e_layer_surface_commit);
+    SIGNAL_CONNECT(wlr_layer_surface_v1->surface->events.map, layer_surface->map, e_layer_surface_map);
+    SIGNAL_CONNECT(wlr_layer_surface_v1->surface->events.unmap, layer_surface->unmap, e_layer_surface_unmap);
 
-    layer_surface->map.notify = e_layer_surface_map;
-    wl_signal_add(&wlr_layer_surface_v1->surface->events.map, &layer_surface->map);
-
-    layer_surface->unmap.notify = e_layer_surface_unmap;
-    wl_signal_add(&wlr_layer_surface_v1->surface->events.unmap, &layer_surface->unmap);
-
-    layer_surface->destroy.notify = e_layer_surface_destroy;
-    wl_signal_add(&wlr_layer_surface_v1->events.destroy, &layer_surface->destroy);
+    SIGNAL_CONNECT(wlr_layer_surface_v1->events.destroy, layer_surface->destroy, e_layer_surface_destroy);
 
     return layer_surface;
 }

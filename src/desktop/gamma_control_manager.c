@@ -9,6 +9,8 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
 
+#include "util/wl_macros.h"
+
 static void e_gamma_control_manager_set_gamma(struct wl_listener* listener, void* data)
 {
     struct e_gamma_control_manager* gamma_control_manager = wl_container_of(listener, gamma_control_manager, set_gamma);
@@ -35,8 +37,8 @@ static void e_gamma_control_manager_destroy(struct wl_listener* listener, void* 
 {
     struct e_gamma_control_manager* gamma_control_manager = wl_container_of(listener, gamma_control_manager, destroy);
 
-    wl_list_remove(&gamma_control_manager->set_gamma.link);
-    wl_list_remove(&gamma_control_manager->destroy.link);
+    SIGNAL_DISCONNECT(gamma_control_manager->set_gamma);
+    SIGNAL_DISCONNECT(gamma_control_manager->destroy);
 
     free(gamma_control_manager);
 }
@@ -56,11 +58,9 @@ struct e_gamma_control_manager* e_gamma_control_manager_create(struct wl_display
     gamma_control_manager->wlr_gamma_control_manager_v1 = wlr_gamma_control_manager_v1_create(display);
 
     //events
-    gamma_control_manager->set_gamma.notify = e_gamma_control_manager_set_gamma;
-    wl_signal_add(&gamma_control_manager->wlr_gamma_control_manager_v1->events.set_gamma, &gamma_control_manager->set_gamma);
 
-    gamma_control_manager->destroy.notify = e_gamma_control_manager_destroy;
-    wl_signal_add(&gamma_control_manager->wlr_gamma_control_manager_v1->events.destroy, &gamma_control_manager->destroy);
+    SIGNAL_CONNECT(gamma_control_manager->wlr_gamma_control_manager_v1->events.set_gamma, gamma_control_manager->set_gamma, e_gamma_control_manager_set_gamma)
+    SIGNAL_CONNECT(gamma_control_manager->wlr_gamma_control_manager_v1->events.destroy, gamma_control_manager->destroy, e_gamma_control_manager_destroy)
 
     return gamma_control_manager;
 }

@@ -17,7 +17,8 @@ struct e_xdg_popup
     struct wlr_scene_tree* scene_tree;
 
     struct wl_listener new_popup;
-
+    //TODO: struct wl_listener reposition;
+    
     //new surface state got committed
     struct wl_listener commit;
     //xdg_popup got destroyed

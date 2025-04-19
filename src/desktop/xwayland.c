@@ -23,6 +23,7 @@
 #include "output.h"
 
 #include "util/log.h"
+#include "util/wl_macros.h"
 
 // All names for e_xcb_atom_type enum values
 const char* atom_names[] = {
@@ -142,12 +143,9 @@ struct e_xwayland* e_xwayland_create(struct e_desktop* desktop, struct wl_displa
     wlr_xwayland_set_seat(xwayland->wlr_xwayland, seat);
 
     //events
-    
-    xwayland->ready.notify = e_xwayland_ready;
-    wl_signal_add(&xwayland->wlr_xwayland->events.ready, &xwayland->ready);
 
-    xwayland->new_surface.notify = e_xwayland_new_surface;
-    wl_signal_add(&xwayland->wlr_xwayland->events.new_surface, &xwayland->new_surface);
+    SIGNAL_CONNECT(xwayland->wlr_xwayland->events.ready, xwayland->ready, e_xwayland_ready);
+    SIGNAL_CONNECT(xwayland->wlr_xwayland->events.new_surface, xwayland->new_surface, e_xwayland_new_surface);
 
     return xwayland;
 }
@@ -200,8 +198,8 @@ void e_xwayland_destroy(struct e_xwayland* xwayland)
 {
     assert(xwayland);
 
-    wl_list_remove(&xwayland->ready.link);
-    wl_list_remove(&xwayland->new_surface.link);
+    SIGNAL_DISCONNECT(xwayland->ready);
+    SIGNAL_DISCONNECT(xwayland->new_surface);
 
     wlr_xwayland_destroy(xwayland->wlr_xwayland);
 

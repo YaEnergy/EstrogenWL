@@ -23,6 +23,7 @@
 #include "input/cursor.h"
 
 #include "util/log.h"
+#include "util/wl_macros.h"
 
 // Create a scene tree displaying this view's surfaces and subsurfaces.
 static struct wlr_scene_tree* e_view_xwayland_create_content_tree(struct e_view* view)
@@ -87,8 +88,7 @@ static void e_xwayland_view_map(struct wl_listener* listener, void* data)
     e_view_map(&xwayland_view->base);
 
     // According to labwc, map and unmap can change the surface used
-    xwayland_view->commit.notify = e_xwayland_view_commit;
-    wl_signal_add(&xwayland_view->xwayland_surface->surface->events.commit, &xwayland_view->commit);
+    SIGNAL_CONNECT(xwayland_view->xwayland_surface->surface->events.commit, xwayland_view->commit, e_xwayland_view_commit);
 }
 
 static void e_xwayland_view_unmap(struct wl_listener* listener, void* data)
@@ -98,7 +98,7 @@ static void e_xwayland_view_unmap(struct wl_listener* listener, void* data)
     e_view_unmap(&xwayland_view->base);
 
     /* According to labwc, map and unmap can change the surface used */
-    wl_list_remove(&xwayland_view->commit.link);
+    SIGNAL_DISCONNECT(xwayland_view->commit);
 }
 
 // Set activated state of the view.
@@ -181,11 +181,8 @@ static void e_xwayland_view_associate(struct wl_listener* listener, void* data)
 
     // events
 
-    xwayland_view->map.notify = e_xwayland_view_map;
-    wl_signal_add(&xwayland_view->xwayland_surface->surface->events.map, &xwayland_view->map);
-
-    xwayland_view->unmap.notify = e_xwayland_view_unmap;
-    wl_signal_add(&xwayland_view->xwayland_surface->surface->events.unmap, &xwayland_view->unmap);
+    SIGNAL_CONNECT(xwayland_view->xwayland_surface->surface->events.map, xwayland_view->map, e_xwayland_view_map);
+    SIGNAL_CONNECT(xwayland_view->xwayland_surface->surface->events.unmap, xwayland_view->unmap, e_xwayland_view_unmap);
 }
 
 // Surface becomes invalid.
@@ -197,8 +194,8 @@ static void e_xwayland_view_dissociate(struct wl_listener* listener, void* data)
 
     xwayland_view->base.surface = NULL;
 
-    wl_list_remove(&xwayland_view->map.link);
-    wl_list_remove(&xwayland_view->unmap.link);
+    SIGNAL_DISCONNECT(xwayland_view->map);
+    SIGNAL_DISCONNECT(xwayland_view->unmap);
 }
 
 //destruction...
@@ -208,23 +205,25 @@ static void e_xwayland_view_destroy(struct wl_listener* listener, void* data)
 
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, destroy);
 
-    wl_list_remove(&xwayland_view->set_title.link);
-    wl_list_remove(&xwayland_view->map_request.link);
-    wl_list_remove(&xwayland_view->request_maximize.link);
-    wl_list_remove(&xwayland_view->request_configure.link);
-    wl_list_remove(&xwayland_view->request_move.link);
-    wl_list_remove(&xwayland_view->request_resize.link);
+    SIGNAL_DISCONNECT(xwayland_view->set_title);
+    SIGNAL_DISCONNECT(xwayland_view->map_request);
+    SIGNAL_DISCONNECT(xwayland_view->request_maximize);
+    SIGNAL_DISCONNECT(xwayland_view->request_configure);
+    SIGNAL_DISCONNECT(xwayland_view->request_move);
+    SIGNAL_DISCONNECT(xwayland_view->request_resize);
 
-    wl_list_remove(&xwayland_view->associate.link);
-    wl_list_remove(&xwayland_view->dissociate.link);
-    wl_list_remove(&xwayland_view->destroy.link);
+    SIGNAL_DISCONNECT(xwayland_view->associate);
+    SIGNAL_DISCONNECT(xwayland_view->dissociate);
+
+    SIGNAL_DISCONNECT(xwayland_view->destroy);
 
     e_view_fini(&xwayland_view->base);
 
     free(xwayland_view);
 }
 
-//FIXME: i'm unsure of this actually works, should probably check that
+// FIXME: i'm unsure of this actually works, should probably check that
+// it does not
 static bool xwayland_surface_geo_configure_is_scheduled(struct wlr_xwayland_surface* xwayland_surface)
 {
     assert(xwayland_surface);
@@ -311,7 +310,7 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct
 
     if (xwayland_view == NULL)
     {
-        e_log_error("failed to allocate xwayland_view");
+        e_log_error("e_xwayland_view_create: failed to allocate xwayland_view");
         return NULL;
     }
 
@@ -330,32 +329,17 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct
 
     // events
 
-    xwayland_view->associate.notify = e_xwayland_view_associate;
-    wl_signal_add(&xwayland_surface->events.associate, &xwayland_view->associate);
+    SIGNAL_CONNECT(xwayland_surface->events.set_title, xwayland_view->set_title, e_xwayland_view_set_title);
+    SIGNAL_CONNECT(xwayland_surface->events.map_request, xwayland_view->map_request, e_xwayland_view_map_request);
+    SIGNAL_CONNECT(xwayland_surface->events.request_maximize, xwayland_view->request_maximize, e_xwayland_view_request_maximize);
+    SIGNAL_CONNECT(xwayland_surface->events.request_configure, xwayland_view->request_configure, e_xwayland_view_request_configure);
+    SIGNAL_CONNECT(xwayland_surface->events.request_move, xwayland_view->request_move, e_xwayland_view_request_move);
+    SIGNAL_CONNECT(xwayland_surface->events.request_resize, xwayland_view->request_resize, e_xwayland_view_request_resize);
+
+    SIGNAL_CONNECT(xwayland_surface->events.associate, xwayland_view->associate, e_xwayland_view_associate);
+    SIGNAL_CONNECT(xwayland_surface->events.dissociate, xwayland_view->dissociate, e_xwayland_view_dissociate);
     
-    xwayland_view->dissociate.notify = e_xwayland_view_dissociate;
-    wl_signal_add(&xwayland_surface->events.dissociate, &xwayland_view->dissociate);
-
-    xwayland_view->destroy.notify = e_xwayland_view_destroy;
-    wl_signal_add(&xwayland_surface->events.destroy, &xwayland_view->destroy);
-
-    xwayland_view->set_title.notify = e_xwayland_view_set_title;
-    wl_signal_add(&xwayland_view->xwayland_surface->events.set_title, &xwayland_view->set_title);
-
-    xwayland_view->map_request.notify = e_xwayland_view_map_request;
-    wl_signal_add(&xwayland_view->xwayland_surface->events.map_request, &xwayland_view->map_request);
-
-    xwayland_view->request_maximize.notify = e_xwayland_view_request_maximize;
-    wl_signal_add(&xwayland_view->xwayland_surface->events.request_maximize, &xwayland_view->request_maximize);
-
-    xwayland_view->request_configure.notify = e_xwayland_view_request_configure;
-    wl_signal_add(&xwayland_view->xwayland_surface->events.request_configure, &xwayland_view->request_configure);
-
-    xwayland_view->request_move.notify = e_xwayland_view_request_move;
-    wl_signal_add(&xwayland_view->xwayland_surface->events.request_move, &xwayland_view->request_move);
-    
-    xwayland_view->request_resize.notify = e_xwayland_view_request_resize;
-    wl_signal_add(&xwayland_view->xwayland_surface->events.request_resize, &xwayland_view->request_resize);
+    SIGNAL_CONNECT(xwayland_surface->events.destroy, xwayland_view->destroy, e_xwayland_view_destroy);
 
     return xwayland_view;
 }

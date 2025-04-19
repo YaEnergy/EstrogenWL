@@ -8,11 +8,14 @@
 
 #include <wlr/types/wlr_scene.h>
 
+#include "util/log.h"
+#include "util/wl_macros.h"
+
 static void e_node_desc_destroy(struct wl_listener* listener, void* data)
 {
     struct e_node_desc* node_desc = wl_container_of(listener, node_desc, destroy);
 
-    wl_list_remove(&node_desc->destroy.link);
+    SIGNAL_DISCONNECT(node_desc->destroy);
     
     free(node_desc);
 }
@@ -21,11 +24,17 @@ static void e_node_desc_destroy(struct wl_listener* listener, void* data)
 struct e_node_desc* e_node_desc_create(struct wlr_scene_node* node, enum e_node_desc_type type, void* data)
 {
     struct e_node_desc* node_desc = calloc(1, sizeof(*node_desc));
+
+    if (node_desc == NULL)
+    {
+        e_log_error("e_node_desc_create: failed to alloc e_node_desc");
+        return NULL;
+    }
+
     node_desc->type = type;
     node_desc->data = data;
 
-    node_desc->destroy.notify = e_node_desc_destroy;
-    wl_signal_add(&node->events.destroy, &node_desc->destroy);
+    SIGNAL_CONNECT(node->events.destroy, node_desc->destroy, e_node_desc_destroy);
 
     node->data = node_desc;
 

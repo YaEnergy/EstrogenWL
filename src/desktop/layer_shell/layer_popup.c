@@ -11,6 +11,9 @@
 #include "desktop/tree/node.h"
 #include "desktop/xdg_popup.h"
 
+#include "util/log.h"
+#include "util/wl_macros.h"
+
 // New xdg popup.
 static void e_layer_popup_new_popup(struct wl_listener* listener, void* data)
 {
@@ -37,9 +40,9 @@ static void e_layer_popup_destroy(struct wl_listener* listener, void* data)
 {
     struct e_layer_popup* popup = wl_container_of(listener, popup, destroy);
 
-    wl_list_remove(&popup->new_popup.link);
-    wl_list_remove(&popup->commit.link);
-    wl_list_remove(&popup->destroy.link);
+    SIGNAL_DISCONNECT(popup->new_popup);
+    SIGNAL_DISCONNECT(popup->commit);
+    SIGNAL_DISCONNECT(popup->destroy);
 
     free(popup);
 }
@@ -50,7 +53,14 @@ struct e_layer_popup* e_layer_popup_create(struct wlr_xdg_popup* xdg_popup, stru
 {
     assert(xdg_popup && layer_surface_v1);
 
-    struct e_layer_popup* popup = calloc(1, sizeof(struct e_layer_popup));
+    struct e_layer_popup* popup = calloc(1, sizeof(*popup));
+
+    if (popup == NULL)
+    {
+        e_log_error("e_layer_popup_create: failed to alloc e_layer_popup");
+        return NULL;
+    }
+
     popup->xdg_popup = xdg_popup;
     popup->layer_surface_v1 = layer_surface_v1;
 
@@ -60,18 +70,16 @@ struct e_layer_popup* e_layer_popup_create(struct wlr_xdg_popup* xdg_popup, stru
     popup->scene_tree = wlr_scene_xdg_surface_create(parent_tree, xdg_popup->base);
     e_node_desc_create(&popup->scene_tree->node, E_NODE_DESC_LAYER_POPUP, popup);
 
-    //allows further popup window scene trees to add themselves to this popup window's scene tree
+    //allows further popup scene trees to add themselves to this popup's scene tree
     xdg_popup->base->data = popup->scene_tree;
 
     //events
-    popup->new_popup.notify = e_layer_popup_new_popup;
-    wl_signal_add(&xdg_popup->base->events.new_popup, &popup->new_popup);
 
-    popup->commit.notify = e_layer_popup_commit;
-    wl_signal_add(&xdg_popup->base->surface->events.commit, &popup->commit);
+    SIGNAL_CONNECT(xdg_popup->base->events.new_popup, popup->new_popup, e_layer_popup_new_popup);
+    
+    SIGNAL_CONNECT(xdg_popup->base->surface->events.commit, popup->commit, e_layer_popup_commit);
 
-    popup->destroy.notify = e_layer_popup_destroy;
-    wl_signal_add(&xdg_popup->events.destroy, &popup->destroy);
+    SIGNAL_CONNECT(xdg_popup->events.destroy, popup->destroy, e_layer_popup_destroy);
 
     return popup;
 }
