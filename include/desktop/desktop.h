@@ -80,9 +80,11 @@ struct e_output* e_desktop_get_output(struct e_desktop* desktop, int index);
 
 /* scene */
 
-//returns a wlr_surface pointer at the specified layout coords, 
-//also outs the surface's node, and translates the layout coords to the surface coords
-struct wlr_surface* e_desktop_wlr_surface_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_scene_node** snode, double* sx, double* sy);
+// Finds the scene surface at the specified layout coords in given scene graph.
+// Also translates the layout coords to the surface coords if not NULL. (sx, sy)
+// NULL for sx & sy is allowed.
+// Returns NULL if nothing is found.
+struct wlr_scene_surface* e_desktop_scene_surface_at(struct wlr_scene_node* node, double lx, double ly, double* sx, double* sy);
 
 /* layers */
 

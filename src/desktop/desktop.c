@@ -152,28 +152,39 @@ static void e_desktop_remove_output(struct e_desktop* desktop, struct e_output* 
 
 /* scene */
 
-//returns a wlr_surface pointer at the specified layout coords, 
-//also outs the surface's node, and translates the layout coords to the surface coords
-struct wlr_surface* e_desktop_wlr_surface_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_scene_node** snode, double* sx, double* sy)
+// Finds the scene surface at the specified layout coords in given scene graph.
+// Also translates the layout coords to the surface coords if not NULL. (sx, sy)
+// NULL for sx & sy is allowed.
+// Returns NULL if nothing is found.
+struct wlr_scene_surface* e_desktop_scene_surface_at(struct wlr_scene_node* node, double lx, double ly, double* sx, double* sy)
 {
-    if (node == NULL || snode == NULL || sx == NULL || sy == NULL)
-    {
-        e_log_error("e_scene_wlr_surface_at: *node, **snode, *sx, or *sy is NULL");
-        abort();
-    }
+    assert(node);
 
-    *snode = wlr_scene_node_at(node, lx, ly, sx, sy);
+    if (sx != NULL)
+        *sx = 0.0;
 
-    if (*snode == NULL || (*snode)->type != WLR_SCENE_NODE_BUFFER)
+    if (sy != NULL)
+        *sy = 0.0;
+
+    double nx, ny = 0.0;
+    struct wlr_scene_node* snode = wlr_scene_node_at(node, lx, ly, &nx, &ny);
+
+    if (snode == NULL || snode->type != WLR_SCENE_NODE_BUFFER)
         return NULL;
 
-    struct wlr_scene_buffer* buffer = wlr_scene_buffer_from_node(*snode);
+    struct wlr_scene_buffer* buffer = wlr_scene_buffer_from_node(snode);
     struct wlr_scene_surface* scene_surface = wlr_scene_surface_try_from_buffer(buffer);
 
     if (scene_surface == NULL)
         return NULL;
 
-    return scene_surface->surface;
+    if (sx != NULL)
+        *sx = nx;
+
+    if (sy != NULL)
+        *sy = ny;
+
+    return scene_surface;
 }
 
 /* layers */

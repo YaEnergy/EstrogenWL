@@ -129,10 +129,9 @@ struct e_view* e_view_from_surface(struct e_desktop* desktop, struct wlr_surface
 // Returns NULL on fail.
 struct e_view* e_view_try_from_node_ancestors(struct wlr_scene_node* node);
 
-// Searches for a view at the specified layout coords in the given scene graph
-// Outs found surface and translated from layout to surface coords.
-// If nothing is found returns NULL, but surface may not always be NULL.
-struct e_view* e_view_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy);
+// Finds the view at the specified layout coords in given scene graph.
+// Returns NULL if nothing is found.
+struct e_view* e_view_at(struct wlr_scene_node* node, double lx, double ly);
 
 // Requests that this view uses its method of closing.
 void e_view_send_close(struct e_view* view);

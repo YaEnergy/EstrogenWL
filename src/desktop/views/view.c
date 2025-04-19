@@ -465,21 +465,18 @@ struct e_view* e_view_try_from_node_ancestors(struct wlr_scene_node* node)
     return NULL;
 }
 
-struct e_view* e_view_at(struct wlr_scene_node* node, double lx, double ly, struct wlr_surface** surface, double* sx, double* sy)
+// Finds the view at the specified layout coords in given scene graph.
+// Returns NULL if nothing is found.
+struct e_view* e_view_at(struct wlr_scene_node* node, double lx, double ly)
 {
-    if (node == NULL || surface == NULL || sx == NULL || sy == NULL)
-    {
-        e_log_error("e_view_at: *node, **surface, *sx, or *sy is NULL");
-        abort();
-    }
+    assert(node);
+    
+    struct wlr_scene_surface* scene_surface = e_desktop_scene_surface_at(node, lx, ly, NULL, NULL);
 
-    struct wlr_scene_node* snode;
-    *surface = e_desktop_wlr_surface_at(node, lx, ly, &snode, sx, sy);
-
-    if (snode == NULL || *surface == NULL)
+    if (scene_surface == NULL)
         return NULL;
 
-    return e_view_try_from_node_ancestors(snode);
+    return e_view_try_from_node_ancestors(&scene_surface->buffer->node);
 }
 
 void e_view_send_close(struct e_view* view)

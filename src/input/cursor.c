@@ -153,7 +153,7 @@ static void swap_tiled_views(struct e_view* a, struct e_view* b)
     e_log_info("swapping tiled views");
     #endif
 
-    // swap parents
+    //swap parents
 
     struct e_tree_container* tmp_tree = b->container.parent;
 
@@ -203,10 +203,7 @@ static void e_cursor_handle_mode_move(struct e_cursor* cursor)
         struct e_desktop* desktop = cursor->seat->desktop;
         
         //get current view under cursor
-        //TODO: remove unnecessary e_view_at out vars
-        double sx, sy = 0.0;
-        struct wlr_surface* surface = NULL;
-        struct e_view* cursor_view = e_view_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &surface, &sx, &sy);
+        struct e_view* cursor_view = e_view_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
     
         //if not the same tiled view as grabbed tiled view, swap them
         if (cursor_view != NULL && cursor_view->tiled && cursor_view != cursor->grab_view)
@@ -229,6 +226,7 @@ static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
 
     //TODO: most likely due to some imprecision of some kind (idk), there seems to be movement on the right edge and bottom edge when resizing their opposite edges
     //TODO: wait for view to finish committing before resizing again
+    //above has been fixed for toplevel views, but xwayland views seem to still have some issues.
 
     if (cursor->grab_view->tiled)
     {
@@ -300,8 +298,7 @@ static void e_cursor_handle_motion(struct e_cursor* cursor, uint32_t time_msec)
     struct e_seat* seat = cursor->seat;
 
     double sx, sy;
-    struct wlr_scene_node* hover_node;
-    struct wlr_surface* hover_surface = e_desktop_wlr_surface_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_node, &sx, &sy);
+    struct wlr_scene_surface* hover_surface = e_desktop_scene_surface_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &sx, &sy);
 
     e_cursor_set_focus_hover(cursor);
 
@@ -529,16 +526,15 @@ void e_cursor_set_focus_hover(struct e_cursor* cursor)
     struct e_seat* seat = cursor->seat;
 
     double sx, sy;
-    struct wlr_scene_node* hover_node;
-    struct wlr_surface* hover_surface = e_desktop_wlr_surface_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &hover_node, &sx, &sy);
-    struct e_view* view = (hover_node == NULL) ? NULL : e_view_try_from_node_ancestors(hover_node);
+    struct wlr_scene_surface* hover_surface = e_desktop_scene_surface_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &sx, &sy);
+    struct e_view* view = (hover_surface == NULL) ? NULL : e_view_try_from_node_ancestors(&hover_surface->buffer->node);
 
     if (hover_surface != NULL)
     {
-        wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface, sx, sy); //is only sent once
+        wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface->surface, sx, sy); //is only sent once
 
         //sloppy focus
-        e_seat_set_focus_surface_type(seat, hover_surface);
+        e_seat_set_focus_surface_type(seat, hover_surface->surface);
     }
     else 
     {
