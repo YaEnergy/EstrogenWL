@@ -14,7 +14,8 @@
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xcursor_manager.h>
-#include <wlr/types/wlr_layer_shell_v1.h>
+#include <wlr/types/wlr_keyboard.h>
+#include <wlr/types/wlr_seat.h>
 
 #include <wlr/util/box.h>
 #include <wlr/util/edges.h>
@@ -23,7 +24,9 @@
 
 #include "desktop/desktop.h"
 #include "desktop/views/view.h"
+#include "desktop/tree/container.h"
 
+#include "util/list.h"
 #include "util/log.h"
 
 //xcursor names: https://www.freedesktop.org/wiki/Specifications/cursor-spec/
@@ -119,6 +122,71 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
         wlr_seat_pointer_notify_button(cursor->seat->wlr_seat, event->time_msec, event->button, event->state);
 }
 
+// Swaps 2 view's parents and percentages.
+static void swap_tiled_views(struct e_view* a, struct e_view* b)
+{
+    if (a == NULL)
+    {
+        e_log_error("swap_tiled_views: view A is NULL");
+        return;
+    }
+
+    if (b == NULL)
+    {
+        e_log_error("swap_tiled_views: view B is NULL");
+        return;
+    }
+
+    if (a->tiled == false)
+    {
+        e_log_error("swap_tiled_views: view A is not tiled!");
+        return;
+    }
+
+    if (b->tiled == false)
+    {
+        e_log_error("swap_tiled_views: view B is not tiled!");
+        return;
+    }
+
+    #if E_VERBOSE
+    e_log_info("swapping tiled views");
+    #endif
+
+    // swap parents
+
+    struct e_tree_container* tmp_tree = b->container.parent;
+
+    int index_a = (a->container.parent != NULL) ? e_list_find_index(&a->container.parent->children, &a->container) : -1;
+    int index_b = (b->container.parent != NULL) ? e_list_find_index(&b->container.parent->children, &b->container) : -1;
+
+    if (b->container.parent != NULL)
+        e_tree_container_remove_container(b->container.parent, &b->container);
+
+    if (index_a != -1)
+        e_tree_container_insert_container(a->container.parent, &b->container, index_a);
+
+    if (a->container.parent != NULL)
+        e_tree_container_remove_container(a->container.parent, &a->container);
+
+    if (index_b != -1)
+        e_tree_container_insert_container(tmp_tree, &a->container, index_b);
+
+    //swap percentages
+
+    float tmp_percentage = a->container.percentage;
+    a->container.percentage = b->container.percentage;
+    b->container.percentage = tmp_percentage;
+
+    //rearrange tree containers
+
+    e_tree_container_arrange(a->container.parent);
+
+    //only rearrange once if both views have the same parent container
+    if (b->container.parent != a->container.parent)
+        e_tree_container_arrange(b->container.parent);
+}
+
 static void e_cursor_handle_mode_move(struct e_cursor* cursor)
 {
     if (cursor->grab_view == NULL)
@@ -128,13 +196,24 @@ static void e_cursor_handle_mode_move(struct e_cursor* cursor)
         return;
     }
 
+    wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "all-scroll");
+
     if (cursor->grab_view->tiled)
     {
-        wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "not-allowed");
+        struct e_desktop* desktop = cursor->seat->desktop;
+        
+        //get current view under cursor
+        //TODO: remove unnecessary e_view_at out vars
+        double sx, sy = 0.0;
+        struct wlr_surface* surface = NULL;
+        struct e_view* cursor_view = e_view_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &surface, &sx, &sy);
+    
+        //if not the same tiled view as grabbed tiled view, swap them
+        if (cursor_view != NULL && cursor_view->tiled && cursor_view != cursor->grab_view)
+            swap_tiled_views(cursor_view, cursor->grab_view);
     }
     else //floating
     {
-        wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "all-scroll");
         e_view_set_position(cursor->grab_view, cursor->wlr_cursor->x - cursor->grab_vx, cursor->wlr_cursor->y - cursor->grab_vy);
     }
 }
@@ -288,6 +367,8 @@ struct e_cursor* e_cursor_create(struct e_seat* seat, struct wlr_output_layout* 
     cursor->mode = E_CURSOR_MODE_DEFAULT;
 
     cursor->wlr_cursor = wlr_cursor_create();
+
+    cursor->grab_view = NULL;
 
     //boundaries and movement semantics of cursor
     wlr_cursor_attach_output_layout(cursor->wlr_cursor, output_layout);
