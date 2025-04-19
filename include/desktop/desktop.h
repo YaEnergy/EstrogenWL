@@ -30,6 +30,8 @@ struct e_layer_trees
     struct wlr_scene_tree* top;
     //layer shell surfaces that display above everything
     struct wlr_scene_tree* overlay;
+    // Xwayland unmanaged surfaces.
+    struct wlr_scene_tree* unmanaged;
 };
 
 // main struct handling what is visible to the user (root tree, outputs) & input (seat).

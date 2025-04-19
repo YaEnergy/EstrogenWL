@@ -41,7 +41,7 @@ static void e_xwayland_unmanaged_map(struct wl_listener* listener, void* data)
     struct e_desktop* desktop = unmanaged->desktop;
     struct wlr_surface* surface = unmanaged->xwayland_surface->surface;
 
-    unmanaged->tree = wlr_scene_subsurface_tree_create(desktop->layers.overlay, surface);
+    unmanaged->tree = wlr_scene_subsurface_tree_create(desktop->layers.unmanaged, surface);
     wlr_scene_node_set_position(&unmanaged->tree->node, unmanaged->xwayland_surface->x, unmanaged->xwayland_surface->y);
 
     /* According to labwc, map and unmap can change the surface used */

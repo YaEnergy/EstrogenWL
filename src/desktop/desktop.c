@@ -36,6 +36,7 @@ static void e_desktop_init_scene(struct e_desktop* desktop)
     desktop->layers.floating = wlr_scene_tree_create(&desktop->scene->tree);
     desktop->layers.top = wlr_scene_tree_create(&desktop->scene->tree);
     desktop->layers.overlay = wlr_scene_tree_create(&desktop->scene->tree);
+    desktop->layers.unmanaged = wlr_scene_tree_create(&desktop->scene->tree);
 
     desktop->pending = wlr_scene_tree_create(&desktop->scene->tree);
     wlr_scene_node_set_enabled(&desktop->pending->node, false);
