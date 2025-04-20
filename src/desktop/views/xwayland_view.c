@@ -101,6 +101,19 @@ static void e_xwayland_view_unmap(struct wl_listener* listener, void* data)
     SIGNAL_DISCONNECT(xwayland_view->commit);
 }
 
+// Set tiled state of the view.
+static void e_view_xwayland_set_tiled(struct e_view* view, bool tiled)
+{
+    assert(view);
+
+    struct e_xwayland_view* xwayland_view = view->data;
+
+    //TODO: if view is actually maximized, don't let e_view_xwayland_set_tiled set maximized to false
+    
+    //why set maximized? for example: this prevents Krita from requesting resizing from the bottom right corner
+    wlr_xwayland_surface_set_maximized(xwayland_view->xwayland_surface, tiled);
+}
+
 // Set activated state of the view.
 static void e_view_xwayland_set_activated(struct e_view* view, bool activated)
 {
@@ -321,6 +334,7 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct
 
     xwayland_view->base.title = xwayland_surface->title;
 
+    xwayland_view->base.implementation.set_tiled = e_view_xwayland_set_tiled;
     xwayland_view->base.implementation.set_activated = e_view_xwayland_set_activated;
     xwayland_view->base.implementation.configure = e_view_xwayland_configure;
     xwayland_view->base.implementation.create_content_tree = e_view_xwayland_create_content_tree;
