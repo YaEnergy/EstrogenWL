@@ -46,23 +46,29 @@ const char* atom_names[] = {
 static void e_xwayland_new_surface(struct wl_listener* listener, void* data)
 {
     struct e_xwayland* xwayland = wl_container_of(listener, xwayland, new_surface);
-    struct wlr_xwayland_surface* wlr_xwayland_surface = data;
+    struct wlr_xwayland_surface* xwayland_surface = data;
 
-    e_log_info("new xwayland surface");
-
-    if (wlr_xwayland_surface->override_redirect)
+    if (xwayland_surface->override_redirect)
     {
-        e_xwayland_unmanaged_create(xwayland->desktop, wlr_xwayland_surface);
-        e_log_info("new xwayland unmanaged surface!");
+        struct e_xwayland_unmanaged* unmanaged = e_xwayland_unmanaged_create(xwayland->desktop, xwayland_surface);
+
+        if (unmanaged != NULL)
+            e_log_info("new xwayland unmanaged surface!");
+        else
+            e_log_error("e_xwayland_new_surface: failed to create xwayland unmanaged surface");
     }
     else
     {
-        e_xwayland_view_create(xwayland->desktop, xwayland, wlr_xwayland_surface);
-        e_log_info("new xwayland view!");
+        struct e_xwayland_view* view = e_xwayland_view_create(xwayland->desktop, xwayland, xwayland_surface);
+        
+        if (view != NULL)
+            e_log_info("new xwayland view!");
+        else
+            e_log_error("e_xwayland_new_surface: failed to create xwayland view");
     }
 }
 
-// Xwayland connection is valid.
+// XCB connection is valid.
 static void e_xwayland_ready(struct wl_listener* listener, void* data)
 {
     struct e_xwayland* xwayland = wl_container_of(listener, xwayland, ready);
@@ -75,11 +81,11 @@ static void e_xwayland_ready(struct wl_listener* listener, void* data)
     // TODO: it seems like wlroots will soon have a way of checking the window type in 0.19.0 https://wlroots.pages.freedesktop.org/wlroots/wlr/xwayland/xwayland.h.html#func-wlr_xwayland_surface_has_window_type, making this soon redundant.
     //thanks Sway
 
-    xcb_connection_t* xcb_connection = wlr_xwayland_get_xwm_connection(xwayland->wlr_xwayland);
+    xcb_connection_t* xcb_connection = xcb_connect(NULL, NULL);
 
     if (xcb_connection == NULL)
     {
-        e_log_error("e_xwayland_ready: what do you mean xcb connection is null this is the event where it became valid???");
+        e_log_error("e_xwayland_ready: connection failed");
         return;
     }
 
@@ -122,8 +128,12 @@ static void e_xwayland_ready(struct wl_listener* listener, void* data)
             free(error);
         }
     }
+
+    xcb_disconnect(xcb_connection);
 }
 
+// Creates a struct handling xwayland shell v1 protocol, server and X11 wm.
+// Returns NULL on fail.
 struct e_xwayland* e_xwayland_create(struct e_desktop* desktop, struct wl_display* display, struct wlr_compositor* compositor, struct wlr_seat* seat, bool lazy)
 {
     assert(desktop && display && compositor && seat);

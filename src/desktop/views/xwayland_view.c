@@ -25,6 +25,8 @@
 #include "util/log.h"
 #include "util/wl_macros.h"
 
+// TODO: I'm unsure what to do with the user-specificied position in xcb_size_hints_t*
+
 // Create a scene tree displaying this view's surfaces and subsurfaces.
 static struct wlr_scene_tree* e_view_xwayland_create_content_tree(struct e_view* view)
 {
@@ -37,6 +39,18 @@ static struct wlr_scene_tree* e_view_xwayland_create_content_tree(struct e_view*
     return tree;
 }
 
+// Sets the view's current geometry to that of the xwayland surface.
+static void e_xwayland_view_update_current_geometry(struct e_xwayland_view* xwayland_view)
+{
+    assert(xwayland_view);
+
+    xwayland_view->base.current.x = xwayland_view->xwayland_surface->x;
+    xwayland_view->base.current.y = xwayland_view->xwayland_surface->y;
+    xwayland_view->base.current.width = xwayland_view->xwayland_surface->width;
+    xwayland_view->base.current.height = xwayland_view->xwayland_surface->height;
+}
+
+// Xwayland surface wants to be mapped.
 static void e_xwayland_view_map_request(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, map_request);
@@ -45,37 +59,18 @@ static void e_xwayland_view_map_request(struct wl_listener* listener, void* data
     e_log_info("xwayland view map request");
     #endif
 
-    xwayland_view->base.pending.x = xwayland_view->xwayland_surface->x;
-    xwayland_view->base.pending.y = xwayland_view->xwayland_surface->y;
+    e_xwayland_view_update_current_geometry(xwayland_view);
+    xwayland_view->base.pending = xwayland_view->base.current;
 
-    if (xwayland_view->xwayland_surface->size_hints != NULL)
-    {
-        xcb_size_hints_t* size_hints = xwayland_view->xwayland_surface->size_hints;
-
-        if (size_hints->flags & XCB_ICCCM_SIZE_HINT_P_POSITION || size_hints->flags & XCB_ICCCM_SIZE_HINT_US_POSITION)
-        {
-            xwayland_view->base.pending.x = size_hints->x;
-            xwayland_view->base.pending.y = size_hints->y;
-        }
-    }
-    
-    xwayland_view->base.pending.width = xwayland_view->xwayland_surface->width;
-    xwayland_view->base.pending.height = xwayland_view->xwayland_surface->height;
-
-    e_view_configure(&xwayland_view->base, xwayland_view->base.pending.x, xwayland_view->base.pending.y, xwayland_view->base.pending.width, xwayland_view->base.pending.height);
+    e_view_configure_pending(&xwayland_view->base);
 }
 
+// New surface state got committed.
 static void e_xwayland_view_commit(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, commit);
 
-    xwayland_view->base.current.x = xwayland_view->xwayland_surface->x;
-    xwayland_view->base.current.y = xwayland_view->xwayland_surface->y;
-
-    wlr_scene_node_set_position(&xwayland_view->base.tree->node, xwayland_view->base.current.x, xwayland_view->base.current.y);
-
-    xwayland_view->base.current.width = xwayland_view->xwayland_surface->width;
-    xwayland_view->base.current.height = xwayland_view->xwayland_surface->height;
+    e_xwayland_view_update_current_geometry(xwayland_view);
 
     e_view_moved(&xwayland_view->base);
 
@@ -83,6 +78,7 @@ static void e_xwayland_view_commit(struct wl_listener* listener, void* data)
         e_view_configure_pending(&xwayland_view->base);
 }
 
+// Surface is ready to be displayed.
 static void e_xwayland_view_map(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, map);
@@ -93,6 +89,7 @@ static void e_xwayland_view_map(struct wl_listener* listener, void* data)
     SIGNAL_CONNECT(xwayland_view->xwayland_surface->surface->events.commit, xwayland_view->commit, e_xwayland_view_commit);
 }
 
+// Surface no longer wants to be displayed.
 static void e_xwayland_view_unmap(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, unmap);
@@ -144,6 +141,7 @@ static void e_xwayland_view_request_maximize(struct wl_listener* listener, void*
     //only maximize floating views
 }
 
+// Xwayland surface wants to be configured in a specific way.
 static void e_xwayland_view_request_configure(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, request_configure);
@@ -194,6 +192,8 @@ static void e_xwayland_view_associate(struct wl_listener* listener, void* data)
 
     xwayland_view->base.surface = xwayland_view->xwayland_surface->surface;
 
+    e_xwayland_view_update_current_geometry(xwayland_view);
+
     // events
 
     SIGNAL_CONNECT(xwayland_view->xwayland_surface->surface->events.map, xwayland_view->map, e_xwayland_view_map);
@@ -213,7 +213,7 @@ static void e_xwayland_view_dissociate(struct wl_listener* listener, void* data)
     SIGNAL_DISCONNECT(xwayland_view->unmap);
 }
 
-//destruction...
+// Xwayland surface was destroyed.
 static void e_xwayland_view_destroy(struct wl_listener* listener, void* data)
 {
     //remove associate & dissociate listener lists & free
@@ -246,7 +246,7 @@ static bool xwayland_surface_geo_configure_is_scheduled(struct wlr_xwayland_surf
     if (xwayland_surface->surface == NULL)
         return false;
 
-    return xwayland_surface->surface->current.width != xwayland_surface->surface->pending.width && xwayland_surface->surface->current.height != xwayland_surface->surface->pending.height;
+    return false;
 }
 
 static void e_view_xwayland_configure(struct e_view* view, int lx, int ly, int width, int height)
@@ -257,11 +257,13 @@ static void e_view_xwayland_configure(struct e_view* view, int lx, int ly, int w
 
     view->pending = (struct wlr_box){lx, ly, width, height};
 
-    //configure is already scheduled, commit will start next one
-    if (xwayland_surface_geo_configure_is_scheduled(xwayland_view->xwayland_surface))
-        return;
-    
-    wlr_xwayland_surface_configure(xwayland_view->xwayland_surface, lx, ly, (uint16_t)width, (uint16_t)height);
+    //if configure is already scheduled, commit will start next one
+    if (!xwayland_surface_geo_configure_is_scheduled(xwayland_view->xwayland_surface))
+        wlr_xwayland_surface_configure(xwayland_view->xwayland_surface, lx, ly, (uint16_t)width, (uint16_t)height);
+
+    //TODO: according to labwc, if the xwayland surface is offscreen it may not send a commit event
+    // and thus not move the view as wait we for a commit that never happens. In these cases we should move it immediately.
+    // Views aren't usually offscreen though, so this shouldn't be that big of a deal.
 }
 
 static bool e_view_xwayland_wants_floating(struct e_view* view)
@@ -316,7 +318,8 @@ static void e_view_xwayland_send_close(struct e_view* view)
     wlr_xwayland_surface_close(xwayland_view->xwayland_surface);
 }
 
-//creates new xwayland view inside server
+// Creates new xwayland view on desktop.
+// Returns NULL on fail.
 struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct e_xwayland* xwayland, struct wlr_xwayland_surface* xwayland_surface)
 {
     assert(desktop && xwayland_surface);
