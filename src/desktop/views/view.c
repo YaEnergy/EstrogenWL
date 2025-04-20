@@ -502,4 +502,6 @@ void e_view_fini(struct e_view* view)
 {
     if (view->mapped)
         e_view_unmap(view);
+
+    wlr_scene_node_destroy(&view->tree->node);
 }
