@@ -58,17 +58,6 @@ static void e_toplevel_view_unmap(struct wl_listener* listener, void* data)
     e_view_unmap(&toplevel_view->base);
 }
 
-// The toplevel view has moved.
-static void e_toplevel_view_moved(struct e_toplevel_view* toplevel_view, int32_t x, int32_t y)
-{
-    assert(toplevel_view);
-
-    toplevel_view->base.current.x = x;
-    toplevel_view->base.current.y = y;
-
-    wlr_scene_node_set_position(&toplevel_view->base.tree->node, toplevel_view->base.current.x, toplevel_view->base.current.y);
-}
-
 // New surface state got committed.
 static void e_toplevel_view_commit(struct wl_listener* listener, void* data)
 {
@@ -91,10 +80,13 @@ static void e_toplevel_view_commit(struct wl_listener* listener, void* data)
     if (!toplevel_view->xdg_toplevel->base->surface->mapped)
         return;
 
-    e_toplevel_view_moved(toplevel_view, toplevel_view->scheduled_x, toplevel_view->scheduled_y);
+    toplevel_view->base.current.x = toplevel_view->scheduled_x;
+    toplevel_view->base.current.y = toplevel_view->scheduled_y;
     
     toplevel_view->base.current.width = toplevel_view->xdg_toplevel->current.width;
     toplevel_view->base.current.height = toplevel_view->xdg_toplevel->current.height;
+
+    e_view_moved(&toplevel_view->base);
 
     //Now that we've finished the changes that were scheduled, we can schedule the next changes.
     if (e_view_has_pending_changes(&toplevel_view->base))
@@ -232,7 +224,9 @@ static void e_view_toplevel_configure(struct e_view* view, int lx, int ly, int w
     //if size remains the same then just move the container node
     if (view->current.width == width && view->current.height == height)
     {
-        e_toplevel_view_moved(toplevel_view, lx, ly);
+        toplevel_view->base.current.x = lx;
+        toplevel_view->base.current.y = ly;
+        e_view_moved(&toplevel_view->base);
     }
     else
     {

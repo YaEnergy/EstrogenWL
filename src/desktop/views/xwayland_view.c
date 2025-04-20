@@ -77,6 +77,8 @@ static void e_xwayland_view_commit(struct wl_listener* listener, void* data)
     xwayland_view->base.current.width = xwayland_view->xwayland_surface->width;
     xwayland_view->base.current.height = xwayland_view->xwayland_surface->height;
 
+    e_view_moved(&xwayland_view->base);
+
     if (e_view_has_pending_changes(&xwayland_view->base))
         e_view_configure_pending(&xwayland_view->base);
 }

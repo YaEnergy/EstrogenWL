@@ -306,6 +306,15 @@ void e_view_configure_pending(struct e_view* view)
     e_view_configure(view, view->pending.x, view->pending.y, view->pending.width, view->pending.height);
 }
 
+// Updates view's tree node to current position.
+// Should be called when view has moved. (Current x & y changed)
+void e_view_moved(struct e_view* view)
+{
+    assert(view);
+
+    wlr_scene_node_set_position(&view->tree->node, view->current.x, view->current.y);
+}
+
 // Create a scene tree displaying this view's surfaces and subsurfaces.
 // Returns NULL on fail.
 static struct wlr_scene_tree* e_view_create_content_tree(struct e_view* view)

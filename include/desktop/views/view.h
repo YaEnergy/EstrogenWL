@@ -36,6 +36,10 @@ struct e_view_impl
 
     // Sets the activated state of the view.
     void (*set_activated)(struct e_view* view, bool activated);
+
+    //void (*set_maximized)(struct e_view* view, bool maximized);
+    //void (*set_resizing)(struct e_view* view, bool resizing);
+    
     // Configure a view within given layout position and size.
     void (*configure)(struct e_view* view, int lx, int ly, int width, int height);
 
@@ -113,12 +117,21 @@ void e_view_configure(struct e_view* view, int lx, int ly, int width, int height
 // Configure view using pending changes.
 void e_view_configure_pending(struct e_view* view);
 
+// Updates view's tree node to current position.
+// Should be called when view has moved. (Current x & y changed)
+void e_view_moved(struct e_view* view);
+
 // Sets the tiled state of the view.
 void e_view_set_tiled(struct e_view* view, bool tiled);
 
 // Sets the activated state of the view.
 void e_view_set_activated(struct e_view* view, bool activated);
 
+/*
+void e_view_set_maximized(struct e_view* view, bool maximized);
+void e_view_set_resizing(struct e_view* view, bool resizing);
+void e_view_set_suspended(struct e_view* view, bool suspended);
+*/
 
 bool e_view_has_pending_changes(struct e_view* view);
 
