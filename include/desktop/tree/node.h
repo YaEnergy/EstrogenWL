@@ -44,4 +44,3 @@ struct e_layer_surface* e_layer_surface_try_from_e_node_desc(struct e_node_desc*
 
 //may return NULL
 struct e_layer_popup* e_layer_popup_try_from_e_node_desc(struct e_node_desc* node_desc);
-

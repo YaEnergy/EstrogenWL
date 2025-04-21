@@ -17,7 +17,7 @@
 
 FILE* logFile = NULL;
 
-static char* get_time_string()
+static char* get_time_string(void)
 {
     time_t t;
     time(&t);
@@ -62,7 +62,7 @@ static char* get_path_in_home(const char* path)
 
 //TODO: add error codes for when logFile is NULL
 
-int e_log_init()
+int e_log_init(void)
 {
     if (logFile != NULL)
         return 1;
@@ -175,7 +175,7 @@ void e_log_error(const char *format, ...)
     va_end(args);
 }
 
-void e_log_deinit()
+void e_log_deinit(void)
 {
     e_log_info("Closing log...");
 

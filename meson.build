@@ -4,7 +4,7 @@ project(
     version: '1.0.0',
     meson_version: '>=1.1',
     default_options: [
-        'c_std=c11', #wlroots uses c11
+        'c_std=c11', #wlroots uses atleast c11
         'warning_level=2',
         'werror=true',
     ],
