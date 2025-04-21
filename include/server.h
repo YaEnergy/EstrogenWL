@@ -25,7 +25,7 @@
 //  - config
 struct e_server
 {
-    struct e_config config;
+    struct e_config* config;
 
     // handles accepting clients from Unix socket, managing wl globals, ...
     struct wl_display* display;
@@ -61,7 +61,7 @@ struct e_server
     struct e_desktop* desktop;
 };
 
-int e_server_init(struct e_server* server);
+int e_server_init(struct e_server* server, struct e_config* config);
 
 bool e_server_run(struct e_server* server);
 

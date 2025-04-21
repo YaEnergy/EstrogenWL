@@ -10,6 +10,7 @@
 
 #include <xkbcommon/xkbcommon-keysyms.h>
 
+#include "config.h"
 #include "server.h"
 
 #include "input/keybind.h"
@@ -37,27 +38,30 @@ int main()
 
         return 1;
     }
-    
-    struct e_server server = {0};
 
-    if (e_server_init(&server) != 0)
-    {
-        e_log_error("failed to init server");
-        return 1;
-    }
+    struct e_config config = {0};
+    e_config_init(&config);
 
     // test keybinds
     
     //check out: xkbcommon.org
     //Important function: xkb_keysym_from_name (const char *name, enum xkb_keysym_flags flags)
     
-    bind_keybind(&server.config.keyboard.keybinds, XKB_KEY_F1, WLR_MODIFIER_ALT, "exec rofi -modi drun,run -show drun");
-    bind_keybind(&server.config.keyboard.keybinds, XKB_KEY_F2, WLR_MODIFIER_ALT, "exec alacritty");
-    bind_keybind(&server.config.keyboard.keybinds, XKB_KEY_F3, WLR_MODIFIER_ALT, "exit");
-    bind_keybind(&server.config.keyboard.keybinds, XKB_KEY_F4, WLR_MODIFIER_ALT, "kill");
-    bind_keybind(&server.config.keyboard.keybinds, XKB_KEY_F5, WLR_MODIFIER_ALT, "toggle_fullscreen");
-    bind_keybind(&server.config.keyboard.keybinds, XKB_KEY_F6, WLR_MODIFIER_ALT, "toggle_tiling");
-    bind_keybind(&server.config.keyboard.keybinds, XKB_KEY_F7, WLR_MODIFIER_ALT, "switch_tiling_mode");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F1, WLR_MODIFIER_ALT, "exec rofi -modi drun,run -show drun");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F2, WLR_MODIFIER_ALT, "exec alacritty");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F3, WLR_MODIFIER_ALT, "exit");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F4, WLR_MODIFIER_ALT, "kill");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F5, WLR_MODIFIER_ALT, "toggle_fullscreen");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F6, WLR_MODIFIER_ALT, "toggle_tiling");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F7, WLR_MODIFIER_ALT, "switch_tiling_mode");
+    
+    struct e_server server = {0};
+
+    if (e_server_init(&server, &config) != 0)
+    {
+        e_log_error("failed to init server");
+        return 1;
+    }
 
     e_server_run(&server);
 
@@ -66,6 +70,8 @@ int main()
     // destroy everything
     
     e_server_fini(&server);
+
+    e_config_fini(&config);
 
     e_log_deinit();
     

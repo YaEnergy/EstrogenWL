@@ -136,9 +136,9 @@ static void e_server_renderer_lost(struct wl_listener* listener, void* data)
     wlr_compositor_set_renderer(server->compositor, server->renderer);
 }
 
-int e_server_init(struct e_server* server)
+int e_server_init(struct e_server* server, struct e_config* config)
 {
-    e_config_init(&server->config);
+    server->config = config;
 
     //handles accepting clients from Unix socket, managing wl globals, ...
     e_log_info("creating display...");
@@ -203,7 +203,7 @@ int e_server_init(struct e_server* server)
     //allows clients to ask to copy part of the screen content to a client buffer, seems to be fully implemented by wlroots already
     wlr_screencopy_manager_v1_create(server->display);
 
-    server->desktop = e_desktop_create(server->display, server->compositor, &server->config);
+    server->desktop = e_desktop_create(server->display, server->compositor, server->config);
 
     if (server->desktop == NULL)
     {
@@ -218,7 +218,7 @@ int e_server_init(struct e_server* server)
 
     #if E_XWAYLAND_SUPPORT
     //create & start xwayland server, xwayland shell protocol
-    server->xwayland = e_xwayland_create(server->desktop, server->display, server->compositor, server->desktop->seat->wlr_seat, server->config.xwayland_lazy); 
+    server->xwayland = e_xwayland_create(server->desktop, server->display, server->compositor, server->desktop->seat->wlr_seat, config->xwayland_lazy); 
     #endif
 
     //protocol to describe output regions, seems to be fully implemented by wlroots already
@@ -290,6 +290,4 @@ void e_server_fini(struct e_server* server)
     wlr_renderer_destroy(server->renderer);
     wlr_backend_destroy(server->backend);
     wl_display_destroy(server->display);
-
-    e_config_fini(&server->config);
 }
