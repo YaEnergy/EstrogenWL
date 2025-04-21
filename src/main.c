@@ -73,7 +73,7 @@ int main()
 
     e_config_fini(&config);
 
-    e_log_deinit();
+    e_log_fini();
     
     return 0;
 }

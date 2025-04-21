@@ -175,7 +175,7 @@ void e_log_error(const char *format, ...)
     va_end(args);
 }
 
-void e_log_deinit(void)
+void e_log_fini(void)
 {
     e_log_info("Closing log...");
 
