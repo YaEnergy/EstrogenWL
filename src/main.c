@@ -10,6 +10,7 @@
 
 #include <xkbcommon/xkbcommon-keysyms.h>
 
+#include "session.h"
 #include "config.h"
 #include "server.h"
 
@@ -38,6 +39,8 @@ int main()
 
         return 1;
     }
+
+    e_session_init_env();
 
     struct e_config config = {0};
     e_config_init(&config);

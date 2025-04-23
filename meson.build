@@ -15,6 +15,7 @@ arguments = [
     '-DWLR_USE_UNSTABLE',
     '-Wno-unused-parameter',
     '-Wmissing-include-dirs',
+    '-Wpointer-arith'
 ]
 
 estrogenwl_includedir = include_directories('include')
@@ -25,6 +26,7 @@ estrogenwl_src = files(
     'src/output.c',
     'src/commands.c',
     'src/config.c',
+    'src/session.c',
     
     'src/desktop/desktop.c',
     'src/desktop/xdg_shell.c',
