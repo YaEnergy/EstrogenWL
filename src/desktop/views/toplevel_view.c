@@ -45,6 +45,9 @@ static void e_toplevel_view_map(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, map);
 
+    //TODO: add actual wm capabilities
+    wlr_xdg_toplevel_set_wm_capabilities(toplevel_view->xdg_toplevel, 0);
+    
     e_view_map(&toplevel_view->base);
 
     //TODO: handle toplevel_view->xdg_toplevel->requested if surface is mapped
@@ -70,10 +73,7 @@ static void e_toplevel_view_commit(struct wl_listener* listener, void* data)
         #endif
 
         //0x0 size to let views configure their size themselves, instead of forcing min or max size
-        wlr_xdg_toplevel_set_size(toplevel_view->xdg_toplevel, 0, 0);
-        //TODO: add wm capabilities
-        wlr_xdg_toplevel_set_wm_capabilities(toplevel_view->xdg_toplevel, 0);
-        
+        wlr_xdg_toplevel_set_size(toplevel_view->xdg_toplevel, 0, 0);        
         return;
     }
 
