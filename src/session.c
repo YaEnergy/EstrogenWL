@@ -13,40 +13,38 @@
 //FIXME: possibility of two forward slashes next to eachother in file paths, might cause issues later?
 
 // Buffer size for config paths (env, autostart, ...)
-#define MAX_CONFIG_PATHS_SIZE 1024
+#define CONFIG_PATHS_MAX_SIZE 1024
 
-#define MAX_ENV_LINE_SIZE 1024
+#define ENV_LINE_MAX_SIZE 1024
 
-// Get length of string up to specified max length.
-static size_t e_strnlen(const char* string, size_t maxlen)
+enum process_env_line_status
 {
-    if (string == NULL)
-        return 0;
+    PROCESS_ENV_LINE_SUCCESS = 0,
+    PROCESS_ENV_LINE_EMPTY = 1,
+    PROCESS_ENV_LINE_TOO_LONG = 2,
+    PROCESS_ENV_LINE_NO_NAME_VALUE_SEPARATOR = 3,
+    PROCESS_ENV_LINE_NO_VALUE = 4
+};
 
-    size_t length = 0;
-
-    while (string[length] != '\0' && length < maxlen)
-        length++;
-
-    return length;
-}
-
-// Checks for empty strings (Only whitespace characters) or NULL.
+// Checks if string is only whitespace characters or given string is NULL.
 // Whitespace characters: \n, \r, \t, and spaces
-static bool str_is_empty_or_null(const char* string, size_t length)
+static bool e_str_is_empty_or_null(const char* string)
 {
     if (string == NULL)
         return true;
 
-    for (size_t i = 0; i < length; i++)
+    size_t i = 0;
+    while (string[i] != '\0')
     {
         char character = string[i];
 
         if (character != '\n' && character != '\r' && character != '\t' && character != ' ')
             return false;
+
+        i++;
     }
 
-    return true;
+    return string[0] != '\0';
 }
 
 // Outs path to EstrogenWL's config directory with a null-terminator.
@@ -91,17 +89,66 @@ static size_t get_relative_config_path(char* buffer, size_t maxlen, const char* 
     return length;
 }
 
+// Process environment file line.
+static enum process_env_line_status process_env_line(const char* line)
+{
+    if (e_str_is_empty_or_null(line))
+        return PROCESS_ENV_LINE_EMPTY;
+
+    char line_cpy[ENV_LINE_MAX_SIZE];
+    size_t length = snprintf(line_cpy, ENV_LINE_MAX_SIZE - 1, "%s", line);
+
+    if (length >= ENV_LINE_MAX_SIZE)
+        return PROCESS_ENV_LINE_TOO_LONG;
+
+    //change line-break character to null-terminator if exists
+    if (line_cpy[length - 1] == '\n')
+    {
+        line_cpy[length - 1] = '\0';
+        length--;
+    }
+
+    //start of line is name.
+    char* name = line_cpy;
+
+    char* equal_sign = strchr(line_cpy, '=');
+
+    if (equal_sign == NULL)
+        return PROCESS_ENV_LINE_NO_NAME_VALUE_SEPARATOR;
+
+    //use null-terminator to separate name & value into 2 strings,
+    //line is no longer allowed to be used in current iteration after this
+    equal_sign[0] = '\0';
+
+    char* value = equal_sign + 1;
+
+    if (value[0] == '\0')
+        return PROCESS_ENV_LINE_NO_VALUE;
+
+    setenv(name, value, true);
+
+    e_log_info("env var %s set to %s", name, value);
+
+    return PROCESS_ENV_LINE_SUCCESS;
+}
+
+// Returns if status for processing environment line was an error.
+static bool process_env_line_status_is_error(enum process_env_line_status status)
+{
+    return status != PROCESS_ENV_LINE_SUCCESS && status != PROCESS_ENV_LINE_EMPTY;
+}
+
 // Set environment variables from pairs separated by line breaks inside file at given path.
 // Format: (name)=(value)
 bool e_session_init_env(void)
 {
-    char env_path[MAX_CONFIG_PATHS_SIZE];
-    size_t env_path_length = get_relative_config_path(env_path, MAX_CONFIG_PATHS_SIZE - 1, "environment");
+    char env_path[CONFIG_PATHS_MAX_SIZE];
+    size_t env_path_length = get_relative_config_path(env_path, CONFIG_PATHS_MAX_SIZE - 1, "environment");
 
     //path too long
-    if (env_path_length >= MAX_CONFIG_PATHS_SIZE)
+    if (env_path_length >= CONFIG_PATHS_MAX_SIZE)
     {
-        e_log_error("e_session_init_env: environment file path name is longer than %i characters. (%s, %i)", MAX_CONFIG_PATHS_SIZE - 1, env_path, env_path_length);
+        e_log_error("e_session_init_env: environment file path name is longer than %i characters. (%s, %i)", CONFIG_PATHS_MAX_SIZE - 1, env_path, env_path_length);
         return false;
     }
 
@@ -115,56 +162,33 @@ bool e_session_init_env(void)
         return false;
     }
 
-    char line[MAX_ENV_LINE_SIZE];
+    char line[ENV_LINE_MAX_SIZE];
     int line_num = 0;
+    enum process_env_line_status status = PROCESS_ENV_LINE_SUCCESS;
 
     //keep reading lines until we can't anymore
-    while (fgets(line, MAX_ENV_LINE_SIZE - 1, file) != NULL)
+    while (fgets(line, ENV_LINE_MAX_SIZE - 1, file) != NULL)
     {
         line_num++;
+        status = process_env_line(line);
 
-        size_t line_length = e_strnlen(line, MAX_ENV_LINE_SIZE - 1);
-
-        //skip empty lines
-        if (str_is_empty_or_null(line, line_length))
-        {
+        if (status == PROCESS_ENV_LINE_EMPTY)
             e_log_info("e_session_init_env: line %i is empty! Skipping...", line_num);
-            continue;
-        }
+        else if (status == PROCESS_ENV_LINE_TOO_LONG)
+            e_log_error("e_session_init_env: line %i is longer than %i characters!", line_num, ENV_LINE_MAX_SIZE - 1);
+        else if (status == PROCESS_ENV_LINE_NO_NAME_VALUE_SEPARATOR)
+            e_log_error("e_session_init_env: line %i has no = separator for name and value!", line_num);
+        else if (status == PROCESS_ENV_LINE_NO_VALUE)
+            e_log_error("e_session_init_env: line %i has no value!", line_num);
 
-        //change \n to \0 if there is one
-        if (line[line_length - 1] == '\n')
-            line[line_length - 1] = '\0'; 
-
-        //start of line is name
-        char* name = line;
-
-        char* equal_sign = strchr(line, '=');
-
-        if (equal_sign == NULL)
+        if (process_env_line_status_is_error(status))
         {
-            e_log_error("e_session_init_env: line %i has no = separator for name and value! Stopping...", line_num);
+            e_log_info("e_session_init_env: Error encountered! Stopping...");
             break;
         }
-
-        //use null-terminator to separate name & value into 2 strings,
-        //line is no longer allowed to be used in current iteration after this
-        equal_sign[0] = '\0';
-
-        char* value = equal_sign + 1;
-
-        if (value[0] == '\0')
-        {
-            e_log_error("e_session_init_env: line %i has no value! Stopping...", line_num);
-            break;
-        }
-
-        setenv(name, value, 1);
-
-        e_log_info("env var %s set to %s", name, value);
     }
 
     fclose(file);
 
-    return true;
+    return !process_env_line_status_is_error(status);
 }
