@@ -69,10 +69,12 @@ struct e_desktop* e_desktop_create(struct wl_display* display, struct wlr_compos
 
 /* outputs */
 
-//adds the given output to the given scene and handles its layout for it
-void e_desktop_add_output(struct e_desktop* desktop, struct e_output* output);
+// Adds the given output to the given desktop and handles its layout for it.
+// Returns desktop output on success, otherwise NULL on fail.
+struct e_output* e_desktop_add_output(struct e_desktop* desktop, struct wlr_output* output);
 
-//get output at specified index, returns NULL if failed
+// Get output at specified index.
+// Returns NULL on fail.
 struct e_output* e_desktop_get_output(struct e_desktop* desktop, int index);
 
 /* scene */

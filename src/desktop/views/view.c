@@ -15,15 +15,13 @@
 #include <wlr/util/box.h>
 
 #include "desktop/desktop.h"
+#include "desktop/output.h"
 #include "desktop/tree/node.h"
-
 #include "desktop/tree/container.h"
 
 #include "input/seat.h"
 
 #include "util/log.h"
-
-#include "output.h"
 
 static void e_container_configure_view(struct e_container* container, int lx, int ly, int width, int height)
 {

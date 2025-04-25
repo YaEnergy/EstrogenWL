@@ -20,7 +20,7 @@
 
 #include "input/seat.h"
 
-#include "output.h"
+#include "desktop/output.h"
 
 #include "util/log.h"
 #include "util/wl_macros.h"

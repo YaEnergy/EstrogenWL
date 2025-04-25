@@ -23,12 +23,12 @@ estrogenwl_includedir = include_directories('include')
 estrogenwl_src = files(
     'src/main.c',
     'src/server.c',
-    'src/output.c',
     'src/commands.c',
     'src/config.c',
     'src/session.c',
     
     'src/desktop/desktop.c',
+    'src/desktop/output.c',
     'src/desktop/xdg_shell.c',
     'src/desktop/xdg_popup.c',
     'src/desktop/gamma_control_manager.c',

@@ -12,8 +12,7 @@
 #include "input/seat.h"
 
 #include "desktop/layer_shell.h"
-
-#include "output.h"
+#include "desktop/output.h"
 
 #include "util/log.h"
 
@@ -88,10 +87,13 @@ static void e_desktop_init_output(struct e_desktop* desktop, struct e_output* ou
     e_output_arrange(output);
 }
 
-//adds the given output to the given scene and handles its layout for it
-void e_desktop_add_output(struct e_desktop* desktop, struct e_output* output)
+// Adds the given output to the given desktop and handles its layout for it.
+// Returns desktop output on success, otherwise NULL on fail.
+struct e_output* e_desktop_add_output(struct e_desktop* desktop, struct wlr_output* wlr_output)
 {
-    assert(desktop && output);
+    assert(desktop && wlr_output);
+
+    struct e_output* output = e_output_create(desktop, wlr_output);
 
     wl_list_insert(&desktop->outputs, &output->link);
 
@@ -104,9 +106,12 @@ void e_desktop_add_output(struct e_desktop* desktop, struct e_output* output)
     output->layout = desktop->output_layout;
 
     e_desktop_init_output(desktop, output);
+
+    return output;
 }
 
-//get output at specified index, returns NULL if failed
+// Get output at specified index.
+// Returns NULL on fail.
 struct e_output* e_desktop_get_output(struct e_desktop* desktop, int index)
 {
     assert(desktop);
@@ -128,9 +133,25 @@ struct e_output* e_desktop_get_output(struct e_desktop* desktop, int index)
     return output;
 }
 
+static void disable_output(struct e_output* output)
+{
+    assert(output);
+
+    struct wlr_output_state state;
+    wlr_output_state_init(&state);
+
+    wlr_output_state_set_enabled(&state, false);
+
+    //apply new output state
+    wlr_output_commit_state(output->wlr_output, &state);
+    wlr_output_state_finish(&state);
+}
+
 static void e_desktop_remove_output(struct e_desktop* desktop, struct e_output* output)
 {
     assert(desktop && output);
+
+    disable_output(output);
 
     if (output->root_tiling_container != NULL)
     {
@@ -188,20 +209,6 @@ struct wlr_scene_surface* e_desktop_scene_surface_at(struct wlr_scene_node* node
 
 /* destruction */
 
-static void e_output_disable(struct e_output* output)
-{
-    assert(output);
-
-    struct wlr_output_state state;
-    wlr_output_state_init(&state);
-
-    wlr_output_state_set_enabled(&state, false);
-
-    //apply new output state
-    wlr_output_commit_state(output->wlr_output, &state);
-    wlr_output_state_finish(&state);
-}
-
 void e_desktop_destroy(struct e_desktop* desktop)
 {
     assert(desktop);
@@ -212,8 +219,6 @@ void e_desktop_destroy(struct e_desktop* desktop)
 
     wl_list_for_each_safe(output, tmp, &desktop->outputs, link)
     {
-        e_output_disable(output);
-
         e_desktop_remove_output(desktop, output);
     }
     

@@ -21,6 +21,7 @@
 #include <wlr/types/wlr_viewporter.h>
 
 #include "desktop/desktop.h"
+#include "desktop/output.h"
 #include "desktop/gamma_control_manager.h"
 #include "desktop/layer_shell.h"
 #include "desktop/xdg_shell.h"
@@ -33,7 +34,6 @@
 
 #include "input/seat.h"
 
-#include "output.h"
 #include "config.h"
 
 static void e_server_new_input(struct wl_listener* listener, void* data)
@@ -70,9 +70,11 @@ static void e_server_new_output(struct wl_listener* listener, void* data)
     wlr_output_state_finish(&state);
 
     //allocate & configure output
-    struct e_output* output = e_output_create(server->desktop, wlr_output);
-
-    e_desktop_add_output(server->desktop, output);
+    if (e_desktop_add_output(server->desktop, wlr_output) == NULL)
+    {
+        e_log_error("e_server_new_output: failed to add output to desktop!");
+        return;
+    }
 
 #if E_XWAYLAND_SUPPORT
     if (server->xwayland != NULL)

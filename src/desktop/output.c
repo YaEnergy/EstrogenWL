@@ -1,4 +1,4 @@
-#include "output.h"
+#include "desktop/output.h"
 
 #include <time.h>
 #include <stdlib.h>
@@ -13,9 +13,11 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/backend.h>
 
+#include "wlr-layer-shell-unstable-v1-protocol.h"
+
 #include "desktop/tree/container.h"
-#include "server.h"
 #include "desktop/desktop.h"
+#include "desktop/layer_shell.h"
 
 #include "util/log.h"
 #include "util/wl_macros.h"

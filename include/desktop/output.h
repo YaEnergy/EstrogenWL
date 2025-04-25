@@ -13,6 +13,7 @@
 
 struct e_desktop;
 
+// Desktop output.
 struct e_output
 {
     struct wl_list link; //e_desktop::outputs

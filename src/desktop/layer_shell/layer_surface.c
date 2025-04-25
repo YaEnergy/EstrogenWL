@@ -15,12 +15,11 @@
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #include "desktop/desktop.h"
+#include "desktop/output.h"
 #include "desktop/xdg_popup.h"
 #include "desktop/tree/node.h"
 
 #include "input/seat.h"
-
-#include "output.h"
 
 #include "util/log.h"
 #include "util/wl_macros.h"
