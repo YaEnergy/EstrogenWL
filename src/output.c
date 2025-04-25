@@ -96,6 +96,8 @@ struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* w
 
     wl_list_init(&output->link);
 
+    wl_list_init(&output->layer_surfaces);
+
     wlr_output->data = output;
 
     // events
@@ -105,6 +107,59 @@ struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* w
     SIGNAL_CONNECT(wlr_output->events.destroy, output->destroy, e_output_destroy);
 
     return output;
+}
+
+static void e_output_arrange_layer(struct e_output* output, enum zwlr_layer_shell_v1_layer layer, struct wlr_box* full_area, struct wlr_box* remaining_area)
+{
+    assert(output && full_area && remaining_area);
+
+    if (wl_list_empty(&output->layer_surfaces))
+        return;
+
+    //configure each layer surface in this output & layer
+    struct e_layer_surface* layer_surface;
+    wl_list_for_each(layer_surface, &output->layer_surfaces, link)
+    {
+        //is this surface on this output & layer? if so, then configure and update remaining area
+        if (e_layer_surface_get_layer(layer_surface) == layer)
+            e_layer_surface_configure(layer_surface, full_area, remaining_area);
+    }
+}
+
+static void e_output_arrange_all_layers(struct e_output* output, struct wlr_box* full_area, struct wlr_box* remaining_area)
+{
+    assert(output && full_area && remaining_area);
+
+    e_output_arrange_layer(output, ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, full_area, remaining_area);
+    e_output_arrange_layer(output, ZWLR_LAYER_SHELL_V1_LAYER_TOP, full_area, remaining_area);
+    e_output_arrange_layer(output, ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM, full_area, remaining_area);
+    e_output_arrange_layer(output, ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND, full_area, remaining_area);
+}
+
+// Get topmost layer surface that requests exclusive focus.
+// Returns NULL if none.
+struct e_layer_surface* e_output_get_exclusive_topmost_layer_surface(struct e_output* output)
+{
+    if (wl_list_empty(&output->layer_surfaces))
+        return NULL;
+
+    struct e_layer_surface* topmost_layer_surface = NULL;
+    struct e_layer_surface* layer_surface;
+
+    wl_list_for_each(layer_surface, &output->layer_surfaces, link)
+    {
+        struct wlr_layer_surface_v1* wlr_layer_surface_v1 = layer_surface->scene_layer_surface_v1->layer_surface;
+
+        //must request exclusive focus
+        if (wlr_layer_surface_v1->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE)
+            continue;
+
+        //highest layer lives
+        if (topmost_layer_surface == NULL || wlr_layer_surface_v1->current.layer > e_layer_surface_get_layer(topmost_layer_surface))
+            topmost_layer_surface = layer_surface;
+    }
+
+    return topmost_layer_surface;
 }
 
 void e_output_arrange(struct e_output* output)
@@ -118,7 +173,7 @@ void e_output_arrange(struct e_output* output)
     struct wlr_box remaining_area = full_area;
 
     if (output->desktop != NULL)
-        e_desktop_arrange_all_layers(output->desktop, output->wlr_output, &full_area, &remaining_area);
+        e_output_arrange_all_layers(output, &full_area, &remaining_area);
 
     if (output->root_tiling_container != NULL)
         e_container_configure(&output->root_tiling_container->base, remaining_area.x, remaining_area.y, remaining_area.width, remaining_area.height);

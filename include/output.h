@@ -37,8 +37,14 @@ struct e_output
     struct wl_listener request_state;
 
     struct wl_listener destroy;
+
+    struct wl_list layer_surfaces; //struct e_layer_surface*
 };
 
 struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* wlr_output);
+
+// Get topmost layer surface that requests exclusive focus.
+// Returns NULL if none.
+struct e_layer_surface* e_output_get_exclusive_topmost_layer_surface(struct e_output* output);
 
 void e_output_arrange(struct e_output* output);

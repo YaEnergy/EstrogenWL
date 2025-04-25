@@ -9,11 +9,11 @@
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_scene.h>
 
-#include "wlr-layer-shell-unstable-v1-protocol.h"
-
 #include "input/seat.h"
 
 #include "desktop/layer_shell.h"
+
+#include "output.h"
 
 #include "util/log.h"
 
@@ -65,7 +65,6 @@ struct e_desktop* e_desktop_create(struct wl_display* display, struct wlr_compos
     e_desktop_init_scene(desktop);
     
     wl_list_init(&desktop->views);
-    wl_list_init(&desktop->layer_surfaces);
 
     //input device management
     desktop->seat = e_seat_create(display, desktop, desktop->output_layout, "seat0");
@@ -187,62 +186,6 @@ struct wlr_scene_surface* e_desktop_scene_surface_at(struct wlr_scene_node* node
     return scene_surface;
 }
 
-/* layers */
-
-void e_desktop_arrange_layer(struct e_desktop* desktop, struct wlr_output* wlr_output, enum zwlr_layer_shell_v1_layer layer, struct wlr_box* full_area, struct wlr_box* remaining_area)
-{
-    assert(desktop && wlr_output && full_area && remaining_area);
-
-    if (wl_list_empty(&desktop->layer_surfaces))
-        return;
-
-    //configure each layer surface in this output & layer
-    struct e_layer_surface* layer_surface;
-    wl_list_for_each(layer_surface, &desktop->layer_surfaces, link)
-    {
-        //is this surface on this output & layer? if so, then configure and update remaining area
-        if (e_layer_surface_get_wlr_output(layer_surface) == wlr_output && e_layer_surface_get_layer(layer_surface) == layer)
-            e_layer_surface_configure(layer_surface, full_area, remaining_area);
-    }
-}
-
-void e_desktop_arrange_all_layers(struct e_desktop* desktop, struct wlr_output* wlr_output, struct wlr_box* full_area, struct wlr_box* remaining_area)
-{
-    assert(desktop && wlr_output && full_area && remaining_area);
-
-    e_desktop_arrange_layer(desktop, wlr_output, ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, full_area, remaining_area);
-    e_desktop_arrange_layer(desktop, wlr_output, ZWLR_LAYER_SHELL_V1_LAYER_TOP, full_area, remaining_area);
-    e_desktop_arrange_layer(desktop, wlr_output, ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM, full_area, remaining_area);
-    e_desktop_arrange_layer(desktop, wlr_output, ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND, full_area, remaining_area);
-}
-
-//get topmost layer surface that requests exclusive focus, may be NULL
-struct e_layer_surface* e_desktop_get_exclusive_topmost_layer_surface(struct e_desktop* desktop)
-{
-    if (wl_list_empty(&desktop->layer_surfaces))
-        return NULL;
-
-    struct e_layer_surface* topmost_layer_surface = NULL;
-    struct e_layer_surface* layer_surface;
-
-    wl_list_for_each(layer_surface, &desktop->layer_surfaces, link)
-    {
-        struct wlr_layer_surface_v1* wlr_layer_surface_v1 = layer_surface->scene_layer_surface_v1->layer_surface;
-
-        //must request exclusive focus
-        if (wlr_layer_surface_v1->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE)
-            continue;
-
-        //highest layer lives
-        if (topmost_layer_surface == NULL)
-            topmost_layer_surface = layer_surface;
-        else if (wlr_layer_surface_v1->current.layer > e_layer_surface_get_layer(topmost_layer_surface))
-            topmost_layer_surface = layer_surface;
-    }
-
-    return topmost_layer_surface;
-}
-
 /* destruction */
 
 static void e_output_disable(struct e_output* output)
@@ -280,7 +223,6 @@ void e_desktop_destroy(struct e_desktop* desktop)
     wl_list_remove(&desktop->outputs);
 
     wl_list_remove(&desktop->views);
-    wl_list_remove(&desktop->layer_surfaces);
 
     free(desktop);
 }

@@ -138,8 +138,7 @@ static void e_layer_surface_map(struct wl_listener* listener, void* data)
     e_log_info("layer surface mapped!");
     #endif
 
-    //append to end of list
-    wl_list_insert(layer_surface->desktop->layer_surfaces.prev, &layer_surface->link);
+    wl_list_append(layer_surface->output->layer_surfaces, &layer_surface->link);
     
     e_output_arrange(layer_surface->output);
 
@@ -162,7 +161,7 @@ static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
 
     //get next topmost layer surface that requests exclusive focus, and focus on it
 
-    struct e_layer_surface* next_layer_surface = e_desktop_get_exclusive_topmost_layer_surface(unmapped_layer_surface->desktop);
+    struct e_layer_surface* next_layer_surface = e_output_get_exclusive_topmost_layer_surface(unmapped_layer_surface->output);
 
     if (next_layer_surface != NULL)
         e_seat_set_focus_layer_surface(next_layer_surface->desktop->seat, next_layer_surface->scene_layer_surface_v1->layer_surface);

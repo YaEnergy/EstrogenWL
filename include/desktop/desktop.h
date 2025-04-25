@@ -7,8 +7,6 @@
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_scene.h>
 
-#include "wlr-layer-shell-unstable-v1-protocol.h"
-
 #include "output.h"
 
 struct e_config;
@@ -60,7 +58,6 @@ struct e_desktop
     struct wlr_scene_tree* pending;
 
     struct wl_list views; //struct e_view*
-    struct wl_list layer_surfaces; //struct e_layer_surface*
 
     // collection & management of input devices: keyboard, mouse, ...
     struct e_seat* seat;
@@ -85,15 +82,6 @@ struct e_output* e_desktop_get_output(struct e_desktop* desktop, int index);
 // NULL for sx & sy is allowed.
 // Returns NULL if nothing is found.
 struct wlr_scene_surface* e_desktop_scene_surface_at(struct wlr_scene_node* node, double lx, double ly, double* sx, double* sy);
-
-/* layers */
-
-void e_desktop_arrange_layer(struct e_desktop* desktop, struct wlr_output* wlr_output, enum zwlr_layer_shell_v1_layer layer, struct wlr_box* full_area, struct wlr_box* remaining_area);
-
-void e_desktop_arrange_all_layers(struct e_desktop* desktop, struct wlr_output* wlr_output, struct wlr_box* full_area, struct wlr_box* remaining_area);
-
-//get topmost layer surface that requests exclusive focus, may be NULL
-struct e_layer_surface* e_desktop_get_exclusive_topmost_layer_surface(struct e_desktop* desktop);
 
 /* destruction */
 
