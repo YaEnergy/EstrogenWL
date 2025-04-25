@@ -8,10 +8,9 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_scene.h>
 
+// Temporary surface.
 struct e_xdg_popup
 {
-    struct wlr_xdg_surface* xdg_surface;
-
     struct wlr_xdg_popup* xdg_popup;
 
     struct wlr_scene_tree* scene_tree;
@@ -27,4 +26,4 @@ struct e_xdg_popup
 
 // Creates new xdg popup.
 // Returns NULL on fail.
-struct e_xdg_popup* e_xdg_popup_create(struct wlr_xdg_popup* xdg_popup, struct wlr_xdg_surface* xdg_surface);
+struct e_xdg_popup* e_xdg_popup_create(struct wlr_xdg_popup* xdg_popup, struct wlr_scene_tree* parent);

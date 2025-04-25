@@ -58,23 +58,6 @@ struct e_layer_surface
     struct wl_list link; //e_desktop::layer_surfaces
 };
 
-// Temporary surface for layer surfaces.
-struct e_layer_popup
-{
-    struct wlr_layer_surface_v1* layer_surface_v1;
-
-    struct wlr_xdg_popup* xdg_popup;
-
-    struct wlr_scene_tree* scene_tree;
-
-    struct wl_listener new_popup;
-
-    // New surface state got committed.
-    struct wl_listener commit;
-    // xdg_popup got destroyed.
-    struct wl_listener destroy;
-};
-
 /* layer shell functions */
 
 // Create a layer shell.
@@ -98,9 +81,3 @@ enum zwlr_layer_shell_v1_layer e_layer_surface_get_layer(struct e_layer_surface*
 
 // Returns this layer surface's wlr output.
 struct wlr_output* e_layer_surface_get_wlr_output(struct e_layer_surface* layer_surface);
-
-/* layer popup functions */
-
-// Creates new layer popup for layer surface.
-// Returns NULL on fail.
-struct e_layer_popup* e_layer_popup_create(struct wlr_xdg_popup* xdg_popup, struct wlr_layer_surface_v1* layer_surface_v1);

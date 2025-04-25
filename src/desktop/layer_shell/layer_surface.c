@@ -15,6 +15,7 @@
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #include "desktop/desktop.h"
+#include "desktop/xdg_popup.h"
 #include "desktop/tree/node.h"
 
 #include "input/seat.h"
@@ -28,10 +29,9 @@
 static void e_layer_surface_new_popup(struct wl_listener* listener, void* data)
 {
     struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, commit);
-    struct wlr_layer_surface_v1* wlr_layer_surface_v1 = layer_surface->scene_layer_surface_v1->layer_surface;
     struct wlr_xdg_popup* xdg_popup = data;
 
-    e_layer_popup_create(xdg_popup, wlr_layer_surface_v1);   
+    e_xdg_popup_create(xdg_popup, layer_surface->scene_tree);
 }
 
 static struct wlr_scene_tree* e_desktop_get_layer_tree(struct e_desktop* desktop, enum zwlr_layer_shell_v1_layer layer)

@@ -19,7 +19,7 @@ static void e_xdg_popup_new_popup(struct wl_listener* listener, void* data)
     struct e_xdg_popup* popup = wl_container_of(listener, popup, new_popup);
     struct wlr_xdg_popup* new_xdg_popup = data;
 
-    e_xdg_popup_create(new_xdg_popup, popup->xdg_popup->base);
+    e_xdg_popup_create(new_xdg_popup, popup->scene_tree);
 }
 
 //new surface state got committed
@@ -46,9 +46,9 @@ static void e_xdg_popup_destroy(struct wl_listener* listener, void* data)
     free(popup);
 }
 
-struct e_xdg_popup* e_xdg_popup_create(struct wlr_xdg_popup* xdg_popup, struct wlr_xdg_surface* xdg_surface)
+struct e_xdg_popup* e_xdg_popup_create(struct wlr_xdg_popup* xdg_popup, struct wlr_scene_tree* parent)
 {
-    assert(xdg_popup && xdg_surface);
+    assert(xdg_popup && parent);
 
     struct e_xdg_popup* popup = calloc(1, sizeof(*popup));
 
@@ -59,12 +59,9 @@ struct e_xdg_popup* e_xdg_popup_create(struct wlr_xdg_popup* xdg_popup, struct w
     }
 
     popup->xdg_popup = xdg_popup;
-    popup->xdg_surface = xdg_surface;
 
     //create popup window's scene tree, and add popup to scene tree of parent
-    struct wlr_scene_tree* parent_tree = xdg_surface->data;
-
-    popup->scene_tree = wlr_scene_xdg_surface_create(parent_tree, xdg_popup->base);
+    popup->scene_tree = wlr_scene_xdg_surface_create(parent, xdg_popup->base);
     e_node_desc_create(&popup->scene_tree->node, E_NODE_DESC_XDG_POPUP, popup);
 
     //allows further popup window scene trees to add themselves to this popup window's scene tree

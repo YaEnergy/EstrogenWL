@@ -38,7 +38,6 @@ estrogenwl_src = files(
 
     'src/desktop/layer_shell/layer_shell.c',
     'src/desktop/layer_shell/layer_surface.c',
-    'src/desktop/layer_shell/layer_popup.c',
 
     'src/desktop/views/view.c',
     'src/desktop/views/toplevel_view.c',

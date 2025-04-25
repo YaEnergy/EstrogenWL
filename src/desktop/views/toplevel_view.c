@@ -101,7 +101,7 @@ static void e_toplevel_view_new_popup(struct wl_listener* listener, void* data)
 
     e_log_info("new popup by toplevel view: %s", toplevel_view->xdg_toplevel->title);
 
-    e_xdg_popup_create(xdg_popup, toplevel_view->xdg_toplevel->base);
+    e_xdg_popup_create(xdg_popup, toplevel_view->base.tree);
 }
 
 static void e_toplevel_view_request_fullscreen(struct wl_listener* listener, void* data)
