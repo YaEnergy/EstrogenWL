@@ -29,14 +29,20 @@ static void e_layer_shell_new_surface(struct wl_listener* listener, void* data)
 
         if (output == NULL)
         {
-            e_log_error("Desktop has no output!");
-            abort();
+            e_log_error("Desktop has no output! Destroying layer surface");
+            wlr_layer_surface_v1_destroy(layer_surface);
+            return;
         }
         
         layer_surface->output = output->wlr_output;
     }
     
-    e_layer_surface_create(layer_shell->desktop, layer_surface);
+    if (e_layer_surface_create(layer_shell->desktop, layer_surface) == NULL)
+    {
+        e_log_error("e_layer_shell_new_surface: failed to create layer surface");
+        wlr_layer_surface_v1_destroy(layer_surface);
+        return;
+    }
 }
 
 static void e_layer_shell_destroy(struct wl_listener* listener, void* data)
