@@ -19,6 +19,7 @@ static void e_xdg_popup_new_popup(struct wl_listener* listener, void* data)
     struct e_xdg_popup* popup = wl_container_of(listener, popup, new_popup);
     struct wlr_xdg_popup* new_xdg_popup = data;
 
+    e_log_info("popup creates new popup!");
     e_xdg_popup_create(new_xdg_popup, popup->scene_tree);
 }
 

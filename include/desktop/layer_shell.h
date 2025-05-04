@@ -41,8 +41,6 @@ struct e_layer_surface
 
     struct wlr_scene_layer_surface_v1* scene_layer_surface_v1;
 
-    struct wlr_scene_tree* scene_tree;
-
     // New surface state got committed.
     struct wl_listener commit;
     // Surface is ready to be displayed.

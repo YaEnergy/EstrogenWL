@@ -27,10 +27,11 @@
 // New layer popup.
 static void e_layer_surface_new_popup(struct wl_listener* listener, void* data)
 {
-    struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, commit);
+    struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, new_popup);
     struct wlr_xdg_popup* xdg_popup = data;
 
-    e_xdg_popup_create(xdg_popup, layer_surface->scene_tree);
+    e_log_info("layer surface creates new popup");
+    e_xdg_popup_create(xdg_popup, layer_surface->scene_layer_surface_v1->tree);
 }
 
 static struct wlr_scene_tree* e_desktop_get_layer_tree(struct e_desktop* desktop, enum zwlr_layer_shell_v1_layer layer)
@@ -79,7 +80,7 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
         struct wlr_scene_tree* layer_tree = e_desktop_get_layer_tree(layer_surface->desktop, wlr_layer_surface_v1->current.layer);
 
         if (layer_tree != NULL)
-            wlr_scene_node_reparent(&layer_surface->scene_tree->node, layer_tree);
+            wlr_scene_node_reparent(&layer_surface->scene_layer_surface_v1->tree->node, layer_tree);
 
         e_log_info("layer surface committed layer");
         update_arrangement = true;
@@ -141,7 +142,7 @@ static void e_layer_surface_map(struct wl_listener* listener, void* data)
     
     e_output_arrange(layer_surface->output);
 
-    wlr_scene_node_set_enabled(&layer_surface->scene_tree->node, true);
+    wlr_scene_node_set_enabled(&layer_surface->scene_layer_surface_v1->tree->node, true);
 
     //give focus if requests exclusive focus
     if (layer_surface->scene_layer_surface_v1->layer_surface->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE)
@@ -153,7 +154,7 @@ static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
 {
     struct e_layer_surface* unmapped_layer_surface = wl_container_of(listener, unmapped_layer_surface, unmap);
 
-    wlr_scene_node_set_enabled(&unmapped_layer_surface->scene_tree->node, false);
+    wlr_scene_node_set_enabled(&unmapped_layer_surface->scene_layer_surface_v1->tree->node, false);
 
     wl_list_remove(&unmapped_layer_surface->link);
     e_output_arrange(unmapped_layer_surface->output);
@@ -202,6 +203,14 @@ struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct
         return NULL;
     }
 
+    struct wlr_scene_layer_surface_v1* scene_layer_surface = wlr_scene_layer_surface_v1_create(layer_tree, wlr_layer_surface_v1);
+
+    if (scene_layer_surface == NULL)
+    {
+        e_log_error("e_layer_surface_create: failed to create scene layer surface");
+        return NULL;
+    }
+
     struct e_layer_surface* layer_surface = calloc(1, sizeof(*layer_surface));
 
     if (layer_surface == NULL)
@@ -213,15 +222,14 @@ struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct
     layer_surface->desktop = desktop;
     layer_surface->output = wlr_layer_surface_v1->output->data;
 
-    layer_surface->scene_layer_surface_v1 = wlr_scene_layer_surface_v1_create(layer_tree, wlr_layer_surface_v1);
-    layer_surface->scene_tree = layer_surface->scene_layer_surface_v1->tree;
-    e_node_desc_create(&layer_surface->scene_tree->node, E_NODE_DESC_LAYER_SURFACE, layer_surface);
-    wlr_scene_node_set_enabled(&layer_surface->scene_tree->node, false);
+    layer_surface->scene_layer_surface_v1 = scene_layer_surface;
+    e_node_desc_create(&scene_layer_surface->tree->node, E_NODE_DESC_LAYER_SURFACE, layer_surface);
+    wlr_scene_node_set_enabled(&scene_layer_surface->tree->node, false);
 
     wl_list_init(&layer_surface->link);
     
     //allows popups to attach themselves this layer surface's scene tree
-    wlr_layer_surface_v1->data = layer_surface->scene_tree;
+    wlr_layer_surface_v1->data = scene_layer_surface->tree;
 
     //events
 
@@ -231,7 +239,7 @@ struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct
     SIGNAL_CONNECT(wlr_layer_surface_v1->surface->events.map, layer_surface->map, e_layer_surface_map);
     SIGNAL_CONNECT(wlr_layer_surface_v1->surface->events.unmap, layer_surface->unmap, e_layer_surface_unmap);
 
-    SIGNAL_CONNECT(wlr_layer_surface_v1->events.destroy, layer_surface->destroy, e_layer_surface_destroy);
+    SIGNAL_CONNECT(scene_layer_surface->tree->node.events.destroy, layer_surface->destroy, e_layer_surface_destroy);
 
     return layer_surface;
 }
