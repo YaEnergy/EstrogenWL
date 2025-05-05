@@ -30,7 +30,12 @@ static bool bind_keybind(struct e_list* keybinds, xkb_keysym_t keysym, enum wlr_
 // Entry point program
 int main()
 {
+    #if E_VERBOSE
     wlr_log_init(WLR_DEBUG, NULL);
+    #else
+    wlr_log_init(WLR_ERROR, NULL);
+    #endif
+
     printf("Welcome to EstrogenWL!\n");
 
     if (e_log_init() != 0)
