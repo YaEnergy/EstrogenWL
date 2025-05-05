@@ -43,5 +43,10 @@ bool e_list_remove(struct e_list* list, void* item);
 // Returns true on success, false on fail.
 bool e_list_remove_index(struct e_list* list, int index);
 
+// Swaps 2 indexes in 2 separate lists.
+// List a & b are allowed to be the same list.
+// Returns true on success, false on fail.
+bool e_list_swap_outside(struct e_list* list_a, int index_a, struct e_list* list_b, int index_b);
+
 // Frees the list, and memory for holding the item pointers, but not the items themselves.
 void e_list_fini(struct e_list* list);

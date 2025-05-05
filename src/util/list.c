@@ -132,6 +132,26 @@ bool e_list_remove_index(struct e_list* list, int index)
     return true;
 }
 
+// Swaps 2 indexes in 2 separate lists.
+// List a & b are allowed to be the same list.
+// Returns true on success, false on fail.
+bool e_list_swap_outside(struct e_list* list_a, int index_a, struct e_list* list_b, int index_b)
+{
+    assert(list_a && list_b);
+
+    if (index_a < 0 || index_a >= list_a->count)
+        return false;
+    
+    if (index_b < 0 || index_b >= list_b->count)
+        return false;
+
+    void* tmp = list_a->items[index_a];
+    list_a->items[index_a] = list_b->items[index_b];
+    list_b->items[index_b] = tmp;
+
+    return true;
+}
+
 void e_list_fini(struct e_list* list)
 {
     assert(list);

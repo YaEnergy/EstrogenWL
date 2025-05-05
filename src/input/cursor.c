@@ -123,7 +123,7 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
         wlr_seat_pointer_notify_button(cursor->seat->wlr_seat, event->time_msec, event->button, event->state);
 }
 
-// Swaps 2 view's parents and percentages.
+// Swaps 2 tiled view's parents and percentages.
 static void swap_tiled_views(struct e_view* a, struct e_view* b)
 {
     if (a == NULL)
@@ -138,13 +138,13 @@ static void swap_tiled_views(struct e_view* a, struct e_view* b)
         return;
     }
 
-    if (a->tiled == false)
+    if (a->container.parent != NULL && a->tiled)
     {
         e_log_error("swap_tiled_views: view A is not tiled!");
         return;
     }
 
-    if (b->tiled == false)
+    if (b->container.parent != NULL && b->tiled)
     {
         e_log_error("swap_tiled_views: view B is not tiled!");
         return;
@@ -156,22 +156,16 @@ static void swap_tiled_views(struct e_view* a, struct e_view* b)
 
     //swap parents
 
-    struct e_tree_container* tmp_tree = b->container.parent;
+    int index_a = e_list_find_index(&a->container.parent->children, &a->container);
+    int index_b = e_list_find_index(&b->container.parent->children, &b->container);
+    
+    e_list_swap_outside(&a->container.parent->children, index_a, &b->container.parent->children, index_b);
 
-    int index_a = (a->container.parent != NULL) ? e_list_find_index(&a->container.parent->children, &a->container) : -1;
-    int index_b = (b->container.parent != NULL) ? e_list_find_index(&b->container.parent->children, &b->container) : -1;
+    //above only swaps in the actual lists
 
-    if (b->container.parent != NULL)
-        e_tree_container_remove_container(b->container.parent, &b->container);
-
-    if (index_a != -1)
-        e_tree_container_insert_container(a->container.parent, &b->container, index_a);
-
-    if (a->container.parent != NULL)
-        e_tree_container_remove_container(a->container.parent, &a->container);
-
-    if (index_b != -1)
-        e_tree_container_insert_container(tmp_tree, &a->container, index_b);
+    struct e_tree_container* tmp_parent = a->container.parent;
+    a->container.parent = b->container.parent;
+    b->container.parent = tmp_parent;
 
     //swap percentages
 
