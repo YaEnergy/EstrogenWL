@@ -197,7 +197,7 @@ int e_server_init(struct e_server* server, struct e_config* config)
     //compositor, subcompositor and data device manager can handle everything we need them to do on their own
 
     //required for clients to allocate surfaces
-    server->compositor = wlr_compositor_create(server->display, 5, server->renderer);
+    server->compositor = wlr_compositor_create(server->display, E_COMPOSITOR_VERSION, server->renderer);
     //allows roles of subsurfaces to surfaces
     wlr_subcompositor_create(server->display);
     //handles clipboard

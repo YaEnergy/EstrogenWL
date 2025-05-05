@@ -19,6 +19,8 @@
 
 #include "config.h"
 
+#define E_COMPOSITOR_VERSION 6
+
 // main struct handling:
 //  - backend (wl_display, wlr_backend, wlr_allocator, wlr_renderer, shells, protocols ...)
 //  - frontend (e_desktop)
