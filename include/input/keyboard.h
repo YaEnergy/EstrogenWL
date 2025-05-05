@@ -28,4 +28,4 @@ struct e_keyboard
 };
 
 // Returns NULL on fail.
-struct e_keyboard* e_keyboard_create(struct wlr_input_device* input, struct e_seat* seat);
+struct e_keyboard* e_keyboard_create(struct wlr_keyboard* wlr_keyboard, struct e_seat* seat);

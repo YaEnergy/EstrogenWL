@@ -124,11 +124,17 @@ static void e_seat_update_capabilities(struct e_seat* seat)
     wlr_seat_set_capabilities(seat->wlr_seat, capabilities);
 }
 
-static void e_seat_add_keyboard(struct e_seat* seat, struct wlr_input_device* input)
+static void e_seat_add_keyboard(struct e_seat* seat, struct wlr_keyboard* wlr_keyboard)
 {
     e_log_info("adding keyboard input device");
 
-    struct e_keyboard* keyboard = e_keyboard_create(input, seat);
+    struct e_keyboard* keyboard = e_keyboard_create(wlr_keyboard, seat);
+    
+    if (keyboard == NULL)
+    {
+        e_log_error("e_seat_add_keyboard: failed to add keyboard");
+        return;
+    }
 
     //add to seat
     wl_list_insert(&seat->keyboards, &keyboard->link);
@@ -146,7 +152,7 @@ void e_seat_add_input_device(struct e_seat* seat, struct wlr_input_device* input
         case WLR_INPUT_DEVICE_KEYBOARD:
             e_log_info("new keyboard input device");
 
-            e_seat_add_keyboard(seat, input);
+            e_seat_add_keyboard(seat, wlr_keyboard_from_input_device(input));
             break;
         case WLR_INPUT_DEVICE_POINTER:
             e_log_info("new pointer input device");

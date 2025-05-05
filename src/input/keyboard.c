@@ -97,19 +97,17 @@ static void e_keyboard_destroy(struct wl_listener* listener, void* data)
     free(keyboard);
 }
 
-struct e_keyboard* e_keyboard_create(struct wlr_input_device* input, struct e_seat* seat)
+struct e_keyboard* e_keyboard_create(struct wlr_keyboard* wlr_keyboard, struct e_seat* seat)
 {
-    assert(input && seat);
+    assert(wlr_keyboard && seat);
     
     struct e_keyboard* keyboard = calloc(1, sizeof(*keyboard));
 
     if (keyboard == NULL)
     {
-        e_log_error("failed to allocate keyboard");
+        e_log_error("e_keyboard_create: failed to allocate keyboard");
         return NULL;
     }
-
-    struct wlr_keyboard* wlr_keyboard = wlr_keyboard_from_input_device(input);
 
     keyboard->seat = seat;
     keyboard->wlr_keyboard = wlr_keyboard;
