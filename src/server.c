@@ -19,6 +19,7 @@
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_viewporter.h>
+#include <wlr/types/wlr_presentation_time.h>
 
 #include "desktop/desktop.h"
 #include "desktop/output.h"
@@ -223,11 +224,22 @@ int e_server_init(struct e_server* server, struct e_config* config)
     server->xwayland = e_xwayland_create(server->desktop, server->display, server->compositor, server->desktop->seat->wlr_seat, config->xwayland_lazy); 
     #endif
 
-    //protocol to describe output regions, seems to be fully implemented by wlroots already
-    wlr_xdg_output_manager_v1_create(server->display, server->desktop->output_layout);
+    //protocol to describe output regions
+    struct wlr_xdg_output_manager_v1* xdg_output_manager_v1 = wlr_xdg_output_manager_v1_create(server->display, server->desktop->output_layout);
+
+    if (xdg_output_manager_v1 == NULL)
+        e_log_error("e_server_init: failed to create wlr_xdg_output_manager_v1");
 
     //enable viewporter => the size of the surface texture may not match the surface size anymore, only use surface size
-    wlr_viewporter_create(server->display);
+    struct wlr_viewporter* viewporter = wlr_viewporter_create(server->display);
+
+    if (viewporter == NULL)
+        e_log_error("e_server_init: failed to create wlr_viewporter");
+    
+    struct wlr_presentation* presentation = wlr_presentation_create(server->display, server->backend);
+
+    if (presentation == NULL)
+        e_log_error("e_server_init: failed to create wlr_presentation");
 
     //gamma control manager for output, does everything it needs to on its own
     //TODO: wlroots 0.19 will introduce wlr_scene_set_gamma_control_manager_v1, a helper that will remove the need for my implementation.
