@@ -15,6 +15,7 @@
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_primary_selection.h>
 
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
@@ -42,8 +43,20 @@ static void e_seat_request_set_selection(struct wl_listener* listener, void* dat
 {
     struct e_seat* seat = wl_container_of(listener, seat, request_set_selection);
     struct wlr_seat_request_set_selection_event* event = data;
-    
+
+    e_log_info("seat request set selection");
+
     wlr_seat_set_selection(seat->wlr_seat, event->source, event->serial);
+}
+
+static void e_seat_request_set_primary_selection(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, request_set_primary_selection);
+    struct wlr_seat_request_set_primary_selection_event* event = data;
+    
+    e_log_info("seat request set primary selection");
+
+    wlr_seat_set_primary_selection(seat->wlr_seat, event->source, event->serial);
 }
 
 // Focused surface was unmapped.
@@ -70,6 +83,7 @@ static void e_seat_destroy(struct wl_listener* listener, void* data)
 
     SIGNAL_DISCONNECT(seat->request_set_cursor);
     SIGNAL_DISCONNECT(seat->request_set_selection);
+    SIGNAL_DISCONNECT(seat->request_set_primary_selection);
     SIGNAL_DISCONNECT(seat->destroy);
 
     free(seat);
@@ -103,6 +117,7 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
 
     SIGNAL_CONNECT(wlr_seat->events.request_set_cursor, seat->request_set_cursor, e_seat_request_set_cursor);
     SIGNAL_CONNECT(wlr_seat->events.request_set_selection, seat->request_set_selection, e_seat_request_set_selection);
+    SIGNAL_CONNECT(wlr_seat->events.request_set_primary_selection, seat->request_set_primary_selection, e_seat_request_set_primary_selection);
     SIGNAL_CONNECT(wlr_seat->events.destroy, seat->destroy, e_seat_destroy);
 
     return seat;
