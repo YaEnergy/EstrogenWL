@@ -20,6 +20,7 @@
 #include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_viewporter.h>
 #include <wlr/types/wlr_presentation_time.h>
+#include <wlr/types/wlr_primary_selection_v1.h>
 
 #include "desktop/desktop.h"
 #include "desktop/output.h"
@@ -152,6 +153,14 @@ int e_server_init(struct e_server* server, struct e_config* config)
         e_log_error("failed to create display");
         return 1;
     }
+
+    //according to wayfire (who discovered this), for this to work inside of gtk apps this must be one of the first globals
+    //I read this inside labwc
+    //Allows a shortcut for pasting text, usually middle click
+    struct wlr_primary_selection_v1_device_manager* primary_selection_v1_device_manager = wlr_primary_selection_v1_device_manager_create(server->display);
+
+    if (primary_selection_v1_device_manager == NULL)
+        e_log_error("e_server_init: failed to create wlr_primary_selection_v1_device_manager");
 
     //backend handles input and output hardware, autocreate automatically creates the backend we want
     e_log_info("creating backend...");
