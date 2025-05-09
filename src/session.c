@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "util/log.h"
 
@@ -16,6 +17,8 @@
 #define CONFIG_PATHS_MAX_SIZE 1024
 
 #define ENV_LINE_MAX_SIZE 1024
+
+#define SHELL_PATH "/bin/sh"
 
 enum process_env_line_status
 {
@@ -191,4 +194,34 @@ bool e_session_init_env(void)
     fclose(file);
 
     return !process_env_line_status_is_error(status);
+}
+
+// Run the autostart script. (autostart.sh in EstrogenWL's config dir)
+// Returns true if fork (duplicating process) was successful, otherwise false.
+bool e_session_autostart_run(void)
+{
+    char autostart_path[CONFIG_PATHS_MAX_SIZE];
+    size_t autostart_path_length = get_relative_config_path(autostart_path, CONFIG_PATHS_MAX_SIZE - 1, "autostart.sh");
+
+    //path too long
+    if (autostart_path_length >= CONFIG_PATHS_MAX_SIZE)
+    {
+        e_log_error("e_session_autostart_run: autostart.sh file path name is longer than %i characters. (%s, %i)", CONFIG_PATHS_MAX_SIZE - 1, autostart_path, autostart_path_length);
+        return false;
+    }
+
+    int pid = fork();
+
+    //duplicate this process, and check if successful and that this is the new process  
+    if (pid == 0)
+    {
+        // new process starts here
+
+        execl(SHELL_PATH, SHELL_PATH, "-c", autostart_path, NULL);
+
+        //should never be reached
+        return false;
+    }
+
+    return (pid != -1);
 }

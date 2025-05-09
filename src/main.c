@@ -27,6 +27,19 @@ static bool bind_keybind(struct e_list* keybinds, xkb_keysym_t keysym, enum wlr_
     return e_list_add(keybinds, keybind);
 }
 
+// Called when event loop is ready.
+static void event_loop_ready(void* data)
+{
+    e_log_info("event loop is ready!");
+
+    e_log_info("running autostart.sh script");
+
+    if (!e_session_autostart_run())
+        e_log_error("event_loop_ready: failed to run autostart.sh");
+
+    /* idle events are automatically removed when they're done */
+}
+
 // Entry point program
 int main()
 {
@@ -72,6 +85,13 @@ int main()
     }
 
     e_server_start(&server);
+
+    //run autostart script when event loop is ready, removed automatically when dispatched
+    //so when event loop is ready
+    struct wl_event_loop* event_loop = wl_display_get_event_loop(server.display);
+
+    if (event_loop == NULL || wl_event_loop_add_idle(event_loop, event_loop_ready, NULL) == NULL)
+        e_log_error("main: failed to add autostart.sh event");
 
     e_server_run(&server);
 
