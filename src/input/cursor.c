@@ -138,13 +138,13 @@ static void swap_tiled_views(struct e_view* a, struct e_view* b)
         return;
     }
 
-    if (a->container.parent != NULL && a->tiled)
+    if (a->container.parent == NULL || !a->tiled)
     {
         e_log_error("swap_tiled_views: view A is not tiled!");
         return;
     }
 
-    if (b->container.parent != NULL && b->tiled)
+    if (b->container.parent == NULL || !b->tiled)
     {
         e_log_error("swap_tiled_views: view B is not tiled!");
         return;
