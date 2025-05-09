@@ -65,6 +65,8 @@ struct e_server
 
 int e_server_init(struct e_server* server, struct e_config* config);
 
-bool e_server_run(struct e_server* server);
+bool e_server_start(struct e_server* server);
+
+void e_server_run(struct e_server* server);
 
 void e_server_fini(struct e_server* server);

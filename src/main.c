@@ -71,6 +71,8 @@ int main()
         return 1;
     }
 
+    e_server_start(&server);
+
     e_server_run(&server);
 
     // display runs

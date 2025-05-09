@@ -263,7 +263,7 @@ int e_server_init(struct e_server* server, struct e_config* config)
     return 0;
 }
 
-bool e_server_run(struct e_server* server)
+bool e_server_start(struct e_server* server)
 {
     // add unix socket to wl display
     const char* socket = wl_display_add_socket_auto(server->display);
@@ -297,10 +297,15 @@ bool e_server_run(struct e_server* server)
         return false;
     }
 
-    e_log_info("running wl display on WAYLAND_DISPLAY=%s", socket);
-    wl_display_run(server->display);
+    e_log_info("WAYLAND_DISPLAY=%s", socket);
 
     return true;
+}
+
+void e_server_run(struct e_server* server)
+{
+    e_log_info("running wl display...");
+    wl_display_run(server->display);
 }
 
 void e_server_fini(struct e_server* server)
