@@ -6,8 +6,10 @@
 #include <wayland-util.h>
 
 #include <wlr/backend.h>
+
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/render/allocator.h>
+
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output_layout.h>
@@ -21,6 +23,7 @@
 #include <wlr/types/wlr_viewporter.h>
 #include <wlr/types/wlr_presentation_time.h>
 #include <wlr/types/wlr_primary_selection_v1.h>
+#include <wlr/types/wlr_data_control_v1.h>
 
 #include "desktop/desktop.h"
 #include "desktop/output.h"
@@ -214,6 +217,9 @@ int e_server_init(struct e_server* server, struct e_config* config)
     wlr_data_device_manager_create(server->display);
     //allows clients to ask to copy part of the screen content to a client buffer, seems to be fully implemented by wlroots already
     wlr_screencopy_manager_v1_create(server->display);
+
+    //allows clients to control selection and take the role of a clipboard manager
+    wlr_data_control_manager_v1_create(server->display);
 
     server->desktop = e_desktop_create(server->display, server->compositor, server->config);
 
