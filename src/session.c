@@ -7,6 +7,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <sys/wait.h>
+
 #include "util/log.h"
 
 //TODO: document config paths used in EstrogenWL
@@ -210,18 +212,39 @@ bool e_session_autostart_run(void)
         return false;
     }
 
-    int pid = fork();
+    //clone process, process id is given to current process and 0 is given to new process
+    int pid_leader = fork();
 
-    //duplicate this process, and check if successful and that this is the new process  
-    if (pid == 0)
+    if (pid_leader < 0)
     {
-        // new process starts here
-
-        execl(SHELL_PATH, SHELL_PATH, "-c", autostart_path, NULL);
-
-        //should never be reached
+        e_log_error("e_session_autostart_run: failed to fork EstrogenWL");
         return false;
     }
 
-    return (pid != -1);
+    if (pid_leader == 0)
+    {
+        //new process starts here
+
+        //avoid: https://en.wikipedia.org/wiki/Zombie_process
+        //thanks wikipedia and labwc
+
+        setsid(); //orphan new process to avoid zombie processes
+        
+        int pid_child = fork();
+
+        if (pid_leader < 0)
+        {
+            e_log_error("e_session_autostart_run: failed to fork leader");
+            exit(1);
+        }
+
+        if (pid_child == 0) //new process execs command in shell
+            execl(autostart_path, autostart_path, NULL);
+
+        exit(0); //exit leader/parent process, so child process is cleaned up by init 
+    }
+
+    waitpid(pid_leader, NULL, 0);
+
+    return true;
 }

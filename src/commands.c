@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <assert.h>
 
+#include <sys/wait.h>
+
 #include <wayland-server-core.h>
 
 #include <wlr/types/wlr_xdg_shell.h>
@@ -121,17 +123,39 @@ static void e_commands_exec_as_new_process(const char* command)
 {
     e_log_info("RUNNING COMMAND AS NEW SHELL PROCESS: %s", command);
 
-    //duplicate this process, and check if successful and that this is the new process  
-    if (fork() == 0)
+    //clone process, process id is given to current process and 0 is given to new process
+    int pid_leader = fork();
+
+    if (pid_leader < 0)
     {
-        // new process starts here
-
-        //unsure why I need to execute shell to run shell again, but otherwise program acts strange
-        execl(SHELL_PATH, SHELL_PATH, "-c", command, NULL);
-
-        //should never be reached
+        e_log_error("e_commands_exec_as_new_process: failed to fork EstrogenWL");
         return;
     }
+
+    if (pid_leader == 0)
+    {
+        //new process starts here
+
+        //avoid: https://en.wikipedia.org/wiki/Zombie_process
+        //thanks wikipedia and labwc
+
+        setsid(); //orphan new process to avoid zombie processes
+        
+        int pid_child = fork();
+
+        if (pid_leader < 0)
+        {
+            e_log_error("e_commands_exec_as_new_process: failed to fork leader");
+            exit(1);
+        }
+
+        if (pid_child == 0) //new process execs command in shell
+            execl(SHELL_PATH, SHELL_PATH, "-c", command, NULL);
+
+        exit(0); //exit leader/parent process, so child process is cleaned up by init 
+    }
+
+    waitpid(pid_leader, NULL, 0);
 }
 
 void e_commands_parse(struct e_desktop* desktop, const char* command)
