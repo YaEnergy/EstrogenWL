@@ -24,6 +24,9 @@
 #include <wlr/types/wlr_presentation_time.h>
 #include <wlr/types/wlr_primary_selection_v1.h>
 #include <wlr/types/wlr_data_control_v1.h>
+#include <wlr/types/wlr_xdg_foreign_registry.h>
+#include <wlr/types/wlr_xdg_foreign_v1.h>
+#include <wlr/types/wlr_xdg_foreign_v2.h>
 
 #include "desktop/desktop.h"
 #include "desktop/output.h"
@@ -259,6 +262,11 @@ int e_server_init(struct e_server* server, struct e_config* config)
     //gamma control manager for output, does everything it needs to on its own
     //TODO: wlroots 0.19 will introduce wlr_scene_set_gamma_control_manager_v1, a helper that will remove the need for my implementation.
     e_gamma_control_manager_create(server->display);
+
+    //allows clients to reference surfaces of other clients
+    struct wlr_xdg_foreign_registry* foreign_registry = wlr_xdg_foreign_registry_create(server->display);
+    wlr_xdg_foreign_v1_create(server->display, foreign_registry);
+    wlr_xdg_foreign_v2_create(server->display, foreign_registry);
 
     return 0;
 }
