@@ -244,7 +244,5 @@ bool e_session_autostart_run(void)
         exit(0); //exit leader/parent process, so child process is cleaned up by init 
     }
 
-    waitpid(pid_leader, NULL, 0);
-
     return true;
 }

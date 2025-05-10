@@ -154,8 +154,6 @@ static void e_commands_exec_as_new_process(const char* command)
 
         exit(0); //exit leader/parent process, so child process is cleaned up by init 
     }
-
-    waitpid(pid_leader, NULL, 0);
 }
 
 void e_commands_parse(struct e_desktop* desktop, const char* command)
