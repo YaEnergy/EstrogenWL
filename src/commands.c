@@ -124,35 +124,26 @@ static void e_commands_exec_as_new_process(const char* command)
     e_log_info("RUNNING COMMAND AS NEW SHELL PROCESS: %s", command);
 
     //clone process, process id is given to current process and 0 is given to new process
-    int pid_leader = fork();
+    int pid = fork();
 
-    if (pid_leader < 0)
+    if (pid < 0)
     {
-        e_log_error("e_commands_exec_as_new_process: failed to fork EstrogenWL");
+        e_log_error("e_commands_exec_as_new_process: failed to fork");
         return;
     }
 
-    if (pid_leader == 0)
+    if (pid == 0)
     {
         //new process starts here
 
+        //according to the wikipedia page on forking _exit must be used instead of exit
+
         //avoid: https://en.wikipedia.org/wiki/Zombie_process
-        //thanks wikipedia and labwc
+        //thanks wikipedia and labwc and sway
 
         setsid(); //orphan new process to avoid zombie processes
-        
-        int pid_child = fork();
-
-        if (pid_leader < 0)
-        {
-            e_log_error("e_commands_exec_as_new_process: failed to fork leader");
-            exit(1);
-        }
-
-        if (pid_child == 0) //new process execs command in shell
-            execl(SHELL_PATH, SHELL_PATH, "-c", command, NULL);
-
-        exit(0); //exit leader/parent process, so child process is cleaned up by init 
+        execl(SHELL_PATH, SHELL_PATH, "-c", command, NULL);
+        _exit(1); //exit process if execl failed
     }
 }
 
