@@ -250,11 +250,11 @@ void e_tree_container_arrange(struct e_tree_container* tree_container)
         switch (tree_container->tiling_mode)
         {
             case E_TILING_MODE_HORIZONTAL:
-                child_area.x = tree_container->base.area.width * percentageStart;
+                child_area.x += tree_container->base.area.width * percentageStart;
                 child_area.width *= child_container->percentage;
                 break;
             case E_TILING_MODE_VERTICAL:
-                child_area.y = tree_container->base.area.height * percentageStart;
+                child_area.y += tree_container->base.area.height * percentageStart;
                 child_area.height *= child_container->percentage;
                 break;
             default:
