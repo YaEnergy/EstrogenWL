@@ -19,6 +19,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_screencopy_v1.h>
+#include <wlr/types/wlr_export_dmabuf_v1.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_viewporter.h>
 #include <wlr/types/wlr_presentation_time.h>
@@ -218,8 +219,11 @@ int e_server_init(struct e_server* server, struct e_config* config)
     wlr_subcompositor_create(server->display);
     //handles clipboard
     wlr_data_device_manager_create(server->display);
+    
     //allows clients to ask to copy part of the screen content to a client buffer, seems to be fully implemented by wlroots already
     wlr_screencopy_manager_v1_create(server->display);
+    //low overhead screen content capturing
+    wlr_export_dmabuf_manager_v1_create(server->display);
 
     //allows clients to control selection and take the role of a clipboard manager
     wlr_data_control_manager_v1_create(server->display);
