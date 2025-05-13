@@ -218,11 +218,16 @@ bool e_tree_container_remove_container(struct e_tree_container* tree_container, 
         return true;
     }
 
-    //TODO: allow having containers of different percentages
+    //distribute container's percentage evenly across remaining children
+
+    float percentage = container->percentage;
+
     for (int i = 0; i < tree_container->children.count; i++)
     {
         struct e_container* container = e_list_at(&tree_container->children, i);
-        container->percentage = 1.0f / tree_container->children.count;
+
+        if (container != NULL)
+            container->percentage += percentage / tree_container->children.count;
     }
 
     return true;
