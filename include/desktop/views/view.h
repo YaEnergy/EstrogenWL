@@ -21,6 +21,23 @@
 
 struct e_view;
 
+// What the view can handle in size.
+// 0 means hint isn't set.
+struct e_view_size_hints
+{
+    int min_width;
+    int min_height;
+
+    int max_width;
+    int max_height;
+
+    int desired_width;
+    int desired_height;
+
+    int width_inc; //Size increments
+    int height_inc; //Size increments
+};
+
 //type of an e_view
 enum e_view_type
 {
@@ -31,6 +48,9 @@ enum e_view_type
 // Implementation of view functions for different view types
 struct e_view_impl
 {
+    // Returns size hints of the view.
+    struct e_view_size_hints (*get_size_hints)(struct e_view* view);
+
     // Sets the tiled state of the view.
     void (*set_tiled)(struct e_view* view, bool tiled);
 
@@ -100,6 +120,9 @@ struct e_view
 // This function should only be called by the implementations of each view type. 
 // I mean it would be a bit weird to even call this function somewhere else.
 void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_type type, void* data);
+
+// Returns size hints of view.
+struct e_view_size_hints e_view_get_size_hints(struct e_view* view);
 
 // Display view.
 void e_view_map(struct e_view* view);

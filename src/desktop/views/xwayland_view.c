@@ -27,6 +27,36 @@
 
 // TODO: I'm unsure what to do with the user-specificied position in xcb_size_hints_t*
 
+// Returns size hints of view.
+static struct e_view_size_hints e_view_xwayland_get_size_hints(struct e_view* view)
+{
+    assert(view);
+
+    struct e_xwayland_view* xwayland_view = view->data;
+    struct wlr_xwayland_surface* surface = xwayland_view->xwayland_surface;
+
+    if (surface->size_hints != NULL)
+    {
+        return (struct e_view_size_hints){
+            .min_width = surface->size_hints->min_width,
+            .min_height = surface->size_hints->min_height,
+    
+            .max_width = surface->size_hints->max_width,
+            .max_height = surface->size_hints->max_height,
+
+            .desired_width = surface->size_hints->base_width,
+            .desired_height = surface->size_hints->base_height,
+
+            .width_inc = surface->size_hints->width_inc,
+            .height_inc = surface->size_hints->height_inc
+        };
+    }
+    else 
+    {
+        return (struct e_view_size_hints){0};
+    }
+}
+
 // Create a scene tree displaying this view's surfaces and subsurfaces.
 static struct wlr_scene_tree* e_view_xwayland_create_content_tree(struct e_view* view)
 {
@@ -338,6 +368,8 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct
     e_view_init(&xwayland_view->base, desktop, E_VIEW_XWAYLAND, xwayland_view);
 
     xwayland_view->base.title = xwayland_surface->title;
+
+    xwayland_view->base.implementation.get_size_hints = e_view_xwayland_get_size_hints;
 
     xwayland_view->base.implementation.set_tiled = e_view_xwayland_set_tiled;
     xwayland_view->base.implementation.set_activated = e_view_xwayland_set_activated;

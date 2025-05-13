@@ -77,6 +77,26 @@ void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_typ
     wl_list_init(&view->link);
 }
 
+// Returns size hints of view.
+struct e_view_size_hints e_view_get_size_hints(struct e_view* view)
+{
+    if (view == NULL)
+    {
+        e_log_error("e_view_get_constraints: view is NULL!");
+        return (struct e_view_size_hints){0};
+    }
+
+    if (view->implementation.get_size_hints != NULL)
+    {
+        return view->implementation.get_size_hints(view);
+    }
+    else
+    {
+        e_log_error("e_view_get_constraints: get_constraints is unimplemented!");
+        return (struct e_view_size_hints){0};
+    }
+}
+
 static void e_view_set_parent_container(struct e_view* view, struct e_tree_container* parent)
 {
     assert(view && parent);

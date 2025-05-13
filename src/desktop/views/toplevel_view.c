@@ -23,6 +23,24 @@
 #include "util/log.h"
 #include "util/wl_macros.h"
 
+// Returns size hints of view.
+static struct e_view_size_hints e_view_toplevel_get_size_hints(struct e_view* view)
+{
+    assert(view);
+
+    struct e_toplevel_view* toplevel = view->data;
+
+    //TODO: desired size and size increment
+
+    return (struct e_view_size_hints){
+        .min_width = toplevel->xdg_toplevel->current.min_width,
+        .min_height = toplevel->xdg_toplevel->current.min_height,
+
+        .max_width = toplevel->xdg_toplevel->current.max_width,
+        .max_height = toplevel->xdg_toplevel->current.max_height,
+    };
+}
+
 // Create a scene tree displaying this view's surfaces and subsurfaces.
 static struct wlr_scene_tree* e_view_toplevel_create_content_tree(struct e_view* view)
 {
@@ -276,6 +294,8 @@ struct e_toplevel_view* e_toplevel_view_create(struct e_desktop* desktop, struct
 
     toplevel_view->base.title = xdg_toplevel->title;
     toplevel_view->base.surface = xdg_toplevel->base->surface;
+
+    toplevel_view->base.implementation.get_size_hints = e_view_toplevel_get_size_hints;
 
     toplevel_view->base.implementation.set_tiled = e_view_toplevel_set_tiled;
     toplevel_view->base.implementation.set_activated = e_view_toplevel_set_activated;
