@@ -25,8 +25,6 @@
 #include "util/log.h"
 #include "util/wl_macros.h"
 
-// TODO: I'm unsure what to do with the user-specificied position in xcb_size_hints_t*
-
 // Returns size hints of view.
 static struct e_view_size_hints e_view_xwayland_get_size_hints(struct e_view* view)
 {
