@@ -44,9 +44,6 @@ static struct e_view_size_hints e_view_xwayland_get_size_hints(struct e_view* vi
             .max_width = surface->size_hints->max_width,
             .max_height = surface->size_hints->max_height,
 
-            .desired_width = surface->size_hints->base_width,
-            .desired_height = surface->size_hints->base_height,
-
             .width_inc = surface->size_hints->width_inc,
             .height_inc = surface->size_hints->height_inc
         };

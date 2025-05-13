@@ -22,7 +22,7 @@
 struct e_view;
 
 // What the view can handle in size.
-// 0 means hint isn't set.
+// 0 or lower means hint isn't set.
 struct e_view_size_hints
 {
     int min_width;
@@ -30,9 +30,6 @@ struct e_view_size_hints
 
     int max_width;
     int max_height;
-
-    int desired_width;
-    int desired_height;
 
     int width_inc; //Size increments
     int height_inc; //Size increments

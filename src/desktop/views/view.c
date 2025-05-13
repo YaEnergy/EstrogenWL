@@ -256,6 +256,8 @@ static void e_view_float(struct e_view* view)
     e_view_set_parent_container(view, parent_container);
 
     wlr_scene_node_reparent(&view->tree->node, view->desktop->layers.floating);
+
+    //TODO: return to natural geometry
 }
 
 // Set pending layout position of view.

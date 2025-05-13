@@ -30,8 +30,6 @@ static struct e_view_size_hints e_view_toplevel_get_size_hints(struct e_view* vi
 
     struct e_toplevel_view* toplevel = view->data;
 
-    //TODO: desired size and size increment
-
     return (struct e_view_size_hints){
         .min_width = toplevel->xdg_toplevel->current.min_width,
         .min_height = toplevel->xdg_toplevel->current.min_height,
