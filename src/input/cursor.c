@@ -206,7 +206,9 @@ static void e_cursor_handle_mode_move(struct e_cursor* cursor)
     }
     else //floating
     {
-        e_view_set_position(cursor->grab_view, cursor->wlr_cursor->x - cursor->grab_vx, cursor->wlr_cursor->y - cursor->grab_vy);
+        float delta_x = cursor->wlr_cursor->x - cursor->grab_start_x;
+        float delta_y = cursor->wlr_cursor->y - cursor->grab_start_y;
+        e_view_set_position(cursor->grab_view, cursor->grab_start_vbox.x + delta_x, cursor->grab_start_vbox.y + delta_y);
     }
 }
 
@@ -237,9 +239,9 @@ static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
         int top = cursor->grab_start_vbox.y;
         int bottom = cursor->grab_start_vbox.y + cursor->grab_start_vbox.height;
 
-        //delta x & delta y since start grab (pos x - (grab view pos x + grabbed view left border), y and top border for delta_y or grow_y)
-        int grow_x = cursor->wlr_cursor->x - cursor->grab_vx - left;
-        int grow_y = cursor->wlr_cursor->y - cursor->grab_vy - top;
+        //delta x & delta y since start grab
+        int grow_x = cursor->wlr_cursor->x - cursor->grab_start_x;
+        int grow_y = cursor->wlr_cursor->y - cursor->grab_start_y;
 
         //expand grabbed edges, while not letting them overlap the opposite edge, min 1 pixel
 
@@ -454,16 +456,17 @@ static void e_cursor_start_grab_view_mode(struct e_cursor* cursor, struct e_view
     e_cursor_set_mode(cursor, mode);
 
     cursor->grab_view = view;
-    cursor->grab_vx = cursor->wlr_cursor->x - view->current.x;
-    cursor->grab_vy = cursor->wlr_cursor->y - view->current.y;
     cursor->grab_start_vbox = view->current;
+
+    cursor->grab_start_x = cursor->wlr_cursor->x;
+    cursor->grab_start_y = cursor->wlr_cursor->y;
 
     SIGNAL_CONNECT(view->surface->events.unmap, cursor->grab_view_unmap, e_cursor_grab_view_unmap);
 
     e_log_info("Grabbed view");
 
     #if E_VERBOSE
-    e_log_info("View grab position: XY(%f, %f)", cursor->grab_vx, cursor->grab_vy);
+    e_log_info("Cursor grab position: XY(%f, %f)", cursor->grab_start_x, cursor->grab_start_y);
     e_log_info("View current rect: XY(%i, %i); WH(%i, %i)", view->current.x, view->current.y, view->current.width, view->current.height);
     #endif
 }

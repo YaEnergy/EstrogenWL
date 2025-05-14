@@ -43,8 +43,8 @@ struct e_cursor
     //grabbed view
     struct e_view* grab_view;
     struct wl_listener grab_view_unmap;
-    double grab_vx;
-    double grab_vy;
+    double grab_start_x;
+    double grab_start_y;
     struct wlr_box grab_start_vbox;
     enum wlr_edges grab_edges;
 };
