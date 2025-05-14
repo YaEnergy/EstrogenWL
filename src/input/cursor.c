@@ -212,6 +212,107 @@ static void e_cursor_handle_mode_move(struct e_cursor* cursor)
     }
 }
 
+static void e_cursor_resize_floating(struct e_cursor* cursor)
+{
+    if (cursor == NULL)
+    {
+        e_log_error("e_cursor_resize_floating: cursor is NULL");
+        return;
+    }
+
+    if (cursor->grab_view == NULL)
+    {
+        e_log_error("e_cursor_resize_floating: view grabbed by cursor is NULL");
+        e_cursor_reset_mode(cursor);
+        return;
+    }
+
+    struct e_view_size_hints size_hints = e_view_get_size_hints(cursor->grab_view);
+
+    int left = cursor->grab_start_vbox.x;
+    int right = cursor->grab_start_vbox.x + cursor->grab_start_vbox.width;
+    int top = cursor->grab_start_vbox.y;
+    int bottom = cursor->grab_start_vbox.y + cursor->grab_start_vbox.height;
+
+    //delta x & delta y since start grab
+    int grow_x = cursor->wlr_cursor->x - cursor->grab_start_x;
+    int grow_y = cursor->wlr_cursor->y - cursor->grab_start_y;
+
+    //expand grabbed edges, while not letting them overlap the opposite edge, min 1 pixel
+
+    if (cursor->grab_edges & WLR_EDGE_LEFT)
+    {
+        left += grow_x;
+
+        //respect size hints
+
+        if (right - left < size_hints.min_width && size_hints.min_width > 0)
+            left = right - size_hints.min_width;
+
+        if (right - left > size_hints.max_width && size_hints.max_width > 0)
+            left = right - size_hints.max_width;
+
+        // don't let box overlap itself
+
+        if (left > right - 1)
+            left = right - 1;
+    }
+    else if (cursor->grab_edges & WLR_EDGE_RIGHT)
+    {
+        right += grow_x;
+
+        //respect size hints
+
+        if (right - left < size_hints.min_width && size_hints.min_width > 0)
+            right = left + size_hints.min_width;
+
+        if (right - left > size_hints.max_width && size_hints.max_width > 0)
+            right = left + size_hints.max_width;
+
+        // don't let box overlap itself
+
+        if (right < left + 1)
+            right = left + 1;
+    }
+
+    if (cursor->grab_edges & WLR_EDGE_TOP)
+    {
+        top += grow_y;
+
+        //respect size hints
+
+        if (bottom - top < size_hints.min_height && size_hints.min_height > 0)
+            top = bottom - size_hints.min_height;
+
+        if (bottom - top > size_hints.max_height && size_hints.max_height > 0)
+            top = bottom - size_hints.max_height;
+
+        // don't let box overlap itself
+
+        if (top > bottom - 1)
+            top = bottom - 1;
+    }
+    else if (cursor->grab_edges & WLR_EDGE_BOTTOM)
+    {
+        bottom += grow_y;
+
+        //respect size hints
+
+        if (bottom - top < size_hints.min_height && size_hints.min_height > 0)
+            bottom = top + size_hints.min_height;
+
+        if (bottom - top > size_hints.max_height && size_hints.max_height > 0)
+            bottom = top + size_hints.max_height;
+
+        // don't let box overlap itself
+
+        if (bottom < top + 1)
+            bottom = top + 1;
+    }
+
+    e_view_configure(cursor->grab_view, left, top, right - left, bottom - top);
+}
+
 static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
 {   
     if (cursor->grab_view == NULL)
@@ -232,90 +333,7 @@ static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
     }
     else //floating
     {
-        struct e_view_size_hints size_hints = e_view_get_size_hints(cursor->grab_view);
-
-        int left = cursor->grab_start_vbox.x;
-        int right = cursor->grab_start_vbox.x + cursor->grab_start_vbox.width;
-        int top = cursor->grab_start_vbox.y;
-        int bottom = cursor->grab_start_vbox.y + cursor->grab_start_vbox.height;
-
-        //delta x & delta y since start grab
-        int grow_x = cursor->wlr_cursor->x - cursor->grab_start_x;
-        int grow_y = cursor->wlr_cursor->y - cursor->grab_start_y;
-
-        //expand grabbed edges, while not letting them overlap the opposite edge, min 1 pixel
-
-        if (cursor->grab_edges & WLR_EDGE_LEFT)
-        {
-            left += grow_x;
-
-            //respect size hints
-
-            if (right - left < size_hints.min_width && size_hints.min_width > 0)
-                left = right - size_hints.min_width;
-
-            if (right - left > size_hints.max_width && size_hints.max_width > 0)
-                left = right - size_hints.max_width;
-
-            // don't let box overlap itself
-
-            if (left > right - 1)
-                left = right - 1;
-        }
-        else if (cursor->grab_edges & WLR_EDGE_RIGHT)
-        {
-            right += grow_x;
-
-            //respect size hints
-
-            if (right - left < size_hints.min_width && size_hints.min_width > 0)
-                right = left + size_hints.min_width;
-
-            if (right - left > size_hints.max_width && size_hints.max_width > 0)
-                right = left + size_hints.max_width;
-
-            // don't let box overlap itself
-
-            if (right < left + 1)
-                right = left + 1;
-        }
-
-        if (cursor->grab_edges & WLR_EDGE_TOP)
-        {
-            top += grow_y;
-
-            //respect size hints
-
-            if (bottom - top < size_hints.min_height && size_hints.min_height > 0)
-                top = bottom - size_hints.min_height;
-
-            if (bottom - top > size_hints.max_height && size_hints.max_height > 0)
-                top = bottom - size_hints.max_height;
-
-            // don't let box overlap itself
-
-            if (top > bottom - 1)
-                top = bottom - 1;
-        }
-        else if (cursor->grab_edges & WLR_EDGE_BOTTOM)
-        {
-            bottom += grow_y;
-
-            //respect size hints
-
-            if (bottom - top < size_hints.min_height && size_hints.min_height > 0)
-                bottom = top + size_hints.min_height;
-
-            if (bottom - top > size_hints.max_height && size_hints.max_height > 0)
-                bottom = top + size_hints.max_height;
-
-            // don't let box overlap itself
-
-            if (bottom < top + 1)
-                bottom = top + 1;
-        }
-
-        e_view_configure(cursor->grab_view, left, top, right - left, bottom - top);
+        e_cursor_resize_floating(cursor);
     }
 }
 
