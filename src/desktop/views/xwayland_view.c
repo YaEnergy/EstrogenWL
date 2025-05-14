@@ -73,6 +73,8 @@ static void e_xwayland_view_update_current_geometry(struct e_xwayland_view* xway
     xwayland_view->base.current.y = xwayland_view->xwayland_surface->y;
     xwayland_view->base.current.width = xwayland_view->xwayland_surface->width;
     xwayland_view->base.current.height = xwayland_view->xwayland_surface->height;
+    
+    xwayland_view->base.container.area = xwayland_view->base.current;
 }
 
 // Xwayland surface wants to be mapped.

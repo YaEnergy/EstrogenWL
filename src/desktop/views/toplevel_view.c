@@ -104,6 +104,8 @@ static void e_toplevel_view_commit(struct wl_listener* listener, void* data)
 
     e_view_moved(&toplevel_view->base);
 
+    toplevel_view->base.container.area = toplevel_view->base.current;
+
     //Now that we've finished the changes that were scheduled, we can schedule the next changes.
     if (e_view_has_pending_changes(&toplevel_view->base))
         e_view_configure_pending(&toplevel_view->base);
