@@ -33,6 +33,7 @@ estrogenwl_src = files(
     'src/desktop/xdg_popup.c',
     'src/desktop/gamma_control_manager.c',
 
+    'src/desktop/tree/workspace.c',
     'src/desktop/tree/container.c',
     'src/desktop/tree/node.c',
 
