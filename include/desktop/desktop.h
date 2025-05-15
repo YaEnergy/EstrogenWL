@@ -14,7 +14,7 @@ struct e_seat;
 struct e_layer_surface;
 
 //see: wlr-layer-shell-unstable-v1-protocol.h @ enum zwlr_layer_shell_v1_layer
-struct e_layer_trees
+struct e_desktop_layers
 {
     //desktop background
     struct wlr_scene_tree* background;
@@ -27,6 +27,7 @@ struct e_layer_trees
     //layer shell surfaces above views
     struct wlr_scene_tree* top;
     //layer shell surfaces that display above everything
+    //or fullscreen surfaces
     struct wlr_scene_tree* overlay;
     // Xwayland unmanaged surfaces.
     struct wlr_scene_tree* unmanaged;
@@ -52,7 +53,7 @@ struct e_desktop
     // layout of outputs in the scene
     struct wlr_scene_output_layout* scene_layout;
     
-    struct e_layer_trees layers;
+    struct e_desktop_layers layers;
 
     // nodes that are waiting to be reparented
     struct wlr_scene_tree* pending;
