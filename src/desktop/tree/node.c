@@ -73,3 +73,14 @@ struct e_layer_surface* e_layer_surface_try_from_e_node_desc(struct e_node_desc*
 
     return (struct e_layer_surface*)node_desc->data;
 }
+
+// Returns NULL on fail.
+struct e_workspace* e_workspace_try_from_e_node_desc(struct e_node_desc* node_desc)
+{
+    assert(node_desc);
+
+    if (node_desc->type != E_NODE_DESC_WORKSPACE)
+        return NULL;
+
+    return (struct e_workspace*)node_desc->data;
+}
