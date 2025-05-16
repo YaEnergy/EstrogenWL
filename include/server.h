@@ -22,6 +22,7 @@
 
 #define E_COMPOSITOR_VERSION 6
 #define E_PRESENTATION_TIME_VERSION 2
+#define E_EXT_DATA_CONTROL_V1_VERSION 1
 
 // main struct handling:
 //  - backend (wl_display, wlr_backend, wlr_allocator, wlr_renderer, shells, protocols ...)

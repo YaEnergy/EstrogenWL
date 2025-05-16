@@ -25,6 +25,7 @@
 #include <wlr/types/wlr_presentation_time.h>
 #include <wlr/types/wlr_primary_selection_v1.h>
 #include <wlr/types/wlr_data_control_v1.h>
+#include <wlr/types/wlr_ext_data_control_v1.h>
 #include <wlr/types/wlr_xdg_foreign_registry.h>
 #include <wlr/types/wlr_xdg_foreign_v1.h>
 #include <wlr/types/wlr_xdg_foreign_v2.h>
@@ -227,6 +228,7 @@ int e_server_init(struct e_server* server, struct e_config* config)
 
     //allows clients to control selection and take the role of a clipboard manager
     wlr_data_control_manager_v1_create(server->display);
+    wlr_ext_data_control_manager_v1_create(server->display, E_EXT_DATA_CONTROL_V1_VERSION);
 
     server->desktop = e_desktop_create(server->display, server->compositor, server->config);
 
