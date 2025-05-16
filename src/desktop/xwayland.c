@@ -15,33 +15,12 @@
 #include <wlr/util/box.h>
 #include <wlr/xwayland.h>
 
-#include <xcb/xcb.h>
-#include <xcb/xproto.h>
-
 #include "input/seat.h"
 
 #include "desktop/output.h"
 
 #include "util/log.h"
 #include "util/wl_macros.h"
-
-// All names for e_xcb_atom_type enum values
-const char* atom_names[] = {
-    [E_NET_WM_WINDOW_TYPE_DESKTOP] = "_NET_WM_WINDOW_TYPE_DESKTOP",
-    [E_NET_WM_WINDOW_TYPE_DOCK] = "_NET_WM_WINDOW_TYPE_DOCK",
-    [E_NET_WM_WINDOW_TYPE_TOOLBAR] = "_NET_WM_WINDOW_TYPE_TOOLBAR",
-    [E_NET_WM_WINDOW_TYPE_MENU] = "_NET_WM_WINDOW_TYPE_MENU",
-    [E_NET_WM_WINDOW_TYPE_UTILITY] = "_NET_WM_WINDOW_TYPE_UTILITY",
-    [E_NET_WM_WINDOW_TYPE_SPLASH] = "_NET_WM_WINDOW_TYPE_SPLASH",
-    [E_NET_WM_WINDOW_TYPE_DIALOG] = "_NET_WM_WINDOW_TYPE_DIALOG",
-    [E_NET_WM_WINDOW_TYPE_DROPDOWN_MENU] = "_NET_WM_WINDOW_TYPE_DROPDOWN_MENU",
-    [E_NET_WM_WINDOW_TYPE_POPUP_MENU] = "_NET_WM_WINDOW_TYPE_POPUP_MENU",
-    [E_NET_WM_WINDOW_TYPE_TOOLTIP] = "_NET_WM_WINDOW_TYPE_TOOLTIP",
-    [E_NET_WM_WINDOW_TYPE_NOTIFICATION] = "_NET_WM_WINDOW_TYPE_NOTIFICATION",
-    [E_NET_WM_WINDOW_TYPE_COMBO] = "_NET_WM_WINDOW_TYPE_COMBO",
-    [E_NET_WM_WINDOW_TYPE_DND] = "_NET_WM_WINDOW_TYPE_DND",
-    [E_NET_WM_WINDOW_TYPE_NORMAL] = "_NET_WM_WINDOW_TYPE_NORMAL"
-};
 
 static void e_xwayland_new_surface(struct wl_listener* listener, void* data)
 {
@@ -76,60 +55,6 @@ static void e_xwayland_ready(struct wl_listener* listener, void* data)
     e_log_info("xwayland is ready!");
 
     e_xwayland_update_workarea(xwayland);
-
-    // Get atom ids we need, so we can check for certain window types. (Useful for e_view_xwayland_wants_floating).
-    // TODO: it seems like wlroots will soon have a way of checking the window type in 0.19.0 https://wlroots.pages.freedesktop.org/wlroots/wlr/xwayland/xwayland.h.html#func-wlr_xwayland_surface_has_window_type, making this soon redundant.
-    //thanks Sway
-
-    xcb_connection_t* xcb_connection = xcb_connect(NULL, NULL);
-
-    if (xcb_connection == NULL)
-    {
-        e_log_error("e_xwayland_ready: connection failed");
-        return;
-    }
-
-    int error_state = xcb_connection_has_error(xcb_connection);
-
-    if (error_state > 0)
-    {
-        e_log_error("e_xwayland_ready: xcb connection is in an error state. (XCB: %i)", error_state);
-        return;
-    }
-    
-    //request all intern atom cookies for the atoms we need
-
-    xcb_intern_atom_cookie_t cookies[E_ATOMS_LEN];
-
-    for (int i = 0; i < E_ATOMS_LEN; i++)
-        cookies[i] = xcb_intern_atom(xcb_connection, 0, (uint16_t)strlen(atom_names[i]), atom_names[i]);
-
-    //reply to all cookies and extract the atom type
-
-    for (int i = 0; i < E_ATOMS_LEN; i++)
-    {
-        xcb_generic_error_t* error = NULL;
-        xcb_intern_atom_reply_t* reply = xcb_intern_atom_reply(xcb_connection, cookies[i], &error);
-
-        if (reply != NULL)
-        {
-            if (error == NULL)
-            {
-                xwayland->atoms[i] = reply->atom;
-                e_log_info("xwayland: resolved atom %s (ID: %zi)", atom_names[i], reply->atom);
-            }
-
-            free(reply);
-        }
-
-        if (error != NULL)
-        {
-            e_log_error("e_xwayland_ready: unable to resolve atom %s. (X11: %i)", atom_names[i], error->error_code);
-            free(error);
-        }
-    }
-
-    xcb_disconnect(xcb_connection);
 }
 
 // Creates a struct handling xwayland shell v1 protocol, server and X11 wm.
