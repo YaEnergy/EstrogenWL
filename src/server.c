@@ -30,6 +30,7 @@
 #include <wlr/types/wlr_xdg_foreign_v1.h>
 #include <wlr/types/wlr_xdg_foreign_v2.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
+#include <wlr/types/wlr_single_pixel_buffer_v1.h>
 
 #include "desktop/desktop.h"
 #include "desktop/output.h"
@@ -272,6 +273,9 @@ int e_server_init(struct e_server* server, struct e_config* config)
         wlr_scene_set_gamma_control_manager_v1(server->desktop->scene, gamma_control_manager);
     else
         e_log_error("e_server_init: failed to create wlr gamma control manager v1");
+
+    if (wlr_single_pixel_buffer_manager_v1_create(server->display) == NULL)
+        e_log_error("e_server_init: failed to create wlr single pixel buffer manager v1");
 
     //allows clients to reference surfaces of other clients
     struct wlr_xdg_foreign_registry* foreign_registry = wlr_xdg_foreign_registry_create(server->display);
