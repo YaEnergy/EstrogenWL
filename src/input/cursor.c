@@ -603,6 +603,22 @@ struct e_view* e_cursor_view_at(struct e_cursor* cursor)
     return e_view_at(&cursor->seat->desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
 }
 
+// Find output at cursor's position.
+// Returns NULL on fail.
+struct e_output* e_cursor_output_at(struct e_cursor* cursor)
+{
+    if (cursor == NULL)
+        return NULL;
+
+    struct wlr_output* wlr_output = wlr_output_layout_output_at(cursor->seat->desktop->output_layout, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
+    
+    if (wlr_output == NULL)
+        return NULL;
+    
+    struct e_output* output = wlr_output->data;
+
+    return output;
+}
 
 void e_cursor_destroy(struct e_cursor* cursor)
 {

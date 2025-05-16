@@ -13,6 +13,8 @@
 
 #include "desktop/views/view.h"
 
+struct e_output;
+
 enum e_cursor_mode
 {
     E_CURSOR_MODE_DEFAULT,
@@ -70,5 +72,9 @@ void e_cursor_set_focus_hover(struct e_cursor* cursor);
 // Find view at cursor's position.
 // Returns NULL on fail.
 struct e_view* e_cursor_view_at(struct e_cursor* cursor);
+
+// Find output at cursor's position.
+// Returns NULL on fail.
+struct e_output* e_cursor_output_at(struct e_cursor* cursor);
 
 void e_cursor_destroy(struct e_cursor* cursor);
