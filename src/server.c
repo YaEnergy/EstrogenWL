@@ -32,6 +32,7 @@
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
 #include <wlr/types/wlr_ext_image_capture_source_v1.h>
+#include <wlr/types/wlr_ext_image_copy_capture_v1.h>
 
 #include "desktop/desktop.h"
 #include "desktop/output.h"
@@ -229,9 +230,14 @@ int e_server_init(struct e_server* server, struct e_config* config)
     wlr_screencopy_manager_v1_create(server->display);
     //low overhead screen content capturing
     wlr_export_dmabuf_manager_v1_create(server->display);
-    //more capturing
+    
+    //more screen capturing
     if (wlr_ext_output_image_capture_source_manager_v1_create(server->display, E_EXT_IMAGE_CAPTURE_SOURCE_VERSION) == NULL)
         e_log_error("e_server_init: failed to create wlr ext output image capture source manager v1");
+
+    //output toplevel capturing
+    if (wlr_ext_image_copy_capture_manager_v1_create(server->display, E_EXT_IMAGE_COPY_CAPTURE_VERSION) == NULL)
+        e_log_error("e_server_init: failed to creat wlr ext image copy capture manager v1");
 
     //allows clients to control selection and take the role of a clipboard manager
     wlr_data_control_manager_v1_create(server->display);

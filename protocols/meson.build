@@ -3,7 +3,8 @@ wayland_scanner = find_program('wayland-scanner', required: true)
 
 wayland_server_protocols = [
     wayland_protocols_dir / 'stable/xdg-shell/xdg-shell.xml',
-    'wlr-layer-shell-unstable-v1.xml'
+    wayland_protocols_dir / 'staging/ext-image-copy-capture/ext-image-copy-capture-v1.xml',
+    'wlr-layer-shell-unstable-v1.xml',
 ]
 
 private_code_generator = generator(
