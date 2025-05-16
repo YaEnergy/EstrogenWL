@@ -593,6 +593,17 @@ void e_cursor_set_focus_hover(struct e_cursor* cursor)
         wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
 }
 
+// Find view at cursor's position.
+// Returns NULL on fail.
+struct e_view* e_cursor_view_at(struct e_cursor* cursor)
+{
+    if (cursor == NULL)
+        return NULL;
+
+    return e_view_at(&cursor->seat->desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
+}
+
+
 void e_cursor_destroy(struct e_cursor* cursor)
 {
     assert(cursor);
