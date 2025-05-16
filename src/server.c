@@ -258,7 +258,7 @@ int e_server_init(struct e_server* server, struct e_config* config)
     if (viewporter == NULL)
         e_log_error("e_server_init: failed to create wlr_viewporter");
     
-    struct wlr_presentation* presentation = wlr_presentation_create(server->display, server->backend);
+    struct wlr_presentation* presentation = wlr_presentation_create(server->display, server->backend, E_PRESENTATION_TIME_VERSION);
 
     if (presentation == NULL)
         e_log_error("e_server_init: failed to create wlr_presentation");

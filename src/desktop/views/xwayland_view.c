@@ -137,7 +137,7 @@ static void e_view_xwayland_set_tiled(struct e_view* view, bool tiled)
     //TODO: if view is actually maximized, don't let e_view_xwayland_set_tiled set maximized to false
     
     //why set maximized? for example: this prevents Krita from requesting resizing from the bottom right corner
-    wlr_xwayland_surface_set_maximized(xwayland_view->xwayland_surface, tiled);
+    wlr_xwayland_surface_set_maximized(xwayland_view->xwayland_surface, tiled, tiled);
 }
 
 // Set activated state of the view.

@@ -57,7 +57,12 @@ cc = meson.get_compiler('c')
 
 # main dependancies
 
-wlroots = dependency('wlroots-0.18', required: true)
+wlroots = dependency(
+    'wlroots-0.19',
+    required: true,
+    default_options: ['default_library=static', 'examples=false'],
+    version: ['>=0.19', '<0.20.0'],
+)
 
 wayland_server = dependency('wayland-server', required: true)
 wayland_cursor = dependency('wayland-cursor', required: true)
