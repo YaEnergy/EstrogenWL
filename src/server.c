@@ -28,10 +28,10 @@
 #include <wlr/types/wlr_xdg_foreign_registry.h>
 #include <wlr/types/wlr_xdg_foreign_v1.h>
 #include <wlr/types/wlr_xdg_foreign_v2.h>
+#include <wlr/types/wlr_gamma_control_v1.h>
 
 #include "desktop/desktop.h"
 #include "desktop/output.h"
-#include "desktop/gamma_control_manager.h"
 #include "desktop/layer_shell.h"
 #include "desktop/xdg_shell.h"
 #if E_XWAYLAND_SUPPORT
@@ -263,9 +263,13 @@ int e_server_init(struct e_server* server, struct e_config* config)
     if (presentation == NULL)
         e_log_error("e_server_init: failed to create wlr_presentation");
 
-    //gamma control manager for output, does everything it needs to on its own
-    //TODO: wlroots 0.19 will introduce wlr_scene_set_gamma_control_manager_v1, a helper that will remove the need for my implementation.
-    e_gamma_control_manager_create(server->display);
+    //gamma control manager for outputs
+    struct wlr_gamma_control_manager_v1* gamma_control_manager = wlr_gamma_control_manager_v1_create(server->display);
+
+    if (gamma_control_manager != NULL)
+        wlr_scene_set_gamma_control_manager_v1(server->desktop->scene, gamma_control_manager);
+    else
+        e_log_error("e_server_init: failed to create wlr gamma control manager v1");
 
     //allows clients to reference surfaces of other clients
     struct wlr_xdg_foreign_registry* foreign_registry = wlr_xdg_foreign_registry_create(server->display);

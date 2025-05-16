@@ -31,7 +31,6 @@ estrogenwl_src = files(
     'src/desktop/output.c',
     'src/desktop/xdg_shell.c',
     'src/desktop/xdg_popup.c',
-    'src/desktop/gamma_control_manager.c',
 
     'src/desktop/tree/workspace.c',
     'src/desktop/tree/container.c',
@@ -55,7 +54,7 @@ estrogenwl_src = files(
 
 cc = meson.get_compiler('c')
 
-# main dependancies
+# main dependencies
 
 wlroots = dependency(
     'wlroots-0.19',
