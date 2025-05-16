@@ -150,10 +150,7 @@ static void e_view_xwayland_set_activated(struct e_view* view, bool activated)
     wlr_xwayland_surface_activate(xwayland_view->xwayland_surface, activated);
 
     if (activated)
-    {
         wlr_scene_node_raise_to_top(&view->tree->node);
-        wlr_xwayland_surface_restack(xwayland_view->xwayland_surface, NULL, XCB_STACK_MODE_ABOVE);
-    }
 }
 
 static void e_xwayland_view_request_maximize(struct wl_listener* listener, void* data)
