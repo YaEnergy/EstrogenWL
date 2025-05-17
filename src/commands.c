@@ -14,10 +14,17 @@
 #include <wlr/types/wlr_xdg_shell.h>
 
 #include "desktop/desktop.h"
+#include "desktop/output.h"
+
 #include "desktop/tree/container.h"
+#include "desktop/tree/workspace.h"
+
 #include "desktop/views/view.h"
+
+#include "input/cursor.h"
 #include "input/seat.h"
 
+#include "util/list.h"
 #include "util/log.h"
 
 #define SHELL_PATH "/bin/sh"
@@ -198,6 +205,49 @@ void e_commands_parse(struct e_desktop* desktop, const char* command)
     else if (strcmp(argument, "maximize") == 0)
     {
         e_commands_maximize_focused_view(desktop);
+    }
+    //TODO: next_workspace is for testing only, remove
+    else if (strcmp(argument, "next_workspace") == 0)
+    {
+        struct e_output* output = e_cursor_output_at(desktop->seat->cursor);
+
+        struct e_workspace* workspace = output->active_workspace;
+
+        if (workspace == NULL)
+        {
+            e_log_error("no workspace");
+            return;
+        }
+
+        int i = e_list_find_index(&desktop->workspaces, workspace);
+
+        e_output_display_workspace(output, e_list_at(&desktop->workspaces, (i + 1) % desktop->workspaces.count));
+        e_cursor_set_focus_hover(desktop->seat->cursor);
+        e_log_info("output workspace index: %i", (i + 1) % desktop->workspaces.count);
+    }
+    //TODO: testing only, remove
+    else if (strcmp(argument, "move_to_next_workspace") == 0)
+    {
+        struct e_view* focused_view = e_seat_focused_view(desktop->seat);
+
+        if (focused_view == NULL)
+            return;
+
+        struct e_output* output = e_cursor_output_at(desktop->seat->cursor);
+
+        struct e_workspace* workspace = output->active_workspace;
+
+        if (workspace == NULL)
+        {
+            e_log_error("no workspace");
+            return;
+        }
+
+        int i = e_list_find_index(&desktop->workspaces, workspace);
+
+        e_view_move_to_workspace(focused_view, e_list_at(&desktop->workspaces, (i + 1) % desktop->workspaces.count));
+        e_cursor_set_focus_hover(desktop->seat->cursor);
+        e_log_info("view workspace index: %i", (i + 1) % desktop->workspaces.count);
     }
     else 
     {

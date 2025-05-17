@@ -6,6 +6,7 @@
 
 #include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
+#include <wlr/types/wlr_keyboard.h>
 #include <wlr/util/log.h>
 
 #include <xkbcommon/xkbcommon-keysyms.h>
@@ -68,13 +69,15 @@ int main()
     //check out: xkbcommon.org
     //Important function: xkb_keysym_from_name (const char *name, enum xkb_keysym_flags flags)
     
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F1, WLR_MODIFIER_ALT, "exec rofi -modi drun,run -show drun");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F2, WLR_MODIFIER_ALT, "exec alacritty");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F3, WLR_MODIFIER_ALT, "exit");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F4, WLR_MODIFIER_ALT, "kill");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F5, WLR_MODIFIER_ALT, "toggle_fullscreen");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F6, WLR_MODIFIER_ALT, "toggle_tiling");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F7, WLR_MODIFIER_ALT, "switch_tiling_mode");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F1, WLR_MODIFIER_LOGO, "exec rofi -modi drun,run -show drun");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F2, WLR_MODIFIER_LOGO, "exec alacritty");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F3, WLR_MODIFIER_LOGO, "exit");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F4, WLR_MODIFIER_LOGO, "kill");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F5, WLR_MODIFIER_LOGO, "toggle_fullscreen");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F6, WLR_MODIFIER_LOGO, "toggle_tiling");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F7, WLR_MODIFIER_LOGO, "switch_tiling_mode");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F8, WLR_MODIFIER_LOGO, "next_workspace");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F9, WLR_MODIFIER_LOGO, "move_to_next_workspace");
     
     struct e_server server = {0};
 
