@@ -11,9 +11,11 @@
 
 #include "input/seat.h"
 
+#include "desktop/tree/workspace.h"
 #include "desktop/layer_shell.h"
 #include "desktop/output.h"
 
+#include "util/list.h"
 #include "util/log.h"
 
 // creates scene and scene layer trees
@@ -62,6 +64,19 @@ struct e_desktop* e_desktop_create(struct wl_display* display, struct wlr_compos
     desktop->output_layout = wlr_output_layout_create(display);
 
     e_desktop_init_scene(desktop);
+
+    //create 3 workspaces for desktop
+    e_list_init(&desktop->workspaces, 3);
+
+    for (int i = 0; i < 3; i++)
+    {
+        struct e_workspace* workspace = e_workspace_create(desktop);
+
+        if (workspace != NULL)
+            e_list_add(&desktop->workspaces, workspace);
+        else
+            e_log_error("e_desktop_create: failed to create workspace %i", i + 1);
+    }
     
     wl_list_init(&desktop->views);
 
@@ -77,12 +92,31 @@ static void e_desktop_init_output(struct e_desktop* desktop, struct e_output* ou
 {
     assert(desktop && output && output->layout);
 
-    //create output's root container
-    if (output->root_tiling_container == NULL)
-        output->root_tiling_container = e_tree_container_create(E_TILING_MODE_HORIZONTAL);
+    if (output->active_workspace == NULL)
+    {
+        // set active workspace to first inactive workspace in desktop
+        for (int i = 0; i < desktop->workspaces.count; i++)
+        {
+            struct e_workspace* workspace = e_list_at(&desktop->workspaces, i);
 
-    if (output->root_floating_container == NULL)
-        output->root_floating_container = e_tree_container_create(E_TILING_MODE_NONE);
+            if (workspace != NULL && !workspace->active)
+            {
+                e_output_display_workspace(output, workspace);
+                break;
+            }
+        }
+
+        //just create new workspace for now
+        if (output->active_workspace == NULL)
+        {
+            struct e_workspace* workspace = e_workspace_create(desktop);
+
+            if (workspace != NULL)
+                e_output_display_workspace(output, workspace);
+            else
+                e_log_error("e_desktop_init_output: failed to create workspace");
+        }
+    }
 
     e_output_arrange(output);
 }
@@ -153,17 +187,7 @@ static void e_desktop_remove_output(struct e_desktop* desktop, struct e_output* 
 
     disable_output(output);
 
-    if (output->root_tiling_container != NULL)
-    {
-        e_tree_container_destroy(output->root_tiling_container);
-        output->root_tiling_container = NULL;
-    }
-
-    if (output->root_floating_container != NULL)
-    {
-        e_tree_container_destroy(output->root_floating_container);
-        output->root_floating_container = NULL;
-    }
+    e_output_display_workspace(output, NULL);
 
     wlr_output_layout_remove(desktop->output_layout, output->wlr_output);
 
@@ -221,6 +245,17 @@ void e_desktop_destroy(struct e_desktop* desktop)
     {
         e_desktop_remove_output(desktop, output);
     }
+
+    //destroy all workspaces
+    for (int i = 0; i < desktop->workspaces.count; i++)
+    {
+        struct e_workspace* workspace = e_list_at(&desktop->workspaces, i);
+
+        if (workspace != NULL)
+            e_workspace_destroy(workspace);
+    }
+
+    e_list_fini(&desktop->workspaces);
     
     //destroy root node
     wlr_scene_node_destroy(&desktop->scene->tree.node);

@@ -12,7 +12,6 @@
 
 #include <util/list.h>
 
-//TODO: function for shrinking the largest children in tree container to ensure enough space
 //TODO: function for getting the preferred percentage of space a container that hasn't been added yet should take up
 
 struct e_container;
@@ -81,6 +80,7 @@ bool e_container_init(struct e_container* container, enum e_container_type type,
 void e_container_fini(struct e_container* container);
 
 // Sets the parent of a container.
+// Parent may be NULL.
 // Returns true on success, false on fail.
 bool e_container_set_parent(struct e_container* container, struct e_tree_container* parent);
 

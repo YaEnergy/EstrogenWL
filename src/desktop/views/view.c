@@ -16,11 +16,15 @@
 
 #include "desktop/desktop.h"
 #include "desktop/output.h"
+
 #include "desktop/tree/node.h"
 #include "desktop/tree/container.h"
+#include "desktop/tree/workspace.h"
 
+#include "input/cursor.h"
 #include "input/seat.h"
 
+#include "util/list.h"
 #include "util/log.h"
 
 static void e_container_configure_view(struct e_container* container, int lx, int ly, int width, int height)
@@ -97,21 +101,22 @@ struct e_view_size_hints e_view_get_size_hints(struct e_view* view)
     }
 }
 
+// Parent is allowed to be NULL.
 static void e_view_set_parent_container(struct e_view* view, struct e_tree_container* parent)
 {
-    assert(view && parent);
+    assert(view);
 
     struct e_tree_container* previous_parent = view->container.parent;
 
     //parent container remains unchanged
     if (parent == previous_parent)
     {
-        e_log_info("window parent remains unchanged");
+        e_log_info("view parent remains unchanged");
         return;
     }
 
     #if E_VERBOSE
-    e_log_info("setting window parent...");
+    e_log_info("setting view parent...");
     #endif
 
     //remove from & rearrange previous container
@@ -120,9 +125,69 @@ static void e_view_set_parent_container(struct e_view* view, struct e_tree_conta
         e_tree_container_remove_container(previous_parent, &view->container);
         e_tree_container_arrange(previous_parent);
     }
+    
+    if (parent != NULL)
+    {
+        e_tree_container_add_container(parent, &view->container);
+        e_tree_container_arrange(parent);
+    }
+}
 
-    e_tree_container_add_container(parent, &view->container);
-    e_tree_container_arrange(parent);
+// Sets workspace of view, but doesn't set parent container of view.
+// Workspace is allowed to be NULL.
+static void e_view_set_workspace(struct e_view* view, struct e_workspace* workspace)
+{
+    if (view == NULL)
+    {
+        e_log_error("e_view_set_workspace: view is NULL!");
+        return;
+    }
+
+    //remove from old floating list if there
+    if (view->workspace != NULL)
+    {
+        int floating_index = e_list_find_index(&view->workspace->floating_views, view);
+
+        if (floating_index != -1)
+            e_list_remove_index(&view->workspace->floating_views, floating_index);
+    }
+    
+    if (workspace != NULL)
+    {
+        if (view->tiled)
+        {
+            wlr_scene_node_reparent(&view->tree->node, workspace->layers.tiling);
+        }
+        else //floating 
+        {
+            wlr_scene_node_reparent(&view->tree->node, workspace->layers.floating);
+            e_list_add(&workspace->floating_views, view);
+        }
+    }
+    else 
+    {
+        wlr_scene_node_reparent(&view->tree->node, view->desktop->pending);
+    }
+
+    view->workspace = workspace;
+}
+
+// Moves view to a different workspace, and updating its container parent.
+// If workspace is NULL, removes view from current workspace.
+void e_view_move_to_workspace(struct e_view* view, struct e_workspace* workspace)
+{
+    if (view == NULL)
+    {
+        e_log_error("e_view_set_workspace: view is NULL!");
+        return;
+    }
+
+    e_view_set_workspace(view, workspace);
+    
+    if (workspace != NULL && view->tiled)
+        e_view_set_parent_container(view, workspace->root_tiling_container);
+    else //floating or NULL workspace
+       e_view_set_parent_container(view, NULL);
 }
 
 static void e_view_tile(struct e_view* view)
@@ -133,89 +198,50 @@ static void e_view_tile(struct e_view* view)
     e_log_info("view tile container");
     #endif
 
-    //if not focused, find current TILED focused view's parent container
-    // else if focused or if none, find previous TILED focused's parent container
-    //if none, then output 0's root tiling container
-    //add to container if found
-    //else give up
+    //find hovered tiled view, and take its parent container
+    //else use hovered workspace's root tiling container
 
     struct e_desktop* desktop = view->desktop;
     struct e_seat* seat = desktop->seat;
 
-    struct wlr_surface* view_surface = view->surface;
-
+    struct e_workspace* workspace = NULL;
     struct e_tree_container* parent_container = NULL;
 
-    if (view_surface != NULL)
+    //find hovered tiled view, and take its parent container if possible
+
+    struct e_view* hovered_view = e_cursor_view_at(seat->cursor);
+
+    if (hovered_view != NULL && hovered_view->tiled && hovered_view->container.parent != NULL)
     {
-        //if not focused, find current TILED focused view's parent container
-        if (!e_seat_has_focus(seat, view_surface) && seat->focus_surface != NULL)
-        {
-            struct e_view* focused_view = e_seat_focused_view(seat);
-
-            if (focused_view != NULL && focused_view->tiled && focused_view->container.parent != NULL)
-                parent_container = focused_view->container.parent;
-        }
-
-        //if focused or none, find previous TILED focused view's parent container
-        if ((parent_container == NULL || e_seat_has_focus(seat, view_surface)) && seat->previous_focus_surface != NULL)
-        {
-            struct e_view* prev_focused_view = e_seat_prev_focused_view(seat);
-
-            if (prev_focused_view != NULL && prev_focused_view->tiled && prev_focused_view->container.parent != NULL)
-                parent_container = prev_focused_view->container.parent;
-        }
+        workspace = hovered_view->workspace;
+        parent_container = hovered_view->container.parent;
     }
     
-    //if still none, then output 0's root tiling container
-    if (parent_container == NULL)
+    //if no tiled view found that had focus or has focus, use hovered output's active workspace and its root tiling container if possible
+    if (workspace == NULL)
     {
-        //Set to output 0's container
-        struct e_output* output = e_desktop_get_output(desktop, 0);
+        struct e_output* hovered_output = e_cursor_output_at(seat->cursor);
 
-        if (output != NULL && output->root_tiling_container != NULL)
-            parent_container = output->root_tiling_container;
+        if (hovered_output == NULL)
+        {
+            e_log_error("e_view_tile: can't find any workspace");
+            return;
+        }
+
+        workspace = hovered_output->active_workspace;
+        parent_container = workspace->root_tiling_container;
     }
 
     if (parent_container == NULL)
     {
-        e_log_error("Failed to set view's parent to a tiled container");
+        e_log_error("e_view_tile: no container found!");
         return;
     }
     
+    //move to workspace as tiled
+    view->tiled = true;
+    e_view_set_workspace(view, workspace);
     e_view_set_parent_container(view, parent_container);
-
-    wlr_scene_node_reparent(&view->tree->node, view->desktop->layers.tiling);
-}
-
-// Returns the view's first current output with a root floating container
-// May return NULL.
-static struct e_tree_container* e_view_first_output_floating_container(struct e_view* view)
-{
-    assert(view);
-
-    if (view->surface == NULL)
-        return NULL;
-
-    if (wl_list_empty(&view->surface->current_outputs))
-        return NULL;
-
-    //loop over surface outputs until output is found with a root floating container
-    struct wlr_surface_output* wlr_surface_output;
-    wl_list_for_each(wlr_surface_output, &view->surface->current_outputs, link)
-    {
-        //attempt to acquire output from it
-        if (wlr_surface_output->output != NULL && wlr_surface_output->output->data != NULL)
-        {
-            struct e_output* output = wlr_surface_output->output->data;
-
-            if (output->root_floating_container != NULL)
-                return output->root_floating_container;
-        }
-    }
-
-    //none found
-    return NULL;
 }
 
 static void e_view_float(struct e_view* view)
@@ -226,36 +252,20 @@ static void e_view_float(struct e_view* view)
     e_log_info("view float container");
     #endif
 
-    //find first of current outputs root floating container
-    //if none, then output 0's root floating container
-    //add to container if found
-    //else give up
+    //find hovered workspace
 
-    struct wlr_surface* view_surface = view->surface;
+    struct e_workspace* workspace = e_cursor_output_at(view->desktop->seat->cursor)->active_workspace;
 
-    struct e_tree_container* parent_container = NULL;
-
-    if (view_surface != NULL)
-        parent_container = e_view_first_output_floating_container(view);
-
-    if (parent_container == NULL)
+    if (workspace == NULL)
     {
-        //Set to output 0's container
-        struct e_output* output = e_desktop_get_output(view->desktop, 0);
-
-        if (output != NULL && output->root_floating_container != NULL)
-            parent_container = output->root_floating_container;
-    }
-
-    if (parent_container == NULL)
-    {
-        e_log_error("Failed to set window's parent to a floating container");
+        e_log_error("e_view_float: no workspace found!");
         return;
     }
 
-    e_view_set_parent_container(view, parent_container);
-
-    wlr_scene_node_reparent(&view->tree->node, view->desktop->layers.floating);
+    //move to workspace as floating
+    view->tiled = false;
+    e_view_set_workspace(view, workspace);
+    e_view_set_parent_container(view, NULL);
 
     //TODO: return to natural geometry
 }
@@ -407,6 +417,8 @@ void e_view_unmap(struct e_view* view)
     #if E_VERBOSE
     e_log_info("view unmap");
     #endif
+
+    e_view_move_to_workspace(view, NULL);
 
     view->mapped = false;
     wlr_scene_node_set_enabled(&view->tree->node, false);

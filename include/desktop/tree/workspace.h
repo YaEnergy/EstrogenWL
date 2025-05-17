@@ -21,25 +21,26 @@ struct e_workspace_layers
     struct wlr_scene_tree* fullscreen;
 };
 
-// A virtual desktop, containing a group of surfaces that can be displayed with by a single output. (Views, xwayland unmanaged surfaces, ...)
+// A virtual desktop, containing a group of views that can be displayed with by a single output.
 struct e_workspace
 {
     struct e_desktop* desktop;
 
-    //Is an output displaying this workspace?
+    // Is an output displaying this workspace?
     bool active;
 
     struct e_workspace_layers layers;
 
     struct wlr_box full_area;
     struct wlr_box tiled_area;
+    
+    // View currently in fullscreen mode.
+    //TODO: struct e_view* fullscreen_view;
 
     //container for tiled containers
     struct e_tree_container* root_tiling_container;
 
     struct e_list floating_views; //struct e_view*
-
-    struct e_list unmanaged_surfaces; //struct e_xwayland_unmanaged*
 };
 
 // Create a new workspace for desktop.

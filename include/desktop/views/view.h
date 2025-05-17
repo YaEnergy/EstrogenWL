@@ -13,6 +13,9 @@
 
 #include "desktop/desktop.h"
 
+#include "desktop/tree/container.h"
+#include "desktop/tree/workspace.h"
+
 //TODO: add functions for states that view considers itself + implementation xdg toplevel & xwayland
 //      + editing window container
 //  - e_view_set_maximized
@@ -107,6 +110,9 @@ struct e_view
     // View's title
     char* title;
 
+    // Workspace view is currently in, may be NULL.
+    struct e_workspace* workspace;
+
     // Base container
     struct e_container container;
 
@@ -126,6 +132,10 @@ void e_view_map(struct e_view* view);
 
 // Stop displaying view.
 void e_view_unmap(struct e_view* view);
+
+// Moves view to a different workspace, and updating its container parent.
+// If workspace is NULL, removes view from current workspace.
+void e_view_move_to_workspace(struct e_view* view, struct e_workspace* workspace);
 
 // Set pending position of view using layout coordinates.
 // Only use if you are moving the view and not resizing it in any way.

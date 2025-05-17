@@ -9,11 +9,11 @@
 
 #include <wlr/util/box.h>
 
-#include "desktop/tree/container.h"
+#include "desktop/tree/workspace.h"
 
 struct e_desktop;
 
-// Desktop output.
+// Desktop output, possibly displaying a workspace.
 struct e_output
 {
     struct wl_list link; //e_desktop::outputs
@@ -25,11 +25,8 @@ struct e_output
     // Area tiled views are allowed to use.
     struct wlr_box usable_area;
 
-    //container for tiled containers
-    struct e_tree_container* root_tiling_container;
-
-    //container for floating containers
-    struct e_tree_container* root_floating_container;
+    // Workspace that output is currently displaying, may be NULL.
+    struct e_workspace* active_workspace;
 
     //output has a new frame ready
     struct wl_listener frame;
@@ -47,5 +44,9 @@ struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* w
 // Get topmost layer surface that requests exclusive focus.
 // Returns NULL if none.
 struct e_layer_surface* e_output_get_exclusive_topmost_layer_surface(struct e_output* output);
+
+// Display given workspace.
+// Given workspace must be inactive, but is allowed to be NULL.
+bool e_output_display_workspace(struct e_output* output, struct e_workspace* workspace);
 
 void e_output_arrange(struct e_output* output);

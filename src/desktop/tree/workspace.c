@@ -52,9 +52,8 @@ struct e_workspace* e_workspace_create(struct e_desktop* desktop)
     NEW_SCENE_TREE(workspace->layers.fullscreen, desktop->layers.overlay, E_NODE_DESC_WORKSPACE, workspace);
 
     e_list_init(&workspace->floating_views, 10);
-    e_list_init(&workspace->unmanaged_surfaces, 10);
 
-    workspace->active = false;
+    e_workspace_set_activated(workspace, false);
 
     return workspace;
 }
@@ -153,7 +152,6 @@ void e_workspace_destroy(struct e_workspace* workspace)
     wlr_scene_node_destroy(&workspace->layers.fullscreen->node);
 
     e_list_fini(&workspace->floating_views);
-    e_list_fini(&workspace->unmanaged_surfaces);
 
     free(workspace);
 }

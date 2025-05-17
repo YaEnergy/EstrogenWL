@@ -15,7 +15,7 @@
 
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
-#include "desktop/tree/container.h"
+#include "desktop/tree/workspace.h"
 #include "desktop/desktop.h"
 #include "desktop/layer_shell.h"
 
@@ -58,18 +58,9 @@ static void e_output_destroy(struct wl_listener* listener, void* data)
 {
     struct e_output* output = wl_container_of(listener, output, destroy);
 
-    if (output->root_tiling_container != NULL)
-    {
-        e_tree_container_destroy(output->root_tiling_container);
-        output->root_tiling_container = NULL;
-    }
-
-    if (output->root_floating_container != NULL)
-    {
-        e_tree_container_destroy(output->root_floating_container);
-        output->root_floating_container = NULL;
-    }
-
+    if (output->active_workspace != NULL)
+        e_workspace_set_activated(output->active_workspace, false);
+    
     wl_list_init(&output->link);
     wl_list_remove(&output->link);
 
@@ -93,8 +84,7 @@ struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* w
     output->wlr_output = wlr_output;
     output->desktop = desktop;
 
-    output->root_tiling_container = NULL;
-    output->root_floating_container = NULL;
+    output->active_workspace = NULL;
 
     wl_list_init(&output->link);
 
@@ -164,9 +154,46 @@ struct e_layer_surface* e_output_get_exclusive_topmost_layer_surface(struct e_ou
     return topmost_layer_surface;
 }
 
+// Display given workspace.
+// Given workspace must be inactive, but is allowed to be NULL.
+bool e_output_display_workspace(struct e_output* output, struct e_workspace* workspace)
+{
+    if (output == NULL)
+    {
+        e_log_error("e_output_set_workspace: no output given!");
+        return false;
+    }
+
+    //must be inactive if workspace is given
+    if (workspace != NULL && workspace->active)
+    {
+        e_log_error("e_output_set_workspace: workspace must be inactive!");
+        return false;
+    }
+
+    //deactivate previous workspace
+    if (output->active_workspace != NULL)
+        e_workspace_set_activated(output->active_workspace, false);
+
+    //activate new workspace
+
+    output->active_workspace = workspace;
+
+    if (workspace != NULL)
+    {
+        e_workspace_set_activated(workspace, true);
+
+        struct wlr_box full_area = (struct wlr_box){0, 0, 0, 0};
+        wlr_output_layout_get_box(output->layout, output->wlr_output, &full_area);
+        e_workspace_arrange(workspace, full_area, output->usable_area);
+    }
+
+    return true;
+}
+
 void e_output_arrange(struct e_output* output)
 {
-    assert(output && output->root_tiling_container && output->root_floating_container && output->layout);
+    assert(output && output->layout);
 
     struct wlr_box full_area = (struct wlr_box){0, 0, 0, 0};
     wlr_output_layout_get_box(output->layout, output->wlr_output, &full_area);
@@ -177,12 +204,9 @@ void e_output_arrange(struct e_output* output)
     if (output->desktop != NULL)
         e_output_arrange_all_layers(output, &full_area, &remaining_area);
 
-    if (output->root_tiling_container != NULL)
-        e_container_configure(&output->root_tiling_container->base, remaining_area.x, remaining_area.y, remaining_area.width, remaining_area.height);
+    if (output->active_workspace != NULL)
+        e_workspace_arrange(output->active_workspace, full_area, remaining_area);
     
-    if (output->root_floating_container != NULL)
-        e_container_configure(&output->root_floating_container->base, remaining_area.x, remaining_area.y, remaining_area.width, remaining_area.height);
-
     #if E_VERBOSE
     e_log_info("full area: (%i, %i) %ix%i", full_area.x, full_area.y, full_area.width, full_area.height);
     e_log_info("remaining area: (%i, %i) %ix%i", remaining_area.x, remaining_area.y, remaining_area.width, remaining_area.height);
