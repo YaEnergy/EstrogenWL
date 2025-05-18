@@ -59,6 +59,8 @@ void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_typ
     view->mapped = false;
     view->surface = NULL;
 
+    view->tiled = false;
+
     view->title = NULL;
     
     view->tree = wlr_scene_tree_create(desktop->pending);
@@ -67,7 +69,7 @@ void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_typ
 
     view->content_tree = NULL;
 
-    view->implementation.set_tiled = NULL;
+    view->implementation.notify_tiled = NULL;
     view->implementation.set_activated = NULL;
     view->implementation.configure = NULL;
     view->implementation.create_content_tree = NULL;
@@ -242,6 +244,9 @@ static void e_view_tile(struct e_view* view)
     view->tiled = true;
     e_view_set_workspace(view, workspace);
     e_view_set_parent_container(view, parent_container);
+
+    if (view->implementation.notify_tiled != NULL)
+        view->implementation.notify_tiled(view, true);
 }
 
 static void e_view_float(struct e_view* view)
@@ -266,6 +271,9 @@ static void e_view_float(struct e_view* view)
     view->tiled = false;
     e_view_set_workspace(view, workspace);
     e_view_set_parent_container(view, NULL);
+
+    if (view->implementation.notify_tiled != NULL)
+        view->implementation.notify_tiled(view, false);
 
     //TODO: return to natural geometry
 }
@@ -304,9 +312,6 @@ void e_view_set_tiled(struct e_view* view, bool tiled)
         e_view_tile(view);
     else
         e_view_float(view);
-
-    if (view->implementation.set_tiled != NULL)
-        view->implementation.set_tiled(view, tiled);
 }
 
 void e_view_set_activated(struct e_view* view, bool activated)

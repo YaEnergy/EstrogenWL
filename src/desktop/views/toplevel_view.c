@@ -193,8 +193,8 @@ static void e_toplevel_view_destroy(struct wl_listener* listener, void* data)
     free(toplevel_view);
 }
 
-// Set tiled state of the view.
-static void e_view_toplevel_set_tiled(struct e_view* view, bool tiled)
+// Notify the view implementation of the new tiled state.
+static void e_view_toplevel_notify_tiled(struct e_view* view, bool tiled)
 {
     assert(view && view->data);
 
@@ -297,7 +297,7 @@ struct e_toplevel_view* e_toplevel_view_create(struct e_desktop* desktop, struct
 
     toplevel_view->base.implementation.get_size_hints = e_view_toplevel_get_size_hints;
 
-    toplevel_view->base.implementation.set_tiled = e_view_toplevel_set_tiled;
+    toplevel_view->base.implementation.notify_tiled = e_view_toplevel_notify_tiled;
     toplevel_view->base.implementation.set_activated = e_view_toplevel_set_activated;
     toplevel_view->base.implementation.configure = e_view_toplevel_configure;
     toplevel_view->base.implementation.create_content_tree = e_view_toplevel_create_content_tree;

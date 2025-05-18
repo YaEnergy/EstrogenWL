@@ -51,8 +51,8 @@ struct e_view_impl
     // Returns size hints of the view.
     struct e_view_size_hints (*get_size_hints)(struct e_view* view);
 
-    // Sets the tiled state of the view.
-    void (*set_tiled)(struct e_view* view, bool tiled);
+    // Notify the view implementation of the new tiled state.
+    void (*notify_tiled)(struct e_view* view, bool tiled);
 
     // Sets the activated state of the view.
     void (*set_activated)(struct e_view* view, bool activated);

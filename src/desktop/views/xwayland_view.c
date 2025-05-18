@@ -127,8 +127,8 @@ static void e_xwayland_view_unmap(struct wl_listener* listener, void* data)
     SIGNAL_DISCONNECT(xwayland_view->commit);
 }
 
-// Set tiled state of the view.
-static void e_view_xwayland_set_tiled(struct e_view* view, bool tiled)
+// Notify the view implementation of the new tiled state.
+static void e_view_xwayland_notify_tiled(struct e_view* view, bool tiled)
 {
     assert(view);
 
@@ -355,7 +355,7 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct
 
     xwayland_view->base.implementation.get_size_hints = e_view_xwayland_get_size_hints;
 
-    xwayland_view->base.implementation.set_tiled = e_view_xwayland_set_tiled;
+    xwayland_view->base.implementation.notify_tiled = e_view_xwayland_notify_tiled;
     xwayland_view->base.implementation.set_activated = e_view_xwayland_set_activated;
     xwayland_view->base.implementation.configure = e_view_xwayland_configure;
     xwayland_view->base.implementation.create_content_tree = e_view_xwayland_create_content_tree;
