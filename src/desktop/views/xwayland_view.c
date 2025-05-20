@@ -332,6 +332,18 @@ static void e_view_xwayland_send_close(struct e_view* view)
     wlr_xwayland_surface_close(xwayland_view->xwayland_surface);
 }
 
+static const struct e_view_impl view_xwayland_implementation = {
+    .get_size_hints = e_view_xwayland_get_size_hints,
+
+    .notify_tiled = e_view_xwayland_notify_tiled,
+    
+    .set_activated = e_view_xwayland_set_activated,
+    .configure = e_view_xwayland_configure,
+    .create_content_tree = e_view_xwayland_create_content_tree,
+    .wants_floating = e_view_xwayland_wants_floating,
+    .send_close = e_view_xwayland_send_close,
+};
+
 // Creates new xwayland view on desktop.
 // Returns NULL on fail.
 struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct e_xwayland* xwayland, struct wlr_xwayland_surface* xwayland_surface)
@@ -349,18 +361,9 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct
     xwayland_view->xwayland = xwayland;
     xwayland_view->xwayland_surface = xwayland_surface;
 
-    e_view_init(&xwayland_view->base, desktop, E_VIEW_XWAYLAND, xwayland_view);
+    e_view_init(&xwayland_view->base, desktop, E_VIEW_XWAYLAND, xwayland_view, &view_xwayland_implementation);
 
     xwayland_view->base.title = xwayland_surface->title;
-
-    xwayland_view->base.implementation.get_size_hints = e_view_xwayland_get_size_hints;
-
-    xwayland_view->base.implementation.notify_tiled = e_view_xwayland_notify_tiled;
-    xwayland_view->base.implementation.set_activated = e_view_xwayland_set_activated;
-    xwayland_view->base.implementation.configure = e_view_xwayland_configure;
-    xwayland_view->base.implementation.create_content_tree = e_view_xwayland_create_content_tree;
-    xwayland_view->base.implementation.wants_floating = e_view_xwayland_wants_floating;
-    xwayland_view->base.implementation.send_close = e_view_xwayland_send_close;
 
     // events
 

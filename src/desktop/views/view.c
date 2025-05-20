@@ -48,9 +48,9 @@ static void e_container_destroy_view(struct e_container* container)
 
 //this function should only be called by the implementations of each view type. 
 //I mean it would be a bit weird to even call this function somewhere else.
-void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_type type, void* data)
+void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_type type, void* data, const struct e_view_impl* implementation)
 {
-    assert(view && desktop);
+    assert(view && desktop && implementation);
 
     view->desktop = desktop;
     view->type = type;
@@ -69,12 +69,7 @@ void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_typ
 
     view->content_tree = NULL;
 
-    view->implementation.notify_tiled = NULL;
-    view->implementation.set_activated = NULL;
-    view->implementation.configure = NULL;
-    view->implementation.create_content_tree = NULL;
-    view->implementation.wants_floating = NULL;
-    view->implementation.send_close = NULL;
+    view->implementation = implementation;
 
     e_container_init(&view->container, E_CONTAINER_VIEW, view);
     view->container.implementation.configure = e_container_configure_view;
@@ -92,9 +87,9 @@ struct e_view_size_hints e_view_get_size_hints(struct e_view* view)
         return (struct e_view_size_hints){0};
     }
 
-    if (view->implementation.get_size_hints != NULL)
+    if (view->implementation->get_size_hints != NULL)
     {
-        return view->implementation.get_size_hints(view);
+        return view->implementation->get_size_hints(view);
     }
     else
     {
@@ -245,8 +240,8 @@ static void e_view_tile(struct e_view* view)
     e_view_set_workspace(view, workspace);
     e_view_set_parent_container(view, parent_container);
 
-    if (view->implementation.notify_tiled != NULL)
-        view->implementation.notify_tiled(view, true);
+    if (view->implementation->notify_tiled != NULL)
+        view->implementation->notify_tiled(view, true);
 }
 
 static void e_view_float(struct e_view* view)
@@ -272,8 +267,8 @@ static void e_view_float(struct e_view* view)
     e_view_set_workspace(view, workspace);
     e_view_set_parent_container(view, NULL);
 
-    if (view->implementation.notify_tiled != NULL)
-        view->implementation.notify_tiled(view, false);
+    if (view->implementation->notify_tiled != NULL)
+        view->implementation->notify_tiled(view, false);
 
     //TODO: return to natural geometry
 }
@@ -294,8 +289,8 @@ void e_view_configure(struct e_view* view, int lx, int ly, int width, int height
     e_log_info("view configure");
     #endif
 
-    if (view->implementation.configure != NULL)
-        view->implementation.configure(view, lx, ly, width, height);
+    if (view->implementation->configure != NULL)
+        view->implementation->configure(view, lx, ly, width, height);
     else
         e_log_error("e_view_configure: configure is not implemented!");
 }
@@ -318,8 +313,8 @@ void e_view_set_activated(struct e_view* view, bool activated)
 {
     assert(view);
 
-    if (view->implementation.set_activated != NULL)
-        view->implementation.set_activated(view, activated);
+    if (view->implementation->set_activated != NULL)
+        view->implementation->set_activated(view, activated);
     else
         e_log_error("e_view_set_activated: not implemented!");
 }
@@ -356,9 +351,9 @@ static struct wlr_scene_tree* e_view_create_content_tree(struct e_view* view)
 {
     assert(view);
 
-    if (view->implementation.create_content_tree != NULL)
+    if (view->implementation->create_content_tree != NULL)
     {
-        return view->implementation.create_content_tree(view);
+        return view->implementation->create_content_tree(view);
     }
     else
     {
@@ -371,9 +366,9 @@ static bool e_view_wants_floating(struct e_view* view)
 {
     assert(view);
 
-    if (view->implementation.wants_floating != NULL)
+    if (view->implementation->wants_floating != NULL)
     {
-        return view->implementation.wants_floating(view);
+        return view->implementation->wants_floating(view);
     }
     else
     {
@@ -529,8 +524,8 @@ void e_view_send_close(struct e_view* view)
 {
     assert(view);
 
-    if (view->implementation.send_close != NULL)
-        view->implementation.send_close(view);
+    if (view->implementation->send_close != NULL)
+        view->implementation->send_close(view);
     else
         e_log_error("e_view_send_close: send_close is not implemented!");
 }

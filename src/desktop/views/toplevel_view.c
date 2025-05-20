@@ -275,6 +275,18 @@ static void e_view_toplevel_send_close(struct e_view* view)
     wlr_xdg_toplevel_send_close(toplevel_view->xdg_toplevel);
 }
 
+static const struct e_view_impl view_toplevel_implementation = {
+    .get_size_hints = e_view_toplevel_get_size_hints,
+
+    .notify_tiled = e_view_toplevel_notify_tiled,
+    
+    .set_activated = e_view_toplevel_set_activated,
+    .configure = e_view_toplevel_configure,
+    .create_content_tree = e_view_toplevel_create_content_tree,
+    .wants_floating = e_view_toplevel_wants_floating,
+    .send_close = e_view_toplevel_send_close,
+};
+
 struct e_toplevel_view* e_toplevel_view_create(struct e_desktop* desktop, struct wlr_xdg_toplevel* xdg_toplevel)
 {
     assert(desktop && xdg_toplevel);
@@ -290,19 +302,10 @@ struct e_toplevel_view* e_toplevel_view_create(struct e_desktop* desktop, struct
     //give pointer to xdg toplevel
     toplevel_view->xdg_toplevel = xdg_toplevel;
 
-    e_view_init(&toplevel_view->base, desktop, E_VIEW_TOPLEVEL, toplevel_view);
+    e_view_init(&toplevel_view->base, desktop, E_VIEW_TOPLEVEL, toplevel_view, &view_toplevel_implementation);
 
     toplevel_view->base.title = xdg_toplevel->title;
     toplevel_view->base.surface = xdg_toplevel->base->surface;
-
-    toplevel_view->base.implementation.get_size_hints = e_view_toplevel_get_size_hints;
-
-    toplevel_view->base.implementation.notify_tiled = e_view_toplevel_notify_tiled;
-    toplevel_view->base.implementation.set_activated = e_view_toplevel_set_activated;
-    toplevel_view->base.implementation.configure = e_view_toplevel_configure;
-    toplevel_view->base.implementation.create_content_tree = e_view_toplevel_create_content_tree;
-    toplevel_view->base.implementation.wants_floating = e_view_toplevel_wants_floating;
-    toplevel_view->base.implementation.send_close = e_view_toplevel_send_close;
 
     // events
 
