@@ -65,7 +65,11 @@ static void e_server_new_output(struct wl_listener* listener, void* data)
 
     //configure output by backend to use allocator and renderer
     //before committing output
-    wlr_output_init_render(wlr_output, server->allocator, server->renderer);
+    if (!wlr_output_init_render(wlr_output, server->allocator, server->renderer))
+    {
+        e_log_error("e_server_new_output: failed to init output's rendering subsystem");
+        return;
+    }
 
     //enable state if neccessary
     struct wlr_output_state state;
@@ -149,6 +153,14 @@ static void e_server_renderer_lost(struct wl_listener* listener, void* data)
 
     // set compositor to use new renderer
     wlr_compositor_set_renderer(server->compositor, server->renderer);
+
+    //reinit outputs
+    struct e_output* output;
+    wl_list_for_each(output, &server->desktop->outputs, link)
+    {
+        if (!wlr_output_init_render(output->wlr_output, server->allocator, server->renderer))
+            e_log_error("e_server_renderer_lost: failed to init an output's rendering subsystem");
+    }
 }
 
 int e_server_init(struct e_server* server, struct e_config* config)
