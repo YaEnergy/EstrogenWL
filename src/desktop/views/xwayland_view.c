@@ -161,7 +161,10 @@ static void e_view_xwayland_set_fullscreen(struct e_view* view, bool fullscreen)
 
     wlr_xwayland_surface_set_fullscreen(xwayland_view->xwayland_surface, fullscreen);
 
-    e_view_set_fullscreen(view, fullscreen);
+    if (fullscreen)
+        e_view_fullscreen(view);
+    else
+        e_view_unfullscreen(view);
 }
 
 static void e_xwayland_view_request_maximize(struct wl_listener* listener, void* data)

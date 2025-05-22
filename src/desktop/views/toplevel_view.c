@@ -224,7 +224,10 @@ static void e_view_toplevel_set_fullscreen(struct e_view* view, bool fullscreen)
 
     wlr_xdg_toplevel_set_fullscreen(toplevel_view->xdg_toplevel, fullscreen);
 
-    e_view_set_fullscreen(&toplevel_view->base, fullscreen);
+    if (fullscreen)
+        e_view_fullscreen(view);
+    else
+        e_view_unfullscreen(view);
 }
 
 static bool toplevel_size_configure_is_scheduled(struct wlr_xdg_toplevel* xdg_toplevel)
