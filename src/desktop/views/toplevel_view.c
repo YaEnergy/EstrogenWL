@@ -216,6 +216,18 @@ static void e_view_toplevel_set_activated(struct e_view* view, bool activated)
         wlr_scene_node_raise_to_top(&view->tree->node);
 }
 
+// Set the fullscreen mode of the view.
+static void e_view_toplevel_set_fullscreen(struct e_view* view, bool fullscreen)
+{
+    assert(view);
+
+    struct e_toplevel_view* toplevel_view = view->data;
+
+    wlr_xdg_toplevel_set_fullscreen(toplevel_view->xdg_toplevel, fullscreen);
+
+    e_view_set_fullscreen(&toplevel_view->base, fullscreen);
+}
+
 static bool toplevel_size_configure_is_scheduled(struct wlr_xdg_toplevel* xdg_toplevel)
 {
     assert(xdg_toplevel);
@@ -281,7 +293,7 @@ static const struct e_view_impl view_toplevel_implementation = {
     .notify_tiled = e_view_toplevel_notify_tiled,
     
     .set_activated = e_view_toplevel_set_activated,
-    .set_fullscreen = NULL,
+    .set_fullscreen = e_view_toplevel_set_fullscreen,
 
     .configure = e_view_toplevel_configure,
     .create_content_tree = e_view_toplevel_create_content_tree,
