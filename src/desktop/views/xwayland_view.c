@@ -153,6 +153,17 @@ static void e_view_xwayland_set_activated(struct e_view* view, bool activated)
         wlr_scene_node_raise_to_top(&view->tree->node);
 }
 
+static void e_view_xwayland_set_fullscreen(struct e_view* view, bool fullscreen)
+{
+    assert(view && view->data);
+
+    struct e_xwayland_view* xwayland_view = view->data;
+
+    wlr_xwayland_surface_set_fullscreen(xwayland_view->xwayland_surface, fullscreen);
+
+    e_view_set_fullscreen(view, fullscreen);
+}
+
 static void e_xwayland_view_request_maximize(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, request_configure);
@@ -338,8 +349,8 @@ static const struct e_view_impl view_xwayland_implementation = {
     .notify_tiled = e_view_xwayland_notify_tiled,
     
     .set_activated = e_view_xwayland_set_activated,
-    .set_fullscreen = NULL,
-    
+    .set_fullscreen = e_view_xwayland_set_fullscreen,
+
     .configure = e_view_xwayland_configure,
     .create_content_tree = e_view_xwayland_create_content_tree,
     .wants_floating = e_view_xwayland_wants_floating,
