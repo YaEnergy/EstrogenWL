@@ -36,6 +36,16 @@ struct e_trans_op* e_trans_session_add_op(struct e_trans_session* session, void*
     return op;
 }
 
+// Destroy all current operations inside session, basically starting a new transaction.
+void e_trans_session_clear(struct e_trans_session* session)
+{
+    struct e_trans_op* op;
+    e_trans_session_for_each_safe(op, session)
+    {
+        e_trans_op_destroy(op);
+    }
+}
+
 // Frees e_trans_op and emits the destroy signal. To destroy data, use the destroy signal.
 void e_trans_op_destroy(struct e_trans_op* operation)
 {

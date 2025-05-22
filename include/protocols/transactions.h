@@ -39,5 +39,8 @@ void e_trans_session_init(struct e_trans_session* session);
 // Returns NULL on fail.
 struct e_trans_op* e_trans_session_add_op(struct e_trans_session* session, void* src, uint32_t type, void* data);
 
+// Destroy all current operations inside session, basically starting a new transaction.
+void e_trans_session_clear(struct e_trans_session* session);
+
 // Frees e_trans_op and emits the destroy signal. To destroy data, use the destroy signal.
 void e_trans_op_destroy(struct e_trans_op* operation);
