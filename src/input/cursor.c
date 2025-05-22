@@ -269,6 +269,78 @@ static bool grow_axis_tiled_container_percentage(struct e_container* container, 
     return true;
 }
 
+static void e_cursor_resize_tiled(struct e_cursor* cursor)
+{
+    if (cursor == NULL)
+    {
+        e_log_error("e_cursor_resize_tiling: cursor is NULL");
+        return;
+    }
+
+    if (cursor->grab_view == NULL)
+    {
+        e_log_error("e_cursor_resize_tiling: view grabbed by cursor is NULL");
+        e_cursor_reset_mode(cursor);
+        return;
+    }
+
+    if (cursor->grab_view->container.parent == NULL || !cursor->grab_view->tiled)
+    {
+        e_log_error("e_cursor_resize_tiling: view grabbed by cursor is not tiled");
+        e_cursor_reset_mode(cursor);
+        return;
+    }
+
+    //TODO: implement e_cursor_resize_tiled
+    //TODO: clean up & refactor
+    //TODO: use starting container percentage
+
+    //if grabbed edge is along the direction of the grabbed view's parent container, update grabbed view's container percentage (not parent)
+    //else update grabbed view's PARENT container's percentage
+    
+    struct e_container* container_resize = NULL;
+
+    if (edge_is_along_tiling_axis(cursor->grab_edges, cursor->grab_view->container.parent->tiling_mode))
+        container_resize = &cursor->grab_view->container;
+    else
+        container_resize = &cursor->grab_view->container.parent->base;
+
+    if (container_resize->parent == NULL)
+    {
+        e_log_error("e_cursor_resize_tiling: container to resize has no parent!");
+        e_cursor_reset_mode(cursor);
+        return;
+    }
+
+    enum e_tiling_mode tiling_axis = container_resize->parent->tiling_mode;
+
+    int size = (tiling_axis == E_TILING_MODE_HORIZONTAL) ? container_resize->parent->base.area.width : container_resize->parent->base.area.height;
+    double cursor_pos = (tiling_axis == E_TILING_MODE_HORIZONTAL) ? cursor->wlr_cursor->x : cursor->wlr_cursor->y;
+
+    double grab_start_pos = (tiling_axis == E_TILING_MODE_HORIZONTAL) ? cursor->grab_start_x : cursor->grab_start_y;
+
+    e_log_info("new: %g, start grab: %g", cursor_pos, grab_start_pos);
+
+    //calc abs percentage moved from start pos
+    float delta_percentage = (cursor_pos - grab_start_pos) / (float)size;
+
+    //are we growing container along its end? right edge in horizontal tiling, bottom edge in vertical tiling
+    bool end = (cursor->grab_edges & WLR_EDGE_RIGHT && tiling_axis == E_TILING_MODE_HORIZONTAL) || (cursor->grab_edges & WLR_EDGE_BOTTOM && tiling_axis == E_TILING_MODE_VERTICAL);
+    
+    //if resizing from the beginning, going left/up should grow container instead of shrinking
+    if (!end)
+        delta_percentage = -delta_percentage;
+
+    e_log_info("delta percentage: %g", delta_percentage);
+
+    grow_axis_tiled_container_percentage(container_resize, end, delta_percentage - cursor->prev_tile_percentage_idk);
+    cursor->prev_tile_percentage_idk = delta_percentage;
+    
+    e_log_info("new percentage %g", container_resize->percentage);
+
+    e_tree_container_arrange(container_resize->parent);
+}
+
 static void e_cursor_resize_floating(struct e_cursor* cursor)
 {
     if (cursor == NULL)
@@ -384,14 +456,9 @@ static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
     //above has been fixed for toplevel views, but xwayland views seem to still have some issues.
 
     if (cursor->grab_view->tiled)
-    {
-        //TODO: allow resizing of tiled views
-        wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "not-allowed");
-    }
+        e_cursor_resize_tiled(cursor);
     else //floating
-    {
         e_cursor_resize_floating(cursor);
-    }
 }
 
 static void e_cursor_handle_motion(struct e_cursor* cursor, uint32_t time_msec)

@@ -49,6 +49,9 @@ struct e_cursor
     double grab_start_y;
     struct wlr_box grab_start_vbox;
     enum wlr_edges grab_edges;
+
+    //TODO: replace with starting percentage
+    float prev_tile_percentage_idk;
 };
 
 // Returns NULL on fail.
