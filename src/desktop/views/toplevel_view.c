@@ -61,8 +61,7 @@ static void e_toplevel_view_map(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, map);
 
-    //TODO: add actual wm capabilities
-    wlr_xdg_toplevel_set_wm_capabilities(toplevel_view->xdg_toplevel, 0);
+    wlr_xdg_toplevel_set_wm_capabilities(toplevel_view->xdg_toplevel, WLR_XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
     
     e_view_map(&toplevel_view->base);
 
