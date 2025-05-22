@@ -222,6 +222,53 @@ static bool edge_is_along_tiling_axis(enum wlr_edges edge, enum e_tiling_mode ti
         return false; 
 }
 
+// Grow container's percentage along end or start by as much as it can until percentage.
+static bool grow_axis_tiled_container_percentage(struct e_container* container, bool end, float percentage)
+{
+    if (container == NULL)
+    {
+        e_log_error("grow_axis_tiled_container_percentage: container is NULL");
+        return false;
+    }
+
+    if (container->parent == NULL || container->parent->tiling_mode == E_TILING_MODE_NONE)
+    {
+        e_log_error("grow_axis_tiled_container_percentage: container is not tiled!");
+        return false;
+    }
+
+    struct e_container* affected_container = NULL;
+
+    if (end)
+        affected_container = e_container_next_sibling(container);
+    else
+        affected_container = e_container_prev_sibling(container);
+
+    if (affected_container == NULL)
+    {
+        e_log_error("grow_axis_tiled_container_percentage: no other container is affected by resize, can't grow");
+        return false;
+    }
+
+    //TODO: should limit by view constraints
+    //TODO: 5% is kind of arbitrary
+    //TODO: respect min size hint if possible
+
+    //limit growth by percentage of affected container, keep 5%
+    if (percentage >= affected_container->percentage - 0.05f)
+        percentage = affected_container->percentage - 0.05f;
+
+    //limit shrinkage by percentage of main container, keep 5%
+    //FIXME: might cause affected container to not keep 5%
+    if (container->percentage + percentage < 0.05f)
+        percentage = -container->percentage + 0.05f;
+
+    container->percentage += percentage;
+    affected_container->percentage  -= percentage;
+    
+    return true;
+}
+
 static void e_cursor_resize_floating(struct e_cursor* cursor)
 {
     if (cursor == NULL)
