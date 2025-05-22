@@ -212,6 +212,16 @@ static void e_cursor_handle_mode_move(struct e_cursor* cursor)
     }
 }
 
+static bool edge_is_along_tiling_axis(enum wlr_edges edge, enum e_tiling_mode tiling_mode)
+{
+    if (tiling_mode == E_TILING_MODE_HORIZONTAL)
+        return (edge & WLR_EDGE_LEFT || edge & WLR_EDGE_RIGHT);
+    else if (tiling_mode == E_TILING_MODE_VERTICAL)
+        return (edge & WLR_EDGE_TOP || edge & WLR_EDGE_BOTTOM);
+    else //E_TILING_MODE_NONE
+        return false; 
+}
+
 static void e_cursor_resize_floating(struct e_cursor* cursor)
 {
     if (cursor == NULL)
