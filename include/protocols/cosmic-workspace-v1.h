@@ -120,9 +120,9 @@ struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struc
 // Returns NULL on fail.
 struct e_cosmic_workspace_group_v1* e_cosmic_workspace_group_v1_create(struct e_cosmic_workspace_manager_v1* manager);
 
-// Creates a new workspace. ID is allowed to be NULL.
+// Creates a new workspace inside workspace group. ID is allowed to be NULL.
 // Returns NULL on fail.
-struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_workspace_manager_v1* manager, const char* id);
+struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_workspace_group_v1* group, const char* id);
 
 void e_cosmic_workspace_v1_set_name(struct e_cosmic_workspace_v1* workspace, const char* name);
 
