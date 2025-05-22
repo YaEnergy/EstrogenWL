@@ -141,18 +141,36 @@ static void e_view_set_workspace(struct e_view* view, struct e_workspace* worksp
         return;
     }
 
-    //remove from old floating list if there
     if (view->workspace != NULL)
     {
+        //remove from old floating list if there
+
         int floating_index = e_list_find_index(&view->workspace->floating_views, view);
 
         if (floating_index != -1)
             e_list_remove_index(&view->workspace->floating_views, floating_index);
+
+        //reenable workspace trees if workspace is active and view was fullscreen
+        if (view->fullscreen)
+        {
+            view->workspace->fullscreen_view = NULL;
+            e_workspace_update_tree_visibility(view->workspace);
+        }
     }
     
     if (workspace != NULL)
     {
-        if (view->tiled)
+        if (view->fullscreen)
+        {
+            if (workspace->fullscreen_view != NULL && workspace->fullscreen_view != view)
+                e_view_set_fullscreen(workspace->fullscreen_view, false);
+
+            workspace->fullscreen_view = view;
+            wlr_scene_node_reparent(&view->tree->node, workspace->layers.fullscreen);
+            e_workspace_update_tree_visibility(workspace);
+            e_workspace_arrange(workspace, workspace->full_area, workspace->tiled_area);
+        }
+        else if (view->tiled)
         {
             wlr_scene_node_reparent(&view->tree->node, workspace->layers.tiling);
         }
@@ -182,10 +200,10 @@ void e_view_move_to_workspace(struct e_view* view, struct e_workspace* workspace
 
     e_view_set_workspace(view, workspace);
     
-    if (workspace != NULL && view->tiled)
+    if (workspace != NULL && view->tiled && !view->fullscreen)
         e_view_set_parent_container(view, workspace->root_tiling_container);
-    else //floating or NULL workspace
-       e_view_set_parent_container(view, NULL);
+    else //floating or NULL workspace or fullscreen
+        e_view_set_parent_container(view, NULL);
 }
 
 static void e_view_tile(struct e_view* view)
@@ -318,6 +336,77 @@ void e_view_set_activated(struct e_view* view, bool activated)
         view->implementation->set_activated(view, activated);
     else
         e_log_error("e_view_set_activated: not implemented!");
+}
+
+
+// Set view to fullscreen.
+void e_view_fullscreen(struct e_view* view)
+{
+    assert(view);
+
+    struct e_workspace* workspace = view->workspace;
+
+    if (workspace == NULL)
+    {
+        e_log_error("e_view_unfullscreen: workspace is NULL!");
+        return;
+    }
+
+    if (workspace->fullscreen_view == view)
+        return;
+
+    if (workspace->fullscreen_view != NULL)
+        e_view_set_fullscreen(workspace->fullscreen_view, false);
+
+    view->fullscreen = true;
+    workspace->fullscreen_view = view;
+    e_view_set_parent_container(view, NULL);
+
+    wlr_scene_node_reparent(&view->tree->node, workspace->layers.fullscreen);
+
+    e_workspace_update_tree_visibility(workspace);
+    e_workspace_arrange(workspace, workspace->full_area, workspace->tiled_area);
+}
+
+// Unfullscreen view.
+void e_view_unfullscreen(struct e_view* view)
+{
+    assert(view);
+
+    struct e_workspace* workspace = view->workspace;
+
+    if (workspace == NULL)
+    {
+        e_log_error("e_view_unfullscreen: workspace is NULL!");
+        return;
+    }
+
+    //this view must be the one that's in fullscreen mode
+    if (workspace->fullscreen_view != view)
+        return;
+
+    view->fullscreen = false;
+    workspace->fullscreen_view = NULL;
+    
+    if (view->tiled)
+        e_view_tile(view);
+    else
+        e_view_float(view);
+
+    e_workspace_update_tree_visibility(workspace);
+    e_workspace_arrange(workspace, workspace->full_area, workspace->tiled_area);
+}
+
+
+// Set the fullscreen mode of the view.
+void e_view_set_fullscreen(struct e_view* view, bool fullscreen)
+{
+    assert(view);
+
+    if (view->implementation->set_fullscreen != NULL)
+        view->implementation->set_fullscreen(view, fullscreen);
+    else
+        e_log_error("e_view_set_fullscreen: set fullscreen not implemented!");
 }
 
 bool e_view_has_pending_changes(struct e_view* view)
