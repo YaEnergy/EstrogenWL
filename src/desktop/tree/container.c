@@ -63,6 +63,36 @@ bool e_container_set_parent(struct e_container* container, struct e_tree_contain
         return true;
 }
 
+// Gets next sibling of container.
+// Returns NULL if none.
+struct e_container* e_container_next_sibling(struct e_container* container)
+{
+    if (container == NULL || container->parent == NULL)
+        return NULL;
+
+    int index = e_list_find_index(&container->parent->children, container);
+
+    if (index == -1)
+        return NULL;
+
+    return e_list_at(&container->parent->children, index + 1);
+}
+
+// Gets previous sibling of container.
+// Returns NULL if none.
+struct e_container* e_container_prev_sibling(struct e_container* container)
+{
+    if (container == NULL || container->parent == NULL)
+        return NULL;
+
+    int index = e_list_find_index(&container->parent->children, container);
+
+    if (index == -1)
+        return NULL;
+
+    return e_list_at(&container->parent->children, index - 1);
+}
+
 // Configure the container.
 void e_container_configure(struct e_container* container, int x, int y, int width, int height)
 {

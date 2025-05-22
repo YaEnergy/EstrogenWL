@@ -84,6 +84,14 @@ void e_container_fini(struct e_container* container);
 // Returns true on success, false on fail.
 bool e_container_set_parent(struct e_container* container, struct e_tree_container* parent);
 
+// Gets next sibling of container.
+// Returns NULL if none.
+struct e_container* e_container_next_sibling(struct e_container* container);
+
+// Gets previous sibling of container.
+// Returns NULL if none.
+struct e_container* e_container_prev_sibling(struct e_container* container);
+
 // Configure the container.
 void e_container_configure(struct e_container* container, int x, int y, int width, int height);
 
