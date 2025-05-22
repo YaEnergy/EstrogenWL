@@ -1,0 +1,139 @@
+#pragma once
+
+#include <stdint.h>
+
+#include <wayland-server-core.h>
+#include <wayland-server.h>
+#include <wayland-util.h>
+
+#include "protocols/transactions.h"
+
+//TODO: group output
+//TODO: comments
+
+// First support minor version 1, later 2
+#define COSMIC_WORKSPACE_V1_VERSION 1
+
+struct e_cosmic_workspace_manager_v1
+{
+    struct wl_global* global;
+
+    struct wl_list groups; //struct e_cosmic_workspace_group_v1*
+    struct wl_list workspaces; //struct e_cosmic_workspace_v1*
+
+    // Resource for each client that has binded to manager.
+    struct wl_list resources; //struct wl_resource*
+
+    struct e_trans_session trans_session;
+    
+    struct
+    {
+        struct wl_signal commit;
+        struct wl_signal stop;
+        struct wl_signal destroy;
+    } events;
+
+    struct 
+    {
+        // Destroy global when display is destroyed.
+        struct wl_listener display_destroy;
+    } listeners;
+};
+
+enum e_cosmic_workspace_group_capability
+{
+    E_COSMIC_WORKSPACE_GROUP_CAPABILITY_CREATE_WORKSPACE = 1 << 0
+};
+
+struct e_cosmic_workspace_group_v1
+{
+    struct e_cosmic_workspace_manager_v1* manager;
+
+    struct wl_list outputs; //struct e_cosmic_workspace_v1_group_output*
+    struct wl_list workspaces; //struct e_cosmic_workspace_v1*
+
+    struct wl_array capabilities; //bitmask enum e_cosmic_workspace_group_capability
+
+    // Resource for each client that has binded to manager.
+    struct wl_list resources; //struct wl_resource*
+
+    struct
+    {
+        struct wl_signal request_create_workspace;
+        struct wl_signal destroy;
+    } events;
+
+    struct wl_list link; //e_cosmic_workspace_manager_v1::groups
+};
+
+enum e_cosmic_workspace_capability
+{
+    E_COSMIC_WORKSPACE_CAPABILITY_ACTIVATE = 1 << 0,
+    E_COSMIC_WORKSPACE_CAPABILITY_DEACTIVATE = 1 << 1,
+    E_COSMIC_WORKSPACE_CAPABILITY_ASSIGN = 1 << 2,
+    E_COSMIC_WORKSPACE_CAPABILITY_REMOVE = 1 << 3
+};
+
+enum e_cosmic_workspace_state
+{
+    E_COSMIC_WORKSPACE_STATE_ACTIVE = 1 << 0,
+    E_COSMIC_WORKSPACE_STATE_URGENT = 1 << 1,
+    E_COSMIC_WORKSPACE_STATE_HIDDEN = 1 << 2
+};
+
+struct e_cosmic_workspace_v1
+{
+    struct e_cosmic_workspace_manager_v1* manager;
+    
+    // Group this workspace is assigned to, may be NULL.
+    struct e_cosmic_workspace_group_v1* group;
+
+    const char* id;
+    const char* name;
+
+    uint32_t state; //bitmask enum e_cosmic_workspace_state
+    uint32_t pending_state; //bitmask enum e_cosmic_workspace_state
+
+    struct wl_array capabilities; //bitmask enum e_cosmic_workspace_capability
+
+    struct wl_array coords;
+
+    // Resource for each client that has binded to manager.
+    struct wl_list resources; //struct wl_resource*
+
+    struct
+    {
+        struct wl_signal request_activate;
+        struct wl_signal request_deactivate;
+        struct wl_signal request_remove;
+        //struct wl_signal request_rename; since minor version 2
+        //struct wl_signal request_set_tiling_state; since minor version 2
+        struct wl_signal destroy;
+    } events;
+
+    struct wl_list link; //e_cosmic_workspace_manager_v1::workspaces
+};
+
+// Returns NULL on fail.
+struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struct wl_display* display, uint32_t version);
+
+// Returns NULL on fail.
+struct e_cosmic_workspace_group_v1* e_cosmic_workspace_group_v1_create(struct e_cosmic_workspace_manager_v1* manager);
+
+// Creates a new workspace. ID is allowed to be NULL.
+// Returns NULL on fail.
+struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_workspace_manager_v1* manager, const char* id);
+
+void e_cosmic_workspace_v1_set_name(struct e_cosmic_workspace_v1* workspace, const char* name);
+
+void e_cosmic_workspace_v1_set_coords(struct e_cosmic_workspace_v1* workspace, struct wl_array* coords);
+
+void e_cosmic_workspace_v1_set_active(struct e_cosmic_workspace_v1* workspace, bool active);
+
+void e_cosmic_workspace_v1_set_urgent(struct e_cosmic_workspace_v1* workspace, bool urgent);
+
+void e_cosmic_workspace_v1_set_hidden(struct e_cosmic_workspace_v1* workspace, bool hidden);
+
+void e_cosmic_workspace_v1_remove(struct e_cosmic_workspace_v1* workspace);
+
+void e_cosmic_workspace_v1_destroy(struct e_cosmic_workspace_v1* workspace);
