@@ -44,5 +44,7 @@ void e_trans_op_destroy(struct e_trans_op* operation)
 
     wl_signal_emit_mutable(&operation->destroy, NULL);
 
+    wl_list_remove(&operation->link);
+
     free(operation);
 }
