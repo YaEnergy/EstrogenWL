@@ -28,6 +28,10 @@ struct e_trans_op
     struct wl_list link; //e_trans_session::operations
 };
 
+// Allows looping over operations inside current transaction of session, and destroying the current operation once finished.
+#define e_trans_session_for_each_safe(pos, session) struct e_trans_op* tmp; \
+wl_list_for_each_safe(pos, tmp, &session->operations, link)
+
 // Init transaction session.
 void e_trans_session_init(struct e_trans_session* session);
 
