@@ -85,7 +85,11 @@ void e_workspace_arrange(struct e_workspace* workspace, struct wlr_box full_area
     workspace->full_area = full_area;
     workspace->tiled_area = tiled_area;
 
-    //TODO: move tree, don't use x y in configure
+    //TODO: move trees, don't use x y in configure
+
+    if (workspace->fullscreen_view != NULL)
+        e_view_configure(workspace->fullscreen_view, full_area.x, full_area.y, full_area.width, full_area.height);
+
     e_container_configure(&workspace->root_tiling_container->base, tiled_area.x, tiled_area.y, tiled_area.width, tiled_area.height);
 }
 
