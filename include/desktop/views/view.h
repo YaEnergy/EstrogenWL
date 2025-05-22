@@ -57,6 +57,9 @@ struct e_view_impl
     // Sets the activated state of the view.
     void (*set_activated)(struct e_view* view, bool activated);
 
+    // Set the fullscreen mode of the view.
+    void (*set_fullscreen)(struct e_view* view, bool fullscreen);
+
     //void (*set_maximized)(struct e_view* view, bool maximized);
     //void (*set_resizing)(struct e_view* view, bool resizing);
     
@@ -106,6 +109,7 @@ struct e_view
     bool mapped;
 
     bool tiled;
+    bool fullscreen;
 
     // View's title
     char* title;
@@ -156,6 +160,12 @@ void e_view_set_tiled(struct e_view* view, bool tiled);
 
 // Sets the activated state of the view.
 void e_view_set_activated(struct e_view* view, bool activated);
+
+void e_view_fullscreen(struct e_view* view);
+void e_view_unfullscreen(struct e_view* view);
+
+// Set the fullscreen mode of the view.
+void e_view_set_fullscreen(struct e_view* view, bool fullscreen);
 
 /*
 void e_view_set_maximized(struct e_view* view, bool maximized);

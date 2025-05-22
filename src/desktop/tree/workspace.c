@@ -10,6 +10,7 @@
 #include "desktop/tree/node.h"
 
 #include "desktop/desktop.h"
+#include "desktop/views/view.h"
 
 #include "util/list.h"
 #include "util/log.h"
@@ -35,6 +36,7 @@ struct e_workspace* e_workspace_create(struct e_desktop* desktop)
     }
 
     workspace->desktop = desktop;
+    workspace->fullscreen_view = NULL;
 
     workspace->root_tiling_container = e_tree_container_create(E_TILING_MODE_HORIZONTAL);
 

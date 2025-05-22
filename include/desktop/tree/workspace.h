@@ -13,6 +13,7 @@
 #include "util/list.h"
 
 struct e_desktop;
+struct e_view;
 
 struct e_workspace_layers
 {
@@ -35,7 +36,7 @@ struct e_workspace
     struct wlr_box tiled_area;
     
     // View currently in fullscreen mode.
-    //TODO: struct e_view* fullscreen_view;
+    struct e_view* fullscreen_view;
 
     //container for tiled containers
     struct e_tree_container* root_tiling_container;

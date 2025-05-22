@@ -281,6 +281,8 @@ static const struct e_view_impl view_toplevel_implementation = {
     .notify_tiled = e_view_toplevel_notify_tiled,
     
     .set_activated = e_view_toplevel_set_activated,
+    .set_fullscreen = NULL,
+
     .configure = e_view_toplevel_configure,
     .create_content_tree = e_view_toplevel_create_content_tree,
     .wants_floating = e_view_toplevel_wants_floating,

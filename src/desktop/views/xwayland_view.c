@@ -338,6 +338,8 @@ static const struct e_view_impl view_xwayland_implementation = {
     .notify_tiled = e_view_xwayland_notify_tiled,
     
     .set_activated = e_view_xwayland_set_activated,
+    .set_fullscreen = NULL,
+    
     .configure = e_view_xwayland_configure,
     .create_content_tree = e_view_xwayland_create_content_tree,
     .wants_floating = e_view_xwayland_wants_floating,

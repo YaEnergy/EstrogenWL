@@ -60,6 +60,7 @@ void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_typ
     view->surface = NULL;
 
     view->tiled = false;
+    view->fullscreen = false;
 
     view->title = NULL;
     
