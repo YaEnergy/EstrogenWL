@@ -543,6 +543,12 @@ void e_cursor_start_view_resize(struct e_cursor* cursor, struct e_view* view, en
 {
     if (view == NULL)
         return;
+    
+    if (view->fullscreen)
+    {
+        e_log_error("e_cursor_start_view_resize: can't resize views in fullscreen mode!");
+        return;
+    }
 
     cursor->grab_edges = edges;
 
@@ -557,6 +563,12 @@ void e_cursor_start_view_move(struct e_cursor* cursor, struct e_view* view)
 
     if (view == NULL)
         return;
+
+    if (view->fullscreen)
+    {
+        e_log_error("e_cursor_start_view_move: can't move views in fullscreen mode!");
+        return;
+    }
 
     e_cursor_start_grab_view_mode(cursor, view, E_CURSOR_MODE_MOVE);
 }
