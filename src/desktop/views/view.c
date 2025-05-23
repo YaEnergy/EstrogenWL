@@ -320,12 +320,22 @@ void e_view_set_tiled(struct e_view* view, bool tiled)
 
     e_log_info("setting tiling mode of view to %d...", tiled);
 
-    view->tiled = tiled;
+    //if view is fullscreen only update vars & notify
+    if (view->fullscreen)
+    {
+        view->tiled = tiled;
 
-    if (tiled)
+        if (view->implementation->notify_tiled != NULL)
+            view->implementation->notify_tiled(view, tiled);
+    }
+    else if (tiled)
+    {
         e_view_tile(view);
-    else
+    }
+    else //floating
+    {
         e_view_float(view);
+    }
 }
 
 void e_view_set_activated(struct e_view* view, bool activated)
