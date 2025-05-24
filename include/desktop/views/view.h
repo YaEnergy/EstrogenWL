@@ -165,7 +165,10 @@ void e_view_set_tiled(struct e_view* view, bool tiled);
 // Sets the activated state of the view.
 void e_view_set_activated(struct e_view* view, bool activated);
 
+// Fullscreen view.
 void e_view_fullscreen(struct e_view* view);
+
+// Unfullscreen view.
 void e_view_unfullscreen(struct e_view* view);
 
 // Set the fullscreen mode of the view.
