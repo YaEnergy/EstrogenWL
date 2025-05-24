@@ -19,7 +19,6 @@ struct e_cosmic_workspace_manager_v1
     struct wl_global* global;
 
     struct wl_list groups; //struct e_cosmic_workspace_group_v1*
-    struct wl_list workspaces; //struct e_cosmic_workspace_v1*
 
     // Resource for each client that has binded to manager.
     struct wl_list resources; //struct wl_resource*
@@ -111,7 +110,7 @@ struct e_cosmic_workspace_v1
         struct wl_signal destroy;
     } events;
 
-    struct wl_list link; //e_cosmic_workspace_manager_v1::workspaces
+    struct wl_list link; //e_cosmic_workspace_group_v1::workspaces
 };
 
 // Returns NULL on fail.

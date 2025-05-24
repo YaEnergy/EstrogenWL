@@ -93,6 +93,7 @@ struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struc
         return NULL;
     }
 
+    wl_list_init(&manager->groups);
     e_trans_session_init(&manager->trans_session);
 
     //init events
@@ -104,9 +105,7 @@ struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struc
     //destroy automatically on destruction of display
     manager->listeners.display_destroy.notify = e_cosmic_workspace_manager_v1_display_destroy;
     wl_display_add_destroy_listener(display, &manager->listeners.display_destroy);
-
-    wl_list_init(&manager->groups);
-    wl_list_init(&manager->workspaces);
+    
 
     return manager;
 }
