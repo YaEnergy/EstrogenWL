@@ -110,7 +110,7 @@ static void e_xwayland_view_map(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, map);
 
-    e_view_map(&xwayland_view->base);
+    e_view_map(&xwayland_view->base, xwayland_view->xwayland_surface->fullscreen, NULL);
 
     // According to labwc, map and unmap can change the surface used
     SIGNAL_CONNECT(xwayland_view->xwayland_surface->surface->events.commit, xwayland_view->commit, e_xwayland_view_commit);
@@ -151,6 +151,20 @@ static void e_view_xwayland_set_activated(struct e_view* view, bool activated)
 
     if (activated)
         wlr_scene_node_raise_to_top(&view->tree->node);
+}
+
+static void e_view_xwayland_set_fullscreen(struct e_view* view, bool fullscreen)
+{
+    assert(view && view->data);
+
+    struct e_xwayland_view* xwayland_view = view->data;
+
+    wlr_xwayland_surface_set_fullscreen(xwayland_view->xwayland_surface, fullscreen);
+
+    if (fullscreen)
+        e_view_fullscreen(view);
+    else
+        e_view_unfullscreen(view);
 }
 
 static void e_xwayland_view_request_maximize(struct wl_listener* listener, void* data)
@@ -338,6 +352,8 @@ static const struct e_view_impl view_xwayland_implementation = {
     .notify_tiled = e_view_xwayland_notify_tiled,
     
     .set_activated = e_view_xwayland_set_activated,
+    .set_fullscreen = e_view_xwayland_set_fullscreen,
+
     .configure = e_view_xwayland_configure,
     .create_content_tree = e_view_xwayland_create_content_tree,
     .wants_floating = e_view_xwayland_wants_floating,
