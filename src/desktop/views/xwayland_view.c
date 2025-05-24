@@ -167,6 +167,17 @@ static void e_view_xwayland_set_fullscreen(struct e_view* view, bool fullscreen)
         e_view_unfullscreen(view);
 }
 
+static void e_xwayland_view_request_fullscreen(struct wl_listener* listener, void* data)
+{
+    struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, request_fullscreen);
+
+    #if E_VERBOSE
+    e_log_info("xwayland view request fullscreen");
+    #endif
+
+    e_view_set_fullscreen(&xwayland_view->base, !xwayland_view->xwayland_surface->fullscreen);
+}
+
 static void e_xwayland_view_request_maximize(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, request_configure);
@@ -260,6 +271,8 @@ static void e_xwayland_view_destroy(struct wl_listener* listener, void* data)
 
     SIGNAL_DISCONNECT(xwayland_view->set_title);
     SIGNAL_DISCONNECT(xwayland_view->map_request);
+
+    SIGNAL_DISCONNECT(xwayland_view->request_fullscreen);
     SIGNAL_DISCONNECT(xwayland_view->request_maximize);
     SIGNAL_DISCONNECT(xwayland_view->request_configure);
     SIGNAL_DISCONNECT(xwayland_view->request_move);
@@ -385,6 +398,8 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct
 
     SIGNAL_CONNECT(xwayland_surface->events.set_title, xwayland_view->set_title, e_xwayland_view_set_title);
     SIGNAL_CONNECT(xwayland_surface->events.map_request, xwayland_view->map_request, e_xwayland_view_map_request);
+    
+    SIGNAL_CONNECT(xwayland_surface->events.request_fullscreen, xwayland_view->request_fullscreen, e_xwayland_view_request_fullscreen);
     SIGNAL_CONNECT(xwayland_surface->events.request_maximize, xwayland_view->request_maximize, e_xwayland_view_request_maximize);
     SIGNAL_CONNECT(xwayland_surface->events.request_configure, xwayland_view->request_configure, e_xwayland_view_request_configure);
     SIGNAL_CONNECT(xwayland_surface->events.request_move, xwayland_view->request_move, e_xwayland_view_request_move);

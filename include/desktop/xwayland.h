@@ -56,6 +56,7 @@ struct e_xwayland_view
     // Xwayland surface wants to be mapped.
     struct wl_listener map_request;
     
+    struct wl_listener request_fullscreen;
     struct wl_listener request_maximize;
 
     // Xwayland surface wants to be configured in a specific way.
