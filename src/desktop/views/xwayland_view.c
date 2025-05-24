@@ -175,7 +175,7 @@ static void e_xwayland_view_request_fullscreen(struct wl_listener* listener, voi
     e_log_info("xwayland view request fullscreen");
     #endif
 
-    e_view_set_fullscreen(&xwayland_view->base, !xwayland_view->xwayland_surface->fullscreen);
+    e_view_set_fullscreen(&xwayland_view->base, !xwayland_view->base.fullscreen);
 }
 
 static void e_xwayland_view_request_maximize(struct wl_listener* listener, void* data)
