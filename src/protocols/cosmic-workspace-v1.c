@@ -27,7 +27,11 @@ static void e_cosmic_workspace_manager_v1_commit(struct wl_client* client, struc
 // Clients no longer wants to receive events.
 static void e_cosmic_workspace_manager_v1_stop(struct wl_client* client, struct wl_resource* resource)
 {
-    //TODO: implement e_cosmic_wrkspace_manager_v1_stop
+    struct e_cosmic_workspace_manager_v1* manager = wl_resource_get_user_data(resource);
+    wl_signal_emit_mutable(&manager->events.stop, NULL);
+
+    zcosmic_workspace_manager_v1_send_finished(resource);
+    wl_resource_destroy(resource);
 }
 
 static const struct zcosmic_workspace_manager_v1_interface workspace_manager_interface = {
