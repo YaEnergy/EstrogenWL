@@ -206,92 +206,6 @@ void e_view_move_to_workspace(struct e_view* view, struct e_workspace* workspace
         e_view_set_parent_container(view, NULL);
 }
 
-static void e_view_tile(struct e_view* view)
-{
-    assert(view);
-
-    #if E_VERBOSE
-    e_log_info("view tile container");
-    #endif
-
-    //find hovered tiled view, and take its parent container
-    //else use hovered workspace's root tiling container
-
-    struct e_desktop* desktop = view->desktop;
-    struct e_seat* seat = desktop->seat;
-
-    struct e_workspace* workspace = NULL;
-    struct e_tree_container* parent_container = NULL;
-
-    //find hovered tiled view, and take its parent container if possible
-
-    struct e_view* hovered_view = e_cursor_view_at(seat->cursor);
-
-    if (hovered_view != NULL && hovered_view->tiled && hovered_view->container.parent != NULL)
-    {
-        workspace = hovered_view->workspace;
-        parent_container = hovered_view->container.parent;
-    }
-    
-    //if no tiled view found that had focus or has focus, use hovered output's active workspace and its root tiling container if possible
-    if (workspace == NULL)
-    {
-        struct e_output* hovered_output = e_cursor_output_at(seat->cursor);
-
-        if (hovered_output == NULL)
-        {
-            e_log_error("e_view_tile: can't find any workspace");
-            return;
-        }
-
-        workspace = hovered_output->active_workspace;
-        parent_container = workspace->root_tiling_container;
-    }
-
-    if (parent_container == NULL)
-    {
-        e_log_error("e_view_tile: no container found!");
-        return;
-    }
-    
-    //move to workspace as tiled
-    view->tiled = true;
-    e_view_set_workspace(view, workspace);
-    e_view_set_parent_container(view, parent_container);
-
-    if (view->implementation->notify_tiled != NULL)
-        view->implementation->notify_tiled(view, true);
-}
-
-static void e_view_float(struct e_view* view)
-{
-    assert(view);
-
-    #if E_VERBOSE
-    e_log_info("view float container");
-    #endif
-
-    //find hovered workspace
-
-    struct e_workspace* workspace = e_cursor_output_at(view->desktop->seat->cursor)->active_workspace;
-
-    if (workspace == NULL)
-    {
-        e_log_error("e_view_float: no workspace found!");
-        return;
-    }
-
-    //move to workspace as floating
-    view->tiled = false;
-    e_view_set_workspace(view, workspace);
-    e_view_set_parent_container(view, NULL);
-
-    if (view->implementation->notify_tiled != NULL)
-        view->implementation->notify_tiled(view, false);
-
-    //TODO: return to natural geometry
-}
-
 // Set pending layout position of view.
 void e_view_set_position(struct e_view* view, int lx, int ly)
 {
@@ -320,21 +234,23 @@ void e_view_set_tiled(struct e_view* view, bool tiled)
 
     e_log_info("setting tiling mode of view to %d...", tiled);
 
-    //if view is fullscreen only update vars & notify
-    if (view->fullscreen)
+    if (view->tiled != tiled)
     {
         view->tiled = tiled;
 
         if (view->implementation->notify_tiled != NULL)
             view->implementation->notify_tiled(view, tiled);
     }
-    else if (tiled)
+
+    struct e_workspace* workspace = view->workspace;
+
+    if (workspace != NULL && !view->fullscreen)
     {
-        e_view_tile(view);
-    }
-    else //floating
-    {
-        e_view_float(view);
+        //TODO: tiled -> parent to previously focused tiled container
+        //TODO: floating -> return to natural geometry and center
+
+        e_view_set_parent_container(view, tiled ? workspace->root_tiling_container : NULL);
+        wlr_scene_node_reparent(&view->tree->node, tiled ? workspace->layers.tiling : workspace->layers.floating);
     }
 }
 
@@ -398,10 +314,7 @@ void e_view_unfullscreen(struct e_view* view)
     view->fullscreen = false;
     workspace->fullscreen_view = NULL;
     
-    if (view->tiled)
-        e_view_tile(view);
-    else
-        e_view_float(view);
+    e_view_set_tiled(view, view->tiled);
 
     e_workspace_update_tree_visibility(workspace);
     e_workspace_arrange(workspace, workspace->full_area, workspace->tiled_area);
