@@ -102,18 +102,17 @@ static void e_commands_toggle_fullscreen_focused_view(struct e_desktop* desktop)
     if (seat->focus_surface == NULL)
         return;
 
-    //TODO: add support for all winodw types by using the base e_view instead of wlr_xdg_toplevel
-    struct wlr_xdg_toplevel* wlr_xdg_toplevel = wlr_xdg_toplevel_try_from_wlr_surface(seat->focus_surface);
+    struct e_view* view = e_seat_focused_view(seat);
 
-    if (wlr_xdg_toplevel != NULL)
+    if (view != NULL)
     {
-        wlr_xdg_toplevel_set_fullscreen(wlr_xdg_toplevel, !wlr_xdg_toplevel->current.fullscreen);
-        e_log_info("requested to toggle fullscreen wlr_xdg_toplevel, title: %s", wlr_xdg_toplevel->title);
+        e_view_set_fullscreen(view, !view->fullscreen);
+        e_log_info("toggle fullscreen mode of view, fullscreen: %i, title: %s", view->fullscreen, view->title);
     }
     else 
     {
-        e_log_info("failed to toggle fullscreen of focussed view");
-    }   
+        e_log_error("e_commands_toggle_fullscreen_focused_view: failed to toggle fullscreen mode of view!");
+    }
 }
 
 static void e_commands_maximize_focused_view(struct e_desktop* desktop)

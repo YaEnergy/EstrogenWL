@@ -14,6 +14,7 @@
 #include <wlr/util/box.h>
 
 #include "desktop/desktop.h"
+#include "desktop/output.h"
 #include "desktop/xdg_popup.h"
 #include "desktop/tree/node.h"
 #include "desktop/views/view.h"
@@ -61,12 +62,23 @@ static void e_toplevel_view_map(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, map);
 
-    //TODO: add actual wm capabilities
-    wlr_xdg_toplevel_set_wm_capabilities(toplevel_view->xdg_toplevel, 0);
+    wlr_xdg_toplevel_set_wm_capabilities(toplevel_view->xdg_toplevel, WLR_XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
     
-    e_view_map(&toplevel_view->base);
+    if (toplevel_view->xdg_toplevel->requested.fullscreen)
+    {
+        struct e_output* output = NULL;
 
-    //TODO: handle toplevel_view->xdg_toplevel->requested if surface is mapped
+        if (toplevel_view->xdg_toplevel->requested.fullscreen_output != NULL)
+            output = toplevel_view->xdg_toplevel->requested.fullscreen_output->data;
+
+        e_view_map(&toplevel_view->base, true, output);
+    }
+    else
+    {
+        e_view_map(&toplevel_view->base, false, NULL);
+    }
+
+    //TODO: handle requested maximized, minimized and other stuff
 }
 
 //surface no longer wants to be displayed
@@ -216,6 +228,21 @@ static void e_view_toplevel_set_activated(struct e_view* view, bool activated)
         wlr_scene_node_raise_to_top(&view->tree->node);
 }
 
+// Set the fullscreen mode of the view.
+static void e_view_toplevel_set_fullscreen(struct e_view* view, bool fullscreen)
+{
+    assert(view);
+
+    struct e_toplevel_view* toplevel_view = view->data;
+
+    wlr_xdg_toplevel_set_fullscreen(toplevel_view->xdg_toplevel, fullscreen);
+
+    if (fullscreen)
+        e_view_fullscreen(view);
+    else
+        e_view_unfullscreen(view);
+}
+
 static bool toplevel_size_configure_is_scheduled(struct wlr_xdg_toplevel* xdg_toplevel)
 {
     assert(xdg_toplevel);
@@ -281,6 +308,8 @@ static const struct e_view_impl view_toplevel_implementation = {
     .notify_tiled = e_view_toplevel_notify_tiled,
     
     .set_activated = e_view_toplevel_set_activated,
+    .set_fullscreen = e_view_toplevel_set_fullscreen,
+
     .configure = e_view_toplevel_configure,
     .create_content_tree = e_view_toplevel_create_content_tree,
     .wants_floating = e_view_toplevel_wants_floating,
