@@ -14,6 +14,8 @@
 // First support minor version 1, later 2
 #define COSMIC_WORKSPACE_V1_VERSION 1
 
+struct wlr_output;
+
 struct e_cosmic_workspace_manager_v1
 {
     struct wl_global* global;
@@ -51,7 +53,7 @@ struct e_cosmic_workspace_group_v1
     struct wl_list outputs; //struct e_cosmic_workspace_v1_group_output*
     struct wl_list workspaces; //struct e_cosmic_workspace_v1*
 
-    struct wl_array capabilities; //bitmask enum e_cosmic_workspace_group_capability
+    struct wl_array capabilities; //contains bitmasks of enum e_cosmic_workspace_group_capability
 
     // Resource for each client that has binded to manager.
     struct wl_list resources; //struct wl_resource*
@@ -118,6 +120,18 @@ struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struc
 
 // Returns NULL on fail.
 struct e_cosmic_workspace_group_v1* e_cosmic_workspace_group_v1_create(struct e_cosmic_workspace_manager_v1* manager);
+
+// Set capabilities of workspace group, where capabilities contains bitmasks of enum e_cosmic_workspace_group_capability.
+void e_cosmic_workspace_group_v1_set_capabilities(struct e_cosmic_workspace_group_v1* group, struct wl_array* capabilities);
+
+// Assign output to workspace group.
+void e_cosmic_workspace_group_v1_output_enter(struct e_cosmic_workspace_group_v1* group, struct wlr_output* output);
+
+// Remove output from workspace group.
+void e_cosmic_workspace_group_v1_output_leave(struct e_cosmic_workspace_group_v1* group, struct wlr_output* output);
+
+// Destroy workspace group and its workspaces.
+void e_cosmic_workspace_group_v1_remove(struct e_cosmic_workspace_group_v1* group);
 
 // Creates a new workspace inside workspace group. ID is allowed to be NULL.
 // Returns NULL on fail.
