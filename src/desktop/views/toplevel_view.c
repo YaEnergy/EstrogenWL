@@ -14,6 +14,7 @@
 #include <wlr/util/box.h>
 
 #include "desktop/desktop.h"
+#include "desktop/output.h"
 #include "desktop/xdg_popup.h"
 #include "desktop/tree/node.h"
 #include "desktop/views/view.h"
@@ -63,9 +64,21 @@ static void e_toplevel_view_map(struct wl_listener* listener, void* data)
 
     wlr_xdg_toplevel_set_wm_capabilities(toplevel_view->xdg_toplevel, WLR_XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
     
-    e_view_map(&toplevel_view->base);
+    if (toplevel_view->xdg_toplevel->requested.fullscreen)
+    {
+        struct e_output* output = NULL;
 
-    //TODO: handle toplevel_view->xdg_toplevel->requested if surface is mapped
+        if (toplevel_view->xdg_toplevel->requested.fullscreen_output != NULL)
+            output = toplevel_view->xdg_toplevel->requested.fullscreen_output->data;
+
+        e_view_map(&toplevel_view->base, true, output);
+    }
+    else
+    {
+        e_view_map(&toplevel_view->base, false, NULL);
+    }
+
+    //TODO: handle requested maximized, minimized and other stuff
 }
 
 //surface no longer wants to be displayed

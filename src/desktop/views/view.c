@@ -391,11 +391,24 @@ static bool e_view_wants_floating(struct e_view* view)
 }
 
 // Display view.
-void e_view_map(struct e_view* view)
+// Set fullscreen to true and set output if you want the view to be on a specific output immediately.
+// If output is NULL, searches for current hovered output instead.
+void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output)
 {
     assert(view);
 
     e_log_info("view map");
+
+    if (output == NULL || output->active_workspace == NULL)
+    {
+        output = e_cursor_output_at(view->desktop->seat->cursor);
+
+        if (output == NULL || output->active_workspace == NULL)
+        {
+            e_log_error("e_view_map: unable to map view, no output with a workspace");
+            return;
+        }
+    }
 
     wl_list_insert(&view->desktop->views, &view->link);
 
@@ -407,13 +420,17 @@ void e_view_map(struct e_view* view)
         return;
     }
 
+    wlr_scene_node_set_position(&view->tree->node, view->current.x, view->current.y);
+
     view->mapped = true;
 
+    e_view_set_workspace(view, output->active_workspace);
+
+    if (fullscreen)
+        e_view_fullscreen(view);
+
     bool wants_floating = e_view_wants_floating(view);
-
     e_view_set_tiled(view, !wants_floating);
-
-    wlr_scene_node_set_position(&view->tree->node, view->current.x, view->current.y);
 
     wlr_scene_node_set_enabled(&view->tree->node, true);
 

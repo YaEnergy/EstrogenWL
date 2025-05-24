@@ -110,7 +110,7 @@ static void e_xwayland_view_map(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, map);
 
-    e_view_map(&xwayland_view->base);
+    e_view_map(&xwayland_view->base, xwayland_view->xwayland_surface->fullscreen, NULL);
 
     // According to labwc, map and unmap can change the surface used
     SIGNAL_CONNECT(xwayland_view->xwayland_surface->surface->events.commit, xwayland_view->commit, e_xwayland_view_commit);

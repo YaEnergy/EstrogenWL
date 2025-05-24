@@ -22,6 +22,8 @@
 //  - e_view_set_resizing
 //  - e_view_set_suspended
 
+struct e_output;
+
 struct e_view;
 
 // What the view can handle in size.
@@ -132,7 +134,9 @@ void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_typ
 struct e_view_size_hints e_view_get_size_hints(struct e_view* view);
 
 // Display view.
-void e_view_map(struct e_view* view);
+// Set fullscreen to true and set output if you want the view to be on a specific output immediately.
+// If output is NULL, searches for current hovered output instead.
+void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output);
 
 // Stop displaying view.
 void e_view_unmap(struct e_view* view);
