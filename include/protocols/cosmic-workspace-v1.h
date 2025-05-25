@@ -86,10 +86,9 @@ struct e_cosmic_workspace_v1
 {
     struct e_cosmic_workspace_manager_v1* manager;
     
-    // Group this workspace is assigned to, may be NULL.
+    // Group this workspace is assigned to.
     struct e_cosmic_workspace_group_v1* group;
 
-    const char* id;
     const char* name;
 
     uint32_t state; //bitmask enum e_cosmic_workspace_state
@@ -133,9 +132,9 @@ void e_cosmic_workspace_group_v1_output_leave(struct e_cosmic_workspace_group_v1
 // Destroy workspace group and its workspaces.
 void e_cosmic_workspace_group_v1_remove(struct e_cosmic_workspace_group_v1* group);
 
-// Creates a new workspace inside workspace group. ID is allowed to be NULL.
+// Creates a new workspace inside workspace group.
 // Returns NULL on fail.
-struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_workspace_group_v1* group, const char* id);
+struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_workspace_group_v1* group);
 
 void e_cosmic_workspace_v1_set_name(struct e_cosmic_workspace_v1* workspace, const char* name);
 
@@ -147,6 +146,5 @@ void e_cosmic_workspace_v1_set_urgent(struct e_cosmic_workspace_v1* workspace, b
 
 void e_cosmic_workspace_v1_set_hidden(struct e_cosmic_workspace_v1* workspace, bool hidden);
 
+// Destroys workspace.
 void e_cosmic_workspace_v1_remove(struct e_cosmic_workspace_v1* workspace);
-
-void e_cosmic_workspace_v1_destroy(struct e_cosmic_workspace_v1* workspace);

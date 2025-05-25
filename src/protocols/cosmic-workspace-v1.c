@@ -19,6 +19,100 @@
 //REF 2: https://wayland.app/protocols/cosmic-workspace-unstable-v1
 //REF 3: labwc
 
+/* workspace interface */
+
+static void e_cosmic_workspace_v1_request_activate(struct wl_client* client, struct wl_resource* resource)
+{
+    //TODO: implement e_cosmic_workspace_v1_request_activate 
+}
+
+static void e_cosmic_workspace_v1_request_deactivate(struct wl_client* client, struct wl_resource* resource)
+{
+    //TODO: implement e_cosmic_workspace_v1_request_deactivate
+}
+
+static void e_cosmic_workspace_v1_request_remove(struct wl_client* client, struct wl_resource* resource)
+{
+    //TODO: implement e_cosmic_workspace_v1_request_remove
+}
+
+static void e_cosmic_workspace_v1_destroy(struct wl_client* client, struct wl_resource* resource)
+{
+    //TODO: implement e_cosmic_workspace_v1_destroy
+}
+
+static const struct zcosmic_workspace_handle_v1_interface workspace_interface = {
+    .activate = e_cosmic_workspace_v1_request_activate,
+    .deactivate = e_cosmic_workspace_v1_request_deactivate,
+    .remove = e_cosmic_workspace_v1_request_remove,
+    .destroy = e_cosmic_workspace_v1_destroy
+};
+
+/* workspace */
+
+static void e_cosmic_workspace_v1_resource_destroy(struct wl_resource* resource)
+{
+    //TODO: clean up resource
+
+    wl_list_remove(wl_resource_get_link(resource));
+}
+
+static void e_cosmic_workspace_v1_create_resource(struct e_cosmic_workspace_v1* workspace, struct wl_resource* group_resource)
+{
+    struct wl_client* client = wl_resource_get_client(group_resource);
+    uint32_t id = wl_resource_get_id(group_resource);
+
+    struct wl_resource* workspace_resource = wl_resource_create(client, &zcosmic_workspace_handle_v1_interface, COSMIC_WORKSPACE_V1_VERSION, id);
+
+    if (workspace_resource == NULL)
+    {
+        wl_client_post_no_memory(client);
+        return;
+    }
+
+    wl_resource_set_implementation(workspace_resource, &workspace_interface, workspace, e_cosmic_workspace_v1_resource_destroy);
+
+    wl_list_insert(&workspace->resources, wl_resource_get_link(workspace_resource));
+
+    zcosmic_workspace_group_handle_v1_send_workspace(group_resource, workspace_resource);
+}
+
+// Returns NULL on fail.
+struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_workspace_group_v1* group)
+{
+    struct e_cosmic_workspace_v1* workspace = calloc(1, sizeof(*workspace));
+
+    if (workspace == NULL)
+        return NULL;
+
+    workspace->group = group;
+
+    wl_array_init(&workspace->capabilities);
+    wl_array_init(&workspace->coords);
+
+    wl_list_init(&workspace->resources);
+
+    wl_signal_init(&workspace->events.request_activate);
+    wl_signal_init(&workspace->events.request_deactivate);
+    wl_signal_init(&workspace->events.request_remove);
+    wl_signal_init(&workspace->events.destroy);
+
+    wl_list_insert(&group->workspaces, &workspace->link);
+
+    //create workspace resource for each client that has binded to manager
+
+    struct wl_resource* group_resource = NULL;
+    struct wl_resource* tmp;
+
+    wl_list_for_each_safe(group_resource, tmp, &group->resources, link)
+    {
+        e_cosmic_workspace_v1_create_resource(workspace, group_resource);
+    }
+
+
+    return workspace;
+}
+
 /* workspace group interface */
 
 static void e_cosmic_workspace_group_v1_create_workspace(struct wl_client* client, struct wl_resource* resource, const char* workspace_name)
@@ -63,8 +157,6 @@ static void e_cosmic_workspace_group_v1_create_resource(struct e_cosmic_workspac
     wl_list_insert(&group->resources, wl_resource_get_link(group_resource));
 
     zcosmic_workspace_manager_v1_send_workspace_group(manager_resource, group_resource);
-
-    zcosmic_workspace_manager_v1_send_done(manager_resource);
 }
 
 // Returns NULL on fail.
