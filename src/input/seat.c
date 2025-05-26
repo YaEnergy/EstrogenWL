@@ -68,7 +68,15 @@ static void e_seat_request_start_drag(struct wl_listener* listener, void* data)
     
     //TODO: does this need any extra checks?
 
-    wlr_seat_start_drag(seat->wlr_seat, event->drag, event->serial);
+    if (wlr_seat_validate_pointer_grab_serial(seat->wlr_seat, event->origin, event->serial))
+    {
+        wlr_seat_start_pointer_drag(seat->wlr_seat, event->drag, event->serial);
+    }
+    else 
+    {
+        wlr_data_source_destroy(event->drag->source);
+        e_log_error("e_seat_request_start_drag: invalid pointer grab serial!");
+    }
 }
 
 // Focused surface was unmapped.
