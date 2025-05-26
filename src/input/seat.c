@@ -98,8 +98,10 @@ static void e_seat_request_start_drag(struct wl_listener* listener, void* data)
     struct e_seat* seat = wl_container_of(listener, seat, request_start_drag);
     struct wlr_seat_request_start_drag_event* event = data;
 
+    #if E_VERBOSE
     e_log_info("seat request start drag");
-    
+    #endif
+
     if (wlr_seat_validate_pointer_grab_serial(seat->wlr_seat, event->origin, event->serial))
     {
         wlr_seat_start_pointer_drag(seat->wlr_seat, event->drag, event->serial);
