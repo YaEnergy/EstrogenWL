@@ -16,6 +16,7 @@
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_primary_selection.h>
+#include <wlr/types/wlr_cursor_shape_v1.h>
 
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
@@ -28,6 +29,20 @@
 #include "util/wl_macros.h"
 
 //2024-12-18 22:29:22 | starting to be able to do this more on my own now, I feel like I'm learning a lot :3
+
+static void e_seat_request_set_cursor_shape(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, request_set_cursor_shape);
+    struct wlr_cursor_shape_manager_v1_request_set_shape_event* event = data;
+    
+    //no support for other device types
+    if (event->device_type != WLR_CURSOR_SHAPE_MANAGER_V1_DEVICE_TYPE_POINTER)
+        return;
+
+    //any client can request, only allow focused client to actually set the surface of the cursor
+    if (event->seat_client == seat->wlr_seat->pointer_state.focused_client)
+        wlr_cursor_set_xcursor(seat->cursor->wlr_cursor, seat->cursor->xcursor_manager, wlr_cursor_shape_v1_name(event->shape));
+}
 
 static void e_seat_request_set_cursor(struct wl_listener* listener, void* data)
 {
@@ -85,6 +100,8 @@ static void e_seat_destroy(struct wl_listener* listener, void* data)
     SIGNAL_DISCONNECT(seat->request_set_selection);
     SIGNAL_DISCONNECT(seat->request_set_primary_selection);
     SIGNAL_DISCONNECT(seat->destroy);
+    
+    SIGNAL_DISCONNECT(seat->request_set_cursor_shape);
 
     free(seat);
 }
@@ -111,6 +128,8 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
 
     seat->cursor = e_cursor_create(seat, output_layout);
 
+    seat->cursor_shape_manager = wlr_cursor_shape_manager_v1_create(display, 1);
+
     wl_list_init(&seat->keyboards);
 
     // events
@@ -119,6 +138,8 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
     SIGNAL_CONNECT(wlr_seat->events.request_set_selection, seat->request_set_selection, e_seat_request_set_selection);
     SIGNAL_CONNECT(wlr_seat->events.request_set_primary_selection, seat->request_set_primary_selection, e_seat_request_set_primary_selection);
     SIGNAL_CONNECT(wlr_seat->events.destroy, seat->destroy, e_seat_destroy);
+
+    SIGNAL_CONNECT(seat->cursor_shape_manager->events.request_set_shape, seat->request_set_cursor_shape, e_seat_request_set_cursor_shape);
 
     return seat;
 }

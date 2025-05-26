@@ -7,6 +7,7 @@
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
+#include <wlr/types/wlr_cursor_shape_v1.h>
 
 #include "input/cursor.h"
 
@@ -24,6 +25,9 @@ struct e_seat
 
     struct e_cursor* cursor;
 
+    //TODO: move into separate input manager
+    struct wlr_cursor_shape_manager_v1* cursor_shape_manager;
+
     // surface that currently has focus
     struct wlr_surface* focus_surface;
     struct wl_listener focus_surface_unmap;
@@ -39,6 +43,9 @@ struct e_seat
 
     // user requests to set primary selection (selecting data)
     struct wl_listener request_set_primary_selection;
+
+    //TODO: move into separate input manager
+    struct wl_listener request_set_cursor_shape;
 
     struct wl_listener destroy;
 };
