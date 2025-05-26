@@ -66,8 +66,6 @@ static void e_seat_request_start_drag(struct wl_listener* listener, void* data)
 
     e_log_info("seat request start drag");
     
-    //TODO: does this need any extra checks?
-
     if (wlr_seat_validate_pointer_grab_serial(seat->wlr_seat, event->origin, event->serial))
     {
         wlr_seat_start_pointer_drag(seat->wlr_seat, event->drag, event->serial);
