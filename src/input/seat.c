@@ -59,6 +59,24 @@ static void e_seat_request_set_primary_selection(struct wl_listener* listener, v
     wlr_seat_set_primary_selection(seat->wlr_seat, event->source, event->serial);
 }
 
+// Focused surface was unmapped.
+static void e_seat_focus_surface_unmap(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, focus_surface_unmap);
+
+    #if E_VERBOSE
+    e_log_info("focused surface was unmapped!");
+    #endif
+
+    e_seat_clear_focus(seat);
+
+    e_cursor_set_focus_hover(seat->cursor);
+}
+
+/* drag & drop */
+
+//TODO: comments
+
 static void e_seat_request_start_drag(struct wl_listener* listener, void* data)
 {
     struct e_seat* seat = wl_container_of(listener, seat, request_start_drag);
@@ -77,25 +95,42 @@ static void e_seat_request_start_drag(struct wl_listener* listener, void* data)
     }
 }
 
-// Focused surface was unmapped.
-static void e_seat_focus_surface_unmap(struct wl_listener* listener, void* data)
+static void e_seat_fini_dnd(struct e_seat* seat)
 {
-    struct e_seat* seat = wl_container_of(listener, seat, focus_surface_unmap);
+    if (seat == NULL)
+    {
+        e_log_error("e_seat_init_dnd: seat is NULL!");
+        return;
+    }
 
-    #if E_VERBOSE
-    e_log_info("focused surface was unmapped!");
-    #endif
-
-    e_seat_clear_focus(seat);
-
-    e_cursor_set_focus_hover(seat->cursor);
+    if (seat->drag_icon_tree != NULL)
+    {
+        wlr_scene_node_destroy(&seat->drag_icon_tree->node);
+        seat->drag_icon_tree = NULL;
+    }
 }
+
+static void e_seat_init_dnd(struct e_seat* seat)
+{
+    if (seat == NULL)
+    {
+        e_log_error("e_seat_init_dnd: seat is NULL!");
+        return;
+    }
+
+    seat->current_dnd.icon = NULL;
+    seat->drag_icon_tree = wlr_scene_tree_create(&seat->desktop->scene->tree);
+}
+
+/* end drag & drop */
 
 static void e_seat_destroy(struct wl_listener* listener, void* data)
 {
     struct e_seat* seat = wl_container_of(listener, seat, destroy);
 
     e_cursor_destroy(seat->cursor);
+
+    e_seat_fini_dnd(seat);
 
     wl_list_remove(&seat->keyboards);
 
@@ -131,6 +166,8 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
     seat->previous_focus_surface = NULL;
 
     seat->cursor = e_cursor_create(seat, output_layout);
+
+    e_seat_init_dnd(seat);
 
     wl_list_init(&seat->keyboards);
 

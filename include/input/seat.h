@@ -13,6 +13,17 @@
 struct e_view;
 struct e_desktop;
 
+// Drag & drop action
+struct e_dnd_action
+{
+    struct wlr_drag* drag;
+
+    struct wlr_scene_tree* icon;
+
+    struct wl_listener motion;
+    struct wl_listener destroy;
+};
+
 // Collection & management of input devices: keyboard, mouse, ...
 struct e_seat
 {
@@ -23,6 +34,12 @@ struct e_seat
     struct wl_list keyboards;
 
     struct e_cursor* cursor;
+
+    // Tree used to store drag icons
+    struct wlr_scene_tree* drag_icon_tree;
+
+    // Current drag & drop action
+    struct e_dnd_action current_dnd;
 
     // surface that currently has focus
     struct wlr_surface* focus_surface;
