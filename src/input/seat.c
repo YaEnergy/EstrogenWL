@@ -75,8 +75,6 @@ static void e_seat_focus_surface_unmap(struct wl_listener* listener, void* data)
 
 /* drag & drop */
 
-//TODO: comments
-
 // Motion during drag & drop action.
 static void e_seat_drag_motion(struct wl_listener* listener, void* data)
 {
