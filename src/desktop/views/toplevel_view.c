@@ -144,7 +144,15 @@ static void e_toplevel_view_request_fullscreen(struct wl_listener* listener, voi
 
     struct wlr_xdg_toplevel* toplevel = toplevel_view->xdg_toplevel;
 
-    //TODO: respect requested output
+    //respect requested output
+    if (toplevel->requested.fullscreen_output != NULL)
+    {
+        struct e_output* requested_output = toplevel->requested.fullscreen_output->data;
+
+        if (requested_output != NULL && requested_output->active_workspace != NULL)
+            e_view_move_to_workspace(&toplevel_view->base, requested_output->active_workspace);
+    }
+
     e_view_set_fullscreen(&toplevel_view->base, toplevel->requested.fullscreen);
 }
 
