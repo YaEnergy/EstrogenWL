@@ -73,17 +73,116 @@ static void e_seat_focus_surface_unmap(struct wl_listener* listener, void* data)
     e_cursor_set_focus_hover(seat->cursor);
 }
 
+/* drag & drop */
+
+// Motion during drag & drop action.
+static void e_seat_drag_motion(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, current_dnd.motion);
+
+    if (seat->current_dnd.icon != NULL)
+        wlr_scene_node_set_position(&seat->current_dnd.icon->node, seat->cursor->wlr_cursor->x, seat->cursor->wlr_cursor->y);
+}
+
+// Drag & drop action ended.
+static void e_seat_drag_destroy(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, current_dnd.destroy);
+
+    SIGNAL_DISCONNECT(seat->current_dnd.motion);
+    SIGNAL_DISCONNECT(seat->current_dnd.destroy);
+}
+
+// Request to start a new drag & drop action.
+static void e_seat_request_start_drag(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, request_start_drag);
+    struct wlr_seat_request_start_drag_event* event = data;
+
+    #if E_VERBOSE
+    e_log_info("seat request start drag");
+    #endif
+
+    if (wlr_seat_validate_pointer_grab_serial(seat->wlr_seat, event->origin, event->serial))
+    {
+        wlr_seat_start_pointer_drag(seat->wlr_seat, event->drag, event->serial);
+    }
+    else 
+    {
+        wlr_data_source_destroy(event->drag->source);
+        e_log_error("e_seat_request_start_drag: invalid pointer grab serial!");
+    }
+}
+
+// Started a new drag & drop action.
+static void e_seat_start_drag(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, start_drag);
+    struct wlr_drag* drag = data;
+
+    #if E_VERBOSE
+    e_log_info("seat start drag");
+    #endif
+    
+    if (drag->icon != NULL)
+    {
+        seat->current_dnd.icon = wlr_scene_drag_icon_create(seat->drag_icon_tree, drag->icon);
+        wlr_scene_node_set_position(&seat->current_dnd.icon->node, seat->cursor->wlr_cursor->x, seat->cursor->wlr_cursor->y);
+    }
+
+    SIGNAL_CONNECT(drag->events.motion, seat->current_dnd.motion, e_seat_drag_motion);
+    SIGNAL_CONNECT(drag->events.destroy, seat->current_dnd.destroy, e_seat_drag_destroy);
+}
+
+// Finalize seat drag & drop actions.
+static void e_seat_fini_dnd(struct e_seat* seat)
+{
+    if (seat == NULL)
+    {
+        e_log_error("e_seat_init_dnd: seat is NULL!");
+        return;
+    }
+
+    if (seat->drag_icon_tree != NULL)
+    {
+        wlr_scene_node_destroy(&seat->drag_icon_tree->node);
+        seat->drag_icon_tree = NULL;
+        seat->current_dnd.icon = NULL; //recursive
+    }
+}
+
+// Init seat drag & drop actions.
+static void e_seat_init_dnd(struct e_seat* seat)
+{
+    if (seat == NULL)
+    {
+        e_log_error("e_seat_init_dnd: seat is NULL!");
+        return;
+    }
+
+    seat->current_dnd.icon = NULL;
+    seat->drag_icon_tree = wlr_scene_tree_create(&seat->desktop->scene->tree);
+}
+
+/* end drag & drop */
+
 static void e_seat_destroy(struct wl_listener* listener, void* data)
 {
     struct e_seat* seat = wl_container_of(listener, seat, destroy);
 
     e_cursor_destroy(seat->cursor);
 
+    e_seat_fini_dnd(seat);
+
     wl_list_remove(&seat->keyboards);
 
     SIGNAL_DISCONNECT(seat->request_set_cursor);
     SIGNAL_DISCONNECT(seat->request_set_selection);
     SIGNAL_DISCONNECT(seat->request_set_primary_selection);
+
+    SIGNAL_DISCONNECT(seat->request_start_drag);
+    SIGNAL_DISCONNECT(seat->start_drag);
+
     SIGNAL_DISCONNECT(seat->destroy);
 
     free(seat);
@@ -111,6 +210,8 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
 
     seat->cursor = e_cursor_create(seat, output_layout);
 
+    e_seat_init_dnd(seat);
+
     wl_list_init(&seat->keyboards);
 
     // events
@@ -118,6 +219,10 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
     SIGNAL_CONNECT(wlr_seat->events.request_set_cursor, seat->request_set_cursor, e_seat_request_set_cursor);
     SIGNAL_CONNECT(wlr_seat->events.request_set_selection, seat->request_set_selection, e_seat_request_set_selection);
     SIGNAL_CONNECT(wlr_seat->events.request_set_primary_selection, seat->request_set_primary_selection, e_seat_request_set_primary_selection);
+    
+    SIGNAL_CONNECT(wlr_seat->events.request_start_drag, seat->request_start_drag, e_seat_request_start_drag);
+    SIGNAL_CONNECT(wlr_seat->events.start_drag, seat->start_drag, e_seat_start_drag);
+    
     SIGNAL_CONNECT(wlr_seat->events.destroy, seat->destroy, e_seat_destroy);
 
     return seat;
