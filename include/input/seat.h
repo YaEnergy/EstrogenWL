@@ -58,6 +58,7 @@ struct e_seat
     struct wl_listener request_set_primary_selection;
 
     struct wl_listener request_start_drag;
+    struct wl_listener start_drag;
 
     struct wl_listener destroy;
 };

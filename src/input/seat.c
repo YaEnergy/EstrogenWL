@@ -77,6 +77,22 @@ static void e_seat_focus_surface_unmap(struct wl_listener* listener, void* data)
 
 //TODO: comments
 
+static void e_seat_drag_motion(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, current_dnd.motion);
+
+    if (seat->current_dnd.icon != NULL)
+        wlr_scene_node_set_position(&seat->current_dnd.icon->node, seat->cursor->wlr_cursor->x, seat->cursor->wlr_cursor->y);
+}
+
+static void e_seat_drag_destroy(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, current_dnd.destroy);
+
+    SIGNAL_DISCONNECT(seat->current_dnd.motion);
+    SIGNAL_DISCONNECT(seat->current_dnd.destroy);
+}
+
 static void e_seat_request_start_drag(struct wl_listener* listener, void* data)
 {
     struct e_seat* seat = wl_container_of(listener, seat, request_start_drag);
@@ -93,6 +109,25 @@ static void e_seat_request_start_drag(struct wl_listener* listener, void* data)
         wlr_data_source_destroy(event->drag->source);
         e_log_error("e_seat_request_start_drag: invalid pointer grab serial!");
     }
+}
+
+static void e_seat_start_drag(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, start_drag);
+    struct wlr_drag* drag = data;
+
+    #if E_VERBOSE
+    e_log_info("seat start drag");
+    #endif
+    
+    if (drag->icon != NULL)
+    {
+        seat->current_dnd.icon = wlr_scene_drag_icon_create(seat->drag_icon_tree, drag->icon);
+        wlr_scene_node_set_position(&seat->current_dnd.icon->node, seat->cursor->wlr_cursor->x, seat->cursor->wlr_cursor->y);
+    }
+
+    SIGNAL_CONNECT(drag->events.motion, seat->current_dnd.motion, e_seat_drag_motion);
+    SIGNAL_CONNECT(drag->events.destroy, seat->current_dnd.destroy, e_seat_drag_destroy);
 }
 
 static void e_seat_fini_dnd(struct e_seat* seat)
@@ -139,6 +174,7 @@ static void e_seat_destroy(struct wl_listener* listener, void* data)
     SIGNAL_DISCONNECT(seat->request_set_primary_selection);
 
     SIGNAL_DISCONNECT(seat->request_start_drag);
+    SIGNAL_DISCONNECT(seat->start_drag);
 
     SIGNAL_DISCONNECT(seat->destroy);
 
@@ -178,6 +214,7 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
     SIGNAL_CONNECT(wlr_seat->events.request_set_primary_selection, seat->request_set_primary_selection, e_seat_request_set_primary_selection);
     
     SIGNAL_CONNECT(wlr_seat->events.request_start_drag, seat->request_start_drag, e_seat_request_start_drag);
+    SIGNAL_CONNECT(wlr_seat->events.start_drag, seat->start_drag, e_seat_start_drag);
     
     SIGNAL_CONNECT(wlr_seat->events.destroy, seat->destroy, e_seat_destroy);
 
