@@ -138,7 +138,7 @@ static void e_toplevel_view_request_fullscreen(struct wl_listener* listener, voi
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, request_fullscreen);
 
-    //will (un)fullscreen on map, TODO: is request fullscreen only called when view is already mapped?
+    //will (un)fullscreen on map
     if (!toplevel_view->base.mapped)
         return;
 
