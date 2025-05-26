@@ -149,6 +149,7 @@ static void e_seat_fini_dnd(struct e_seat* seat)
     {
         wlr_scene_node_destroy(&seat->drag_icon_tree->node);
         seat->drag_icon_tree = NULL;
+        seat->current_dnd.icon = NULL; //recursive
     }
 }
 
