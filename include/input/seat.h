@@ -14,6 +14,17 @@
 struct e_view;
 struct e_desktop;
 
+// Drag & drop action
+struct e_dnd_action
+{
+    struct wlr_drag* drag;
+
+    struct wlr_scene_tree* icon;
+
+    struct wl_listener motion;
+    struct wl_listener destroy;
+};
+
 // Collection & management of input devices: keyboard, mouse, ...
 struct e_seat
 {
@@ -24,6 +35,12 @@ struct e_seat
     struct wl_list keyboards;
 
     struct e_cursor* cursor;
+
+    // Tree used to store drag icons
+    struct wlr_scene_tree* drag_icon_tree;
+
+    // Current drag & drop action
+    struct e_dnd_action current_dnd;
 
     //TODO: move into separate input manager
     struct wlr_cursor_shape_manager_v1* cursor_shape_manager;
@@ -43,6 +60,9 @@ struct e_seat
 
     // user requests to set primary selection (selecting data)
     struct wl_listener request_set_primary_selection;
+
+    struct wl_listener request_start_drag;
+    struct wl_listener start_drag;
 
     //TODO: move into separate input manager
     struct wl_listener request_set_cursor_shape;
