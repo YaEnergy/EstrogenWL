@@ -138,11 +138,22 @@ static void e_toplevel_view_request_fullscreen(struct wl_listener* listener, voi
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, request_fullscreen);
 
-    //TODO: implement fullscreen
+    //will (un)fullscreen on map
+    if (!toplevel_view->base.mapped)
+        return;
 
-    //send empty configure to conform to xdg shell protocol if xdg surface is init
-    if (toplevel_view->xdg_toplevel->base->initialized)
-        wlr_xdg_surface_schedule_configure(toplevel_view->xdg_toplevel->base);
+    struct wlr_xdg_toplevel* toplevel = toplevel_view->xdg_toplevel;
+
+    //respect requested output
+    if (toplevel->requested.fullscreen_output != NULL)
+    {
+        struct e_output* requested_output = toplevel->requested.fullscreen_output->data;
+
+        if (requested_output != NULL && requested_output->active_workspace != NULL)
+            e_view_move_to_workspace(&toplevel_view->base, requested_output->active_workspace);
+    }
+
+    e_view_set_fullscreen(&toplevel_view->base, toplevel->requested.fullscreen);
 }
 
 static void e_toplevel_view_request_maximize(struct wl_listener* listener, void* data)
