@@ -77,6 +77,7 @@ static void e_seat_focus_surface_unmap(struct wl_listener* listener, void* data)
 
 //TODO: comments
 
+// Motion during drag & drop action.
 static void e_seat_drag_motion(struct wl_listener* listener, void* data)
 {
     struct e_seat* seat = wl_container_of(listener, seat, current_dnd.motion);
@@ -85,6 +86,7 @@ static void e_seat_drag_motion(struct wl_listener* listener, void* data)
         wlr_scene_node_set_position(&seat->current_dnd.icon->node, seat->cursor->wlr_cursor->x, seat->cursor->wlr_cursor->y);
 }
 
+// Drag & drop action ended.
 static void e_seat_drag_destroy(struct wl_listener* listener, void* data)
 {
     struct e_seat* seat = wl_container_of(listener, seat, current_dnd.destroy);
@@ -93,6 +95,7 @@ static void e_seat_drag_destroy(struct wl_listener* listener, void* data)
     SIGNAL_DISCONNECT(seat->current_dnd.destroy);
 }
 
+// Request to start a new drag & drop action.
 static void e_seat_request_start_drag(struct wl_listener* listener, void* data)
 {
     struct e_seat* seat = wl_container_of(listener, seat, request_start_drag);
@@ -113,6 +116,7 @@ static void e_seat_request_start_drag(struct wl_listener* listener, void* data)
     }
 }
 
+// Started a new drag & drop action.
 static void e_seat_start_drag(struct wl_listener* listener, void* data)
 {
     struct e_seat* seat = wl_container_of(listener, seat, start_drag);
@@ -132,6 +136,7 @@ static void e_seat_start_drag(struct wl_listener* listener, void* data)
     SIGNAL_CONNECT(drag->events.destroy, seat->current_dnd.destroy, e_seat_drag_destroy);
 }
 
+// Finalize seat drag & drop actions.
 static void e_seat_fini_dnd(struct e_seat* seat)
 {
     if (seat == NULL)
@@ -147,6 +152,7 @@ static void e_seat_fini_dnd(struct e_seat* seat)
     }
 }
 
+// Init seat drag & drop actions.
 static void e_seat_init_dnd(struct e_seat* seat)
 {
     if (seat == NULL)
