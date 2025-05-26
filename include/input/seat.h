@@ -40,6 +40,8 @@ struct e_seat
     // user requests to set primary selection (selecting data)
     struct wl_listener request_set_primary_selection;
 
+    struct wl_listener request_start_drag;
+
     struct wl_listener destroy;
 };
 

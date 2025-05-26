@@ -59,6 +59,18 @@ static void e_seat_request_set_primary_selection(struct wl_listener* listener, v
     wlr_seat_set_primary_selection(seat->wlr_seat, event->source, event->serial);
 }
 
+static void e_seat_request_start_drag(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, request_start_drag);
+    struct wlr_seat_request_start_drag_event* event = data;
+
+    e_log_info("seat request start drag");
+    
+    //TODO: does this need any extra checks?
+
+    wlr_seat_start_drag(seat->wlr_seat, event->drag, event->serial);
+}
+
 // Focused surface was unmapped.
 static void e_seat_focus_surface_unmap(struct wl_listener* listener, void* data)
 {
@@ -84,6 +96,9 @@ static void e_seat_destroy(struct wl_listener* listener, void* data)
     SIGNAL_DISCONNECT(seat->request_set_cursor);
     SIGNAL_DISCONNECT(seat->request_set_selection);
     SIGNAL_DISCONNECT(seat->request_set_primary_selection);
+
+    SIGNAL_DISCONNECT(seat->request_start_drag);
+
     SIGNAL_DISCONNECT(seat->destroy);
 
     free(seat);
@@ -118,6 +133,9 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
     SIGNAL_CONNECT(wlr_seat->events.request_set_cursor, seat->request_set_cursor, e_seat_request_set_cursor);
     SIGNAL_CONNECT(wlr_seat->events.request_set_selection, seat->request_set_selection, e_seat_request_set_selection);
     SIGNAL_CONNECT(wlr_seat->events.request_set_primary_selection, seat->request_set_primary_selection, e_seat_request_set_primary_selection);
+    
+    SIGNAL_CONNECT(wlr_seat->events.request_start_drag, seat->request_start_drag, e_seat_request_start_drag);
+    
     SIGNAL_CONNECT(wlr_seat->events.destroy, seat->destroy, e_seat_destroy);
 
     return seat;
