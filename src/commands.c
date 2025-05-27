@@ -31,12 +31,7 @@
 
 static void e_commands_kill_focused_view(struct e_desktop* desktop)
 {
-    struct e_seat* seat = desktop->seat;
-
-    if (seat->focus_surface == NULL)
-        return;
-
-    struct e_view* view = e_seat_focused_view(seat);
+    struct e_view* view = e_desktop_focused_view(desktop);
 
     if (view != NULL)
     {
@@ -52,12 +47,7 @@ static void e_commands_kill_focused_view(struct e_desktop* desktop)
 
 static void e_commands_toggle_tiling_focused_view(struct e_desktop* desktop)
 {
-    struct e_seat* seat = desktop->seat;
-
-    if (seat->focus_surface == NULL)
-        return;
-
-    struct e_view* view = e_seat_focused_view(desktop->seat);
+    struct e_view* view = e_desktop_focused_view(desktop);
 
     if (view != NULL)
     {
@@ -75,12 +65,7 @@ static void e_commands_switch_tiling_mode(struct e_desktop* desktop)
 {
     assert(desktop);
 
-    struct e_seat* seat = desktop->seat;
-
-    if (seat->focus_surface == NULL)
-        return;
-
-    struct e_view* view = e_seat_focused_view(desktop->seat);
+    struct e_view* view = e_desktop_focused_view(desktop);
 
     if (view == NULL || view->container.parent == NULL)
         return;
@@ -97,12 +82,7 @@ static void e_commands_switch_tiling_mode(struct e_desktop* desktop)
 
 static void e_commands_toggle_fullscreen_focused_view(struct e_desktop* desktop)
 {
-    struct e_seat* seat = desktop->seat;
-
-    if (seat->focus_surface == NULL)
-        return;
-
-    struct e_view* view = e_seat_focused_view(seat);
+    struct e_view* view = e_desktop_focused_view(desktop);
 
     if (view != NULL)
     {
@@ -119,7 +99,7 @@ static void e_commands_maximize_focused_view(struct e_desktop* desktop)
 {
     assert(desktop);
 
-    //struct e_view* view = e_seat_focused_view(desktop->seat);
+    //struct e_view* view = e_desktop_focused_view(desktop->seat);
 
     //if (view != NULL)
         //e_window_maximize(view);
@@ -227,7 +207,7 @@ void e_commands_parse(struct e_desktop* desktop, const char* command)
     //TODO: testing only, remove
     else if (strcmp(argument, "move_to_next_workspace") == 0)
     {
-        struct e_view* focused_view = e_seat_focused_view(desktop->seat);
+        struct e_view* focused_view = e_desktop_focused_view(desktop);
 
         if (focused_view == NULL)
             return;

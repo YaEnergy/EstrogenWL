@@ -436,7 +436,7 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output)
 
     //set focus to this view
     if (view->surface != NULL)
-        e_seat_set_focus_view(view->desktop->seat, view);
+        e_desktop_focus_view(view->desktop, view);
 }
 
 // Stop displaying view.
