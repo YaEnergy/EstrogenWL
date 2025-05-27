@@ -11,11 +11,13 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output_layout.h>
 
-#include "desktop/desktop.h"
-#include "desktop/layer_shell.h"
-#include "desktop/xdg_shell.h"
+struct e_desktop;
+struct e_seat;
+
+struct e_xdg_shell;
+struct e_layer_shell;
 #if E_XWAYLAND_SUPPORT
-#include "desktop/xwayland.h"
+struct e_xwayland;
 #endif
 
 #include "config.h"
@@ -66,6 +68,9 @@ struct e_server
 
     // what the user interacts with
     struct e_desktop* desktop;
+
+    // collection & management of input devices: keyboard, mouse, ...
+    struct e_seat* seat;
 };
 
 int e_server_init(struct e_server* server, struct e_config* config);

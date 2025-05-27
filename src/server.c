@@ -263,6 +263,17 @@ int e_server_init(struct e_server* server, struct e_config* config)
         return 1;
     }
 
+    //input device management
+    server->seat = e_seat_create(server->display, server->desktop, server->desktop->output_layout, "seat0");
+
+    if (server->seat == NULL)
+    {
+        e_log_error("e_server_init: failed to create seat0");
+        return 1;
+    }
+
+    e_desktop_set_seat(server->desktop, server->seat);
+
     //xdg shell v6, protocol for application views
     server->xdg_shell = e_xdg_shell_create(server->display, server->desktop);
     //protocol for layer surfaces
