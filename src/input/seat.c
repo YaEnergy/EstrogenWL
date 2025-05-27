@@ -147,6 +147,9 @@ static void e_seat_fini_dnd(struct e_seat* seat)
         seat->drag_icon_tree = NULL;
         seat->current_dnd.icon = NULL; //recursive
     }
+
+    SIGNAL_DISCONNECT(seat->request_start_drag);
+    SIGNAL_DISCONNECT(seat->start_drag);
 }
 
 // Init seat drag & drop actions.
@@ -160,6 +163,9 @@ static void e_seat_init_dnd(struct e_seat* seat)
 
     seat->current_dnd.icon = NULL;
     seat->drag_icon_tree = wlr_scene_tree_create(&seat->desktop->scene->tree);
+
+    SIGNAL_CONNECT(seat->wlr_seat->events.request_start_drag, seat->request_start_drag, e_seat_request_start_drag);
+    SIGNAL_CONNECT(seat->wlr_seat->events.start_drag, seat->start_drag, e_seat_start_drag);
 }
 
 /* end drag & drop */
@@ -177,9 +183,6 @@ static void e_seat_destroy(struct wl_listener* listener, void* data)
     SIGNAL_DISCONNECT(seat->request_set_cursor);
     SIGNAL_DISCONNECT(seat->request_set_selection);
     SIGNAL_DISCONNECT(seat->request_set_primary_selection);
-
-    SIGNAL_DISCONNECT(seat->request_start_drag);
-    SIGNAL_DISCONNECT(seat->start_drag);
 
     SIGNAL_DISCONNECT(seat->destroy);
 
@@ -216,9 +219,6 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
     SIGNAL_CONNECT(wlr_seat->events.request_set_cursor, seat->request_set_cursor, e_seat_request_set_cursor);
     SIGNAL_CONNECT(wlr_seat->events.request_set_selection, seat->request_set_selection, e_seat_request_set_selection);
     SIGNAL_CONNECT(wlr_seat->events.request_set_primary_selection, seat->request_set_primary_selection, e_seat_request_set_primary_selection);
-    
-    SIGNAL_CONNECT(wlr_seat->events.request_start_drag, seat->request_start_drag, e_seat_request_start_drag);
-    SIGNAL_CONNECT(wlr_seat->events.start_drag, seat->start_drag, e_seat_start_drag);
     
     SIGNAL_CONNECT(wlr_seat->events.destroy, seat->destroy, e_seat_destroy);
 
