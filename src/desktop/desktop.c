@@ -11,6 +11,7 @@
 
 #include "input/seat.h"
 
+#include "desktop/views/view.h"
 #include "desktop/tree/workspace.h"
 #include "desktop/layer_shell.h"
 #include "desktop/output.h"
@@ -235,6 +236,105 @@ struct wlr_scene_surface* e_desktop_scene_surface_at(struct wlr_scene_node* node
         *sy = ny;
 
     return scene_surface;
+}
+
+/* focus */
+
+// Set seat focus on a view if possible, and activating view.
+void e_desktop_focus_view(struct e_desktop* desktop, struct e_view* view)
+{
+    assert(desktop && view);
+
+    #if E_VERBOSE
+    e_log_info("desktop focus on view");
+    #endif
+
+    if (view->surface == NULL)
+    {
+        e_log_error("e_desktop_focus_view: view has no surface!");
+        return;
+    }
+
+    if (e_seat_focus_surface(desktop->seat, view->surface, false))
+        e_view_set_activated(view, true);
+}
+
+// Set seat focus on a layer surface if possible.
+void e_desktop_focus_layer_surface(struct e_desktop* desktop, struct e_layer_surface* layer_surface)
+{
+    assert(desktop && layer_surface);
+
+    e_seat_focus_layer_surface(desktop->seat, layer_surface->scene_layer_surface_v1->layer_surface);
+}
+
+// Gets the type of surface (view or layer surface) and sets seat focus.
+// This will do nothing if surface isn't of a type that should be focused on by the desktop's seat.
+void e_desktop_focus_surface(struct e_desktop* desktop, struct wlr_surface* surface)
+{
+    assert(desktop && surface);
+
+    struct e_seat* seat = desktop->seat;
+
+    //focus on views & windows
+
+    struct wlr_surface* root_surface = wlr_surface_get_root_surface(surface);
+    struct e_view* view = e_view_from_surface(desktop, root_surface);
+
+    if (view != NULL && !e_seat_has_focus(seat, view->surface))
+    {
+        e_desktop_focus_view(desktop, view);
+        return;
+    }
+
+    //focus on layer surfaces that request on demand interactivity
+
+    struct wlr_layer_surface_v1* hover_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(surface);
+
+    //is layer surface that allows focus?
+    if (hover_layer_surface != NULL && hover_layer_surface->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE)
+    {
+        if (!e_seat_has_focus(seat, hover_layer_surface->surface))
+            e_seat_focus_layer_surface(seat, hover_layer_surface);    
+
+        return;  
+    }
+}
+
+// Returns view currently in focus.
+// Returns NULL if no view has focus.
+struct e_view* e_desktop_focused_view(struct e_desktop* desktop)
+{
+    assert(desktop);
+
+    if (desktop->seat->focus_surface == NULL)
+        return NULL;
+
+    return e_view_from_surface(desktop, desktop->seat->focus_surface);
+}
+
+// Returns view previously in focus.
+// Returns NULL if no view had focus.
+struct e_view* e_desktop_prev_focused_view(struct e_desktop* desktop)
+{
+    assert(desktop);
+
+    if (desktop->seat->previous_focus_surface == NULL)
+        return NULL;
+
+    return e_view_from_surface(desktop, desktop->seat->previous_focus_surface);
+}
+
+
+void e_desktop_clear_focus(struct e_desktop* desktop)
+{
+    assert(desktop);
+
+    struct e_view* focused_view = e_desktop_focused_view(desktop);
+
+    if (focused_view != NULL)
+        e_view_set_activated(focused_view, false);
+
+    e_seat_clear_focus(desktop->seat);
 }
 
 /* destruction */

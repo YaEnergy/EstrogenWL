@@ -48,7 +48,7 @@ static void start_grab_resize_focused_view(struct e_cursor* cursor)
 {
     assert(cursor);
 
-    struct e_view* focused_view = e_seat_focused_view(cursor->seat);
+    struct e_view* focused_view = e_desktop_focused_view(cursor->seat->desktop);
 
     if (focused_view == NULL)
         return;
@@ -78,7 +78,7 @@ static void start_grab_move_focused_view(struct e_cursor* cursor)
 {
     assert(cursor);
 
-    struct e_view* focused_view = e_seat_focused_view(cursor->seat);
+    struct e_view* focused_view = e_desktop_focused_view(cursor->seat->desktop);
 
     if (focused_view != NULL)
         e_cursor_start_view_move(cursor, focused_view);
@@ -593,7 +593,7 @@ void e_cursor_set_focus_hover(struct e_cursor* cursor)
         wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface->surface, sx, sy); //is only sent once
 
         //sloppy focus
-        e_seat_set_focus_surface_type(seat, hover_surface->surface);
+        e_desktop_focus_surface(desktop, hover_surface->surface);
     }
     else 
     {
