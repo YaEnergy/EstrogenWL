@@ -64,7 +64,6 @@ struct e_seat
     struct wl_listener request_start_drag;
     struct wl_listener start_drag;
 
-    //TODO: move into separate input manager
     struct wl_listener request_set_cursor_shape;
 
     struct wl_listener destroy;
