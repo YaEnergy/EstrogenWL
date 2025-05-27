@@ -16,8 +16,6 @@ struct e_desktop;
 // Drag & drop action
 struct e_dnd_action
 {
-    struct wlr_drag* drag;
-
     struct wlr_scene_tree* icon;
 
     struct wl_listener motion;
