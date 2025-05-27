@@ -80,10 +80,16 @@ struct e_desktop* e_desktop_create(struct wl_display* display, struct wlr_compos
     
     wl_list_init(&desktop->views);
 
-    //input device management
-    desktop->seat = e_seat_create(display, desktop, desktop->output_layout, "seat0");
+    desktop->seat = NULL;
 
     return desktop;
+}
+
+void e_desktop_set_seat(struct e_desktop* desktop, struct e_seat* seat)
+{
+    assert(desktop && seat);
+
+    desktop->seat = seat;
 }
 
 /* outputs */

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
@@ -13,6 +15,8 @@
 
 struct e_config;
 struct e_seat;
+
+struct e_view;
 struct e_layer_surface;
 
 //see: wlr-layer-shell-unstable-v1-protocol.h @ enum zwlr_layer_shell_v1_layer
@@ -64,13 +68,15 @@ struct e_desktop
 
     struct wl_list views; //struct e_view*
 
-    // collection & management of input devices: keyboard, mouse, ...
     struct e_seat* seat;
 };
 
 // Creates a desktop.
 // Returns NULL on fail.
 struct e_desktop* e_desktop_create(struct wl_display* display, struct wlr_compositor* compositor, struct e_config* config);
+
+// Set seat used by desktop.
+void e_desktop_set_seat(struct e_desktop* desktop, struct e_seat* seat);
 
 /* outputs */
 

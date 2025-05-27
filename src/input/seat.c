@@ -200,10 +200,9 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
         return NULL;
     }
 
-    seat->desktop = desktop;
-
     struct wlr_seat* wlr_seat = wlr_seat_create(display, name);
 
+    seat->desktop = desktop;
     seat->wlr_seat = wlr_seat;
     seat->focus_surface = NULL;
     seat->previous_focus_surface = NULL;
