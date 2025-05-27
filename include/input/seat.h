@@ -42,7 +42,7 @@ struct e_seat
     // Current drag & drop action
     struct e_dnd_action current_dnd;
 
-    //TODO: move into separate input manager
+    // handles cursor shape protocol
     struct wlr_cursor_shape_manager_v1* cursor_shape_manager;
 
     // surface that currently has focus
