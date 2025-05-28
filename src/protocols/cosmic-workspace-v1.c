@@ -191,6 +191,8 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
         e_cosmic_workspace_v1_create_resource(workspace, group_resource);
     }
 
+    e_cosmic_workspace_manager_v1_schedule_done_event(group->manager);
+
     return workspace;
 }
 
@@ -317,6 +319,8 @@ struct e_cosmic_workspace_group_v1* e_cosmic_workspace_group_v1_create(struct e_
         e_cosmic_workspace_group_v1_create_resource(group, manager_resource);
     }
 
+    e_cosmic_workspace_manager_v1_schedule_done_event(group->manager);
+
     return group;
 }
 
@@ -386,6 +390,9 @@ static void e_cosmic_workspace_manager_v1_schedule_done_event(struct e_cosmic_wo
 static void e_cosmic_workspace_manager_v1_commit(struct wl_client* client, struct wl_resource* resource)
 {
     //TODO: implement e_cosmic_workspace_manager_v1_commit
+    struct e_cosmic_workspace_manager_v1* manager = wl_resource_get_user_data(resource);
+
+    e_cosmic_workspace_manager_v1_schedule_done_event(manager);
 }
 
 // Clients no longer wants to receive events.
@@ -476,6 +483,5 @@ struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struc
     manager->listeners.display_destroy.notify = e_cosmic_workspace_manager_v1_display_destroy;
     wl_display_add_destroy_listener(display, &manager->listeners.display_destroy);
     
-
     return manager;
 }
