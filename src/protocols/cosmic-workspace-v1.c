@@ -78,6 +78,7 @@ static void e_cosmic_workspace_v1_request_remove(struct wl_client* client, struc
     e_trans_session_add_op(&workspace->group->manager->trans_session, workspace, MANAGER_WORKSPACE_REMOVE, NULL);
 }
 
+// Client does not want workspace object anymore.
 static void e_cosmic_workspace_v1_destroy(struct wl_client* client, struct wl_resource* resource)
 {
     wl_resource_destroy(resource);
@@ -291,7 +292,6 @@ static void e_cosmic_workspace_group_v1_create_resource(struct e_cosmic_workspac
 // Returns NULL on fail.
 struct e_cosmic_workspace_group_v1* e_cosmic_workspace_group_v1_create(struct e_cosmic_workspace_manager_v1* manager)
 {
-    //TODO: e_cosmic_workspace_group_v1_create
     struct e_cosmic_workspace_group_v1* group = calloc(1, sizeof(*group));
 
     if (group == NULL)
@@ -346,7 +346,7 @@ void e_cosmic_workspace_group_v1_output_leave(struct e_cosmic_workspace_group_v1
 // Destroy workspace group and its workspaces.
 void e_cosmic_workspace_group_v1_remove(struct e_cosmic_workspace_group_v1* group)
 {
-    //TODO: implement e_cosmic_workspace_group_v1_destroy
+    //TODO: implement e_cosmic_workspace_group_v1_remove
 }
 
 /* workspace manager done schedule */
