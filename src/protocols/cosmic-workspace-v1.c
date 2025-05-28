@@ -145,7 +145,7 @@ static void e_cosmic_workspace_v1_create_resource(struct e_cosmic_workspace_v1* 
     struct wl_client* client = wl_resource_get_client(group_resource);
     uint32_t id = wl_resource_get_id(group_resource);
 
-    struct wl_resource* workspace_resource = wl_resource_create(client, &zcosmic_workspace_handle_v1_interface, COSMIC_WORKSPACE_V1_VERSION, id);
+    struct wl_resource* workspace_resource = wl_resource_create(client, &zcosmic_workspace_handle_v1_interface, zcosmic_workspace_handle_v1_interface.version, id);
 
     if (workspace_resource == NULL)
     {
@@ -274,7 +274,7 @@ static void e_cosmic_workspace_group_v1_create_resource(struct e_cosmic_workspac
     struct wl_client* client = wl_resource_get_client(manager_resource);
     uint32_t id = wl_resource_get_id(manager_resource);
 
-    struct wl_resource* group_resource = wl_resource_create(client, &zcosmic_workspace_group_handle_v1_interface, COSMIC_WORKSPACE_V1_VERSION, id);
+    struct wl_resource* group_resource = wl_resource_create(client, &zcosmic_workspace_group_handle_v1_interface, zcosmic_workspace_group_handle_v1_interface.version, id);
 
     if (group_resource == NULL)
     {
