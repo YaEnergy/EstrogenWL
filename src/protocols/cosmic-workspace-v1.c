@@ -388,10 +388,42 @@ static void e_cosmic_workspace_manager_v1_schedule_done_event(struct e_cosmic_wo
 
 /* workspace manager interface */
 
+// Handle all requested operations at once.
 static void e_cosmic_workspace_manager_v1_commit(struct wl_client* client, struct wl_resource* resource)
 {
-    //TODO: implement e_cosmic_workspace_manager_v1_commit
     struct e_cosmic_workspace_manager_v1* manager = wl_resource_get_user_data(resource);
+
+    struct e_trans_session* trans_session = &manager->trans_session;
+
+    struct e_cosmic_workspace_group_v1* group;
+    struct e_cosmic_workspace_v1* workspace;
+
+    struct e_trans_op* operation;
+    e_trans_session_for_each_safe(operation, trans_session)
+    {
+        switch(operation->type)
+        {
+            case MANAGER_GROUP_CREATE_WORKSPACE:
+                group = operation->src;
+                struct group_create_workspace_event* event = operation->data;
+                wl_signal_emit_mutable(&group->events.request_create_workspace, event);
+                break;
+            case MANAGER_WORKSPACE_ACTIVATE:
+                workspace = operation->src;
+                wl_signal_emit_mutable(&workspace->events.request_activate, event);
+                break;
+            case MANAGER_WORKSPACE_DEACTIVATE:
+                workspace = operation->src;
+                wl_signal_emit_mutable(&workspace->events.request_deactivate, event);
+                break;
+            case MANAGER_WORKSPACE_REMOVE:
+                workspace = operation->src;
+                wl_signal_emit_mutable(&workspace->events.request_remove, event);
+                break;
+        }
+
+        e_trans_op_destroy(operation);
+    }
 
     e_cosmic_workspace_manager_v1_schedule_done_event(manager);
 }
