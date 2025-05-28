@@ -54,6 +54,10 @@ static void wl_array_append_uint32_t(struct wl_array* array, uint32_t num)
         *start = num;
 }
 
+/* workspace manager schedule */
+
+static void e_cosmic_workspace_manager_v1_schedule_done_event(struct e_cosmic_workspace_manager_v1* manager);
+
 /* workspace interface */
 
 static void e_cosmic_workspace_v1_request_activate(struct wl_client* client, struct wl_resource* resource)
@@ -340,6 +344,43 @@ void e_cosmic_workspace_group_v1_remove(struct e_cosmic_workspace_group_v1* grou
     //TODO: implement e_cosmic_workspace_group_v1_destroy
 }
 
+/* workspace manager done schedule */
+
+static void manager_idle_send_done_event(void* data)
+{
+    struct e_cosmic_workspace_manager_v1* manager = data;
+
+    //send pending workspace state
+    struct e_cosmic_workspace_group_v1* group;
+    wl_list_for_each(group, &manager->groups, link)
+    {
+        struct e_cosmic_workspace_v1* workspace;
+        wl_list_for_each(workspace, &group->workspaces, link)
+        {
+            if (workspace->pending_state != workspace->state)
+                e_cosmic_workspace_v1_send_state(workspace, NULL);
+        }   
+    }
+
+    struct wl_resource* resource;
+    wl_list_for_each(resource, &manager->resources, link)
+    {
+        zcosmic_workspace_manager_v1_send_done(resource);
+    }
+}
+
+static void e_cosmic_workspace_manager_v1_schedule_done_event(struct e_cosmic_workspace_manager_v1* manager)
+{
+    if (manager == NULL || manager->event_loop == NULL)
+        return;
+
+    //already scheduled
+    if (manager->done_idle_event != NULL)
+        return;
+
+    wl_event_loop_add_idle(manager->event_loop, manager_idle_send_done_event, manager);
+}
+
 /* workspace manager interface */
 
 static void e_cosmic_workspace_manager_v1_commit(struct wl_client* client, struct wl_resource* resource)
@@ -412,6 +453,8 @@ struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struc
     if (manager == NULL)
         return NULL;
 
+    manager->event_loop = wl_display_get_event_loop(display);
+    manager->done_idle_event = NULL;
     manager->global = wl_global_create(display, &zcosmic_workspace_manager_v1_interface, version, manager, e_cosmic_workspace_manager_v1_bind);
 
     if (manager->global == NULL)

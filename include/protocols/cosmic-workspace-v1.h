@@ -20,6 +20,9 @@ struct e_cosmic_workspace_manager_v1
 {
     struct wl_global* global;
 
+    struct wl_event_loop* event_loop;
+    struct wl_event_source* done_idle_event;
+
     struct wl_list groups; //struct e_cosmic_workspace_group_v1*
 
     // Resource for each client that has binded to manager.
