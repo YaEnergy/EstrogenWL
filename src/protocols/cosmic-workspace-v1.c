@@ -131,8 +131,6 @@ static void e_cosmic_workspace_v1_send_state(struct e_cosmic_workspace_v1* works
     }
 
     wl_array_release(&state_array);
-
-    workspace->state = workspace->pending_state;
 }
 
 static void e_cosmic_workspace_v1_resource_destroy(struct wl_resource* resource)
