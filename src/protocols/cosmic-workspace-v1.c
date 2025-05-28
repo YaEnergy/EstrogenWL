@@ -21,7 +21,7 @@
 
 enum manager_op_type
 {
-    MANAGER_GROUP_CREATE_WORKSPACE,
+    MANAGER_GROUP_CREATE_WORKSPACE, //struct group_create_workspace_event*
 
     MANAGER_WORKSPACE_ACTIVATE,
     MANAGER_WORKSPACE_DEACTIVATE,
@@ -127,9 +127,43 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
 
 /* workspace group interface */
 
+struct group_create_workspace_event
+{
+    const char* name;
+
+    struct wl_listener destroy;
+};
+
+void group_create_workspace_event_destroy(struct wl_listener* listener, void* data)
+{
+    struct group_create_workspace_event* event = wl_container_of(listener, event, destroy);
+
+    SIGNAL_DISCONNECT(event->destroy);
+
+    free(event);
+}
+
 static void e_cosmic_workspace_group_v1_create_workspace(struct wl_client* client, struct wl_resource* resource, const char* workspace_name)
 {
-    //TODO: implement e_cosmic_workspace_group_v1_create_workspace
+    struct e_cosmic_workspace_group_v1* group = wl_resource_get_user_data(resource);
+
+    struct group_create_workspace_event* event = calloc(1, sizeof(*event));
+
+    if (event == NULL)
+    {
+        wl_client_post_no_memory(client);
+        return;
+    }
+
+    struct e_trans_op* operation = e_trans_session_add_op(&group->manager->trans_session, group, MANAGER_GROUP_CREATE_WORKSPACE, event);
+
+    if (operation == NULL)
+    {
+        wl_client_post_no_memory(client);
+        return;
+    }
+
+    SIGNAL_CONNECT(operation->destroy, event->destroy, group_create_workspace_event_destroy);
 }
 
 static void e_cosmic_workspace_group_v1_destroy(struct wl_client* client, struct wl_resource* resource)
