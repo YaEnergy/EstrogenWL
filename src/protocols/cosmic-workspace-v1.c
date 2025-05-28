@@ -46,6 +46,14 @@ char* e_strdup(const char* string)
     return copy;
 }
 
+static void wl_array_append_uint32_t(struct wl_array* array, uint32_t num)
+{
+    uint32_t* start = wl_array_add(array, sizeof(uint32_t));
+
+    if (start != NULL)
+        *start = num;
+}
+
 /* workspace interface */
 
 static void e_cosmic_workspace_v1_request_activate(struct wl_client* client, struct wl_resource* resource)
@@ -79,6 +87,48 @@ static const struct zcosmic_workspace_handle_v1_interface workspace_interface = 
 };
 
 /* workspace */
+
+static void workspace_state_to_wl_array(uint32_t workspace_state, struct wl_array* array)
+{
+    if (array == NULL)
+        return;
+
+    if (workspace_state & E_COSMIC_WORKSPACE_STATE_ACTIVE)
+        wl_array_append_uint32_t(array, (uint32_t)E_COSMIC_WORKSPACE_STATE_ACTIVE);
+
+    if (workspace_state & E_COSMIC_WORKSPACE_STATE_URGENT)
+        wl_array_append_uint32_t(array, (uint32_t)E_COSMIC_WORKSPACE_STATE_URGENT);
+
+    if (workspace_state & E_COSMIC_WORKSPACE_STATE_HIDDEN)
+        wl_array_append_uint32_t(array, (uint32_t)E_COSMIC_WORKSPACE_STATE_HIDDEN);
+}
+
+// Sends pending state of workspace to all its resources if resource is NULL.
+// If resource is not NULL, only sends pending state to that resource.
+static void e_cosmic_workspace_v1_send_state(struct e_cosmic_workspace_v1* workspace, struct wl_resource* resource)
+{
+    struct wl_array state_array;
+    wl_array_init(&state_array);
+
+    workspace_state_to_wl_array(workspace->pending_state, &state_array);
+
+    if (resource != NULL)
+    {
+        zcosmic_workspace_handle_v1_send_state(resource, &state_array);
+    }
+    else
+    {
+        struct wl_resource* workspace_resource;
+        wl_list_for_each(workspace_resource, &workspace->resources, link)
+        {
+            zcosmic_workspace_handle_v1_send_state(resource, &state_array);
+        }
+    }
+
+    wl_array_release(&state_array);
+
+    workspace->state = workspace->pending_state;
+}
 
 static void e_cosmic_workspace_v1_resource_destroy(struct wl_resource* resource)
 {
