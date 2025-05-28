@@ -402,19 +402,19 @@ static void e_cosmic_workspace_manager_v1_commit(struct wl_client* client, struc
             case MANAGER_GROUP_CREATE_WORKSPACE:
                 group = operation->src;
                 struct group_create_workspace_event* event = operation->data;
-                wl_signal_emit_mutable(&group->events.request_create_workspace, event);
+                wl_signal_emit_mutable(&group->events.request_create_workspace, event->name);
                 break;
             case MANAGER_WORKSPACE_ACTIVATE:
                 workspace = operation->src;
-                wl_signal_emit_mutable(&workspace->events.request_activate, event);
+                wl_signal_emit_mutable(&workspace->events.request_activate, NULL);
                 break;
             case MANAGER_WORKSPACE_DEACTIVATE:
                 workspace = operation->src;
-                wl_signal_emit_mutable(&workspace->events.request_deactivate, event);
+                wl_signal_emit_mutable(&workspace->events.request_deactivate, NULL);
                 break;
             case MANAGER_WORKSPACE_REMOVE:
                 workspace = operation->src;
-                wl_signal_emit_mutable(&workspace->events.request_remove, event);
+                wl_signal_emit_mutable(&workspace->events.request_remove, NULL);
                 break;
         }
 

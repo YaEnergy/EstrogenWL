@@ -63,7 +63,7 @@ struct e_cosmic_workspace_group_v1
 
     struct
     {
-        struct wl_signal request_create_workspace;
+        struct wl_signal request_create_workspace; //const char*
         struct wl_signal destroy;
     } events;
 
