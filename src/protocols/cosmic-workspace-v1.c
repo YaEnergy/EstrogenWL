@@ -368,6 +368,8 @@ static void manager_idle_send_done_event(void* data)
     {
         zcosmic_workspace_manager_v1_send_done(resource);
     }
+
+    manager->done_idle_event = NULL;
 }
 
 static void e_cosmic_workspace_manager_v1_schedule_done_event(struct e_cosmic_workspace_manager_v1* manager)
