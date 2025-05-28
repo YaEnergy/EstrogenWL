@@ -38,7 +38,7 @@ static void e_cosmic_workspace_v1_request_remove(struct wl_client* client, struc
 
 static void e_cosmic_workspace_v1_destroy(struct wl_client* client, struct wl_resource* resource)
 {
-    //TODO: implement e_cosmic_workspace_v1_destroy
+    wl_resource_destroy(resource);
 }
 
 static const struct zcosmic_workspace_handle_v1_interface workspace_interface = {
