@@ -10,6 +10,7 @@
 #include "desktop/tree/node.h"
 
 #include "desktop/desktop.h"
+#include "desktop/views/view.h"
 
 #include "util/list.h"
 #include "util/log.h"
@@ -35,6 +36,7 @@ struct e_workspace* e_workspace_create(struct e_desktop* desktop)
     }
 
     workspace->desktop = desktop;
+    workspace->fullscreen_view = NULL;
 
     workspace->root_tiling_container = e_tree_container_create(E_TILING_MODE_HORIZONTAL);
 
@@ -67,10 +69,8 @@ void e_workspace_set_activated(struct e_workspace* workspace, bool activated)
         return;
     }
 
-    wlr_scene_node_set_enabled(&workspace->layers.floating->node, activated);
-    wlr_scene_node_set_enabled(&workspace->layers.tiling->node, activated);
-    wlr_scene_node_set_enabled(&workspace->layers.fullscreen->node, activated);
     workspace->active = activated;
+    e_workspace_update_tree_visibility(workspace);
 }
 
 // Arranges a workspace's children to fit within the given area.
@@ -85,8 +85,37 @@ void e_workspace_arrange(struct e_workspace* workspace, struct wlr_box full_area
     workspace->full_area = full_area;
     workspace->tiled_area = tiled_area;
 
-    //TODO: move tree, don't use x y in configure
+    //TODO: move trees, don't use x y in configure
+
+    if (workspace->fullscreen_view != NULL)
+        e_view_configure(workspace->fullscreen_view, full_area.x, full_area.y, full_area.width, full_area.height);
+
     e_container_configure(&workspace->root_tiling_container->base, tiled_area.x, tiled_area.y, tiled_area.width, tiled_area.height);
+}
+
+// Update visiblity of workspace trees.
+void e_workspace_update_tree_visibility(struct e_workspace* workspace)
+{
+    if (workspace == NULL)
+    {
+        e_log_error("e_workspace_update_trees: workspace is NULL!");
+        return;
+    }
+
+    if (workspace->active)
+    {
+        bool fullscreen = (workspace->fullscreen_view != NULL);
+
+        wlr_scene_node_set_enabled(&workspace->layers.floating->node, !fullscreen);
+        wlr_scene_node_set_enabled(&workspace->layers.tiling->node, !fullscreen);
+        wlr_scene_node_set_enabled(&workspace->layers.fullscreen->node, fullscreen);
+    }
+    else 
+    {
+        wlr_scene_node_set_enabled(&workspace->layers.floating->node, false);
+        wlr_scene_node_set_enabled(&workspace->layers.tiling->node, false);
+        wlr_scene_node_set_enabled(&workspace->layers.fullscreen->node, false);
+    }
 }
 
 // Returns NULL on fail.

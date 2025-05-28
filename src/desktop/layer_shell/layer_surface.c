@@ -93,10 +93,10 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
 
         //give exclusive focus if requested and allowed and doesn't have focus
         if (wlr_layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE && !e_seat_has_focus(seat, wlr_layer_surface_v1->surface))
-            e_seat_set_focus_layer_surface(seat, wlr_layer_surface_v1);
+            e_desktop_focus_layer_surface(layer_surface->desktop, layer_surface);
         //clear focus if layer surface no longer wants focus and has focus
         else if (wlr_layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE && e_seat_has_focus(seat, wlr_layer_surface_v1->surface))
-            e_seat_clear_focus(seat);
+            e_desktop_clear_focus(layer_surface->desktop);
 
         e_log_info("layer surface committed keyboard interactivity");
     }
@@ -146,7 +146,7 @@ static void e_layer_surface_map(struct wl_listener* listener, void* data)
 
     //give focus if requests exclusive focus
     if (layer_surface->scene_layer_surface_v1->layer_surface->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE)
-        e_seat_set_focus_layer_surface(layer_surface->desktop->seat, layer_surface->scene_layer_surface_v1->layer_surface);
+        e_desktop_focus_layer_surface(layer_surface->desktop, layer_surface);
 }
 
 // Surface no longer wants to be displayed.
@@ -164,7 +164,7 @@ static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
     struct e_layer_surface* next_layer_surface = e_output_get_exclusive_topmost_layer_surface(unmapped_layer_surface->output);
 
     if (next_layer_surface != NULL)
-        e_seat_set_focus_layer_surface(next_layer_surface->desktop->seat, next_layer_surface->scene_layer_surface_v1->layer_surface);
+        e_desktop_focus_layer_surface(next_layer_surface->desktop, next_layer_surface);
 }
 
 static void e_layer_surface_destroy(struct wl_listener* listener, void* data)

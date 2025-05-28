@@ -22,6 +22,8 @@
 //  - e_view_set_resizing
 //  - e_view_set_suspended
 
+struct e_output;
+
 struct e_view;
 
 // What the view can handle in size.
@@ -56,6 +58,9 @@ struct e_view_impl
 
     // Sets the activated state of the view.
     void (*set_activated)(struct e_view* view, bool activated);
+
+    // Set the fullscreen mode of the view.
+    void (*set_fullscreen)(struct e_view* view, bool fullscreen);
 
     //void (*set_maximized)(struct e_view* view, bool maximized);
     //void (*set_resizing)(struct e_view* view, bool resizing);
@@ -106,6 +111,7 @@ struct e_view
     bool mapped;
 
     bool tiled;
+    bool fullscreen;
 
     // View's title
     char* title;
@@ -128,7 +134,9 @@ void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_typ
 struct e_view_size_hints e_view_get_size_hints(struct e_view* view);
 
 // Display view.
-void e_view_map(struct e_view* view);
+// Set fullscreen to true and set output if you want the view to be on a specific output immediately.
+// If output is NULL, searches for current hovered output instead.
+void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output);
 
 // Stop displaying view.
 void e_view_unmap(struct e_view* view);
@@ -156,6 +164,15 @@ void e_view_set_tiled(struct e_view* view, bool tiled);
 
 // Sets the activated state of the view.
 void e_view_set_activated(struct e_view* view, bool activated);
+
+// Fullscreen view.
+void e_view_fullscreen(struct e_view* view);
+
+// Unfullscreen view.
+void e_view_unfullscreen(struct e_view* view);
+
+// Set the fullscreen mode of the view.
+void e_view_set_fullscreen(struct e_view* view, bool fullscreen);
 
 /*
 void e_view_set_maximized(struct e_view* view, bool maximized);

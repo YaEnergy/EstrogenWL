@@ -31,12 +31,7 @@
 
 static void e_commands_kill_focused_view(struct e_desktop* desktop)
 {
-    struct e_seat* seat = desktop->seat;
-
-    if (seat->focus_surface == NULL)
-        return;
-
-    struct e_view* view = e_seat_focused_view(seat);
+    struct e_view* view = e_desktop_focused_view(desktop);
 
     if (view != NULL)
     {
@@ -52,12 +47,7 @@ static void e_commands_kill_focused_view(struct e_desktop* desktop)
 
 static void e_commands_toggle_tiling_focused_view(struct e_desktop* desktop)
 {
-    struct e_seat* seat = desktop->seat;
-
-    if (seat->focus_surface == NULL)
-        return;
-
-    struct e_view* view = e_seat_focused_view(desktop->seat);
+    struct e_view* view = e_desktop_focused_view(desktop);
 
     if (view != NULL)
     {
@@ -75,12 +65,7 @@ static void e_commands_switch_tiling_mode(struct e_desktop* desktop)
 {
     assert(desktop);
 
-    struct e_seat* seat = desktop->seat;
-
-    if (seat->focus_surface == NULL)
-        return;
-
-    struct e_view* view = e_seat_focused_view(desktop->seat);
+    struct e_view* view = e_desktop_focused_view(desktop);
 
     if (view == NULL || view->container.parent == NULL)
         return;
@@ -97,30 +82,24 @@ static void e_commands_switch_tiling_mode(struct e_desktop* desktop)
 
 static void e_commands_toggle_fullscreen_focused_view(struct e_desktop* desktop)
 {
-    struct e_seat* seat = desktop->seat;
+    struct e_view* view = e_desktop_focused_view(desktop);
 
-    if (seat->focus_surface == NULL)
-        return;
-
-    //TODO: add support for all winodw types by using the base e_view instead of wlr_xdg_toplevel
-    struct wlr_xdg_toplevel* wlr_xdg_toplevel = wlr_xdg_toplevel_try_from_wlr_surface(seat->focus_surface);
-
-    if (wlr_xdg_toplevel != NULL)
+    if (view != NULL)
     {
-        wlr_xdg_toplevel_set_fullscreen(wlr_xdg_toplevel, !wlr_xdg_toplevel->current.fullscreen);
-        e_log_info("requested to toggle fullscreen wlr_xdg_toplevel, title: %s", wlr_xdg_toplevel->title);
+        e_view_set_fullscreen(view, !view->fullscreen);
+        e_log_info("toggle fullscreen mode of view, fullscreen: %i, title: %s", view->fullscreen, view->title);
     }
     else 
     {
-        e_log_info("failed to toggle fullscreen of focussed view");
-    }   
+        e_log_error("e_commands_toggle_fullscreen_focused_view: failed to toggle fullscreen mode of view!");
+    }
 }
 
 static void e_commands_maximize_focused_view(struct e_desktop* desktop)
 {
     assert(desktop);
 
-    //struct e_view* view = e_seat_focused_view(desktop->seat);
+    //struct e_view* view = e_desktop_focused_view(desktop->seat);
 
     //if (view != NULL)
         //e_window_maximize(view);
@@ -228,7 +207,7 @@ void e_commands_parse(struct e_desktop* desktop, const char* command)
     //TODO: testing only, remove
     else if (strcmp(argument, "move_to_next_workspace") == 0)
     {
-        struct e_view* focused_view = e_seat_focused_view(desktop->seat);
+        struct e_view* focused_view = e_desktop_focused_view(desktop);
 
         if (focused_view == NULL)
             return;
