@@ -1,7 +1,9 @@
 #include "protocols/cosmic-workspace-v1.h"
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
 #include <wayland-server-core.h>
@@ -29,6 +31,20 @@ enum manager_op_type
     //MANAGER_WORKSPACE_RENAME (since minor version 2)
     //MANAGER_WORKSPACE_SET_TILING_STATE (since minor version 2)
 };
+
+// Duplicates given null-terminated string.
+// Returned string must be freed, returns NULL on fail.
+char* e_strdup(const char* string)
+{
+    size_t len = strlen(string);
+    char* copy = calloc(len + 1, sizeof(*copy));
+
+    if (copy == NULL)
+        return NULL;
+
+    strncpy(copy, string, len);
+    return copy;
+}
 
 /* workspace interface */
 
@@ -121,7 +137,6 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
         e_cosmic_workspace_v1_create_resource(workspace, group_resource);
     }
 
-
     return workspace;
 }
 
@@ -129,7 +144,7 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
 
 struct group_create_workspace_event
 {
-    const char* name;
+    char* name;
 
     struct wl_listener destroy;
 };
@@ -139,6 +154,8 @@ void group_create_workspace_event_destroy(struct wl_listener* listener, void* da
     struct group_create_workspace_event* event = wl_container_of(listener, event, destroy);
 
     SIGNAL_DISCONNECT(event->destroy);
+
+    free(event->name);
 
     free(event);
 }
@@ -155,10 +172,21 @@ static void e_cosmic_workspace_group_v1_create_workspace(struct wl_client* clien
         return;
     }
 
+    event->name = e_strdup(workspace_name);
+
+    if (event->name == NULL)
+    {
+        free(event);
+        wl_client_post_no_memory(client);
+        return;
+    }
+
     struct e_trans_op* operation = e_trans_session_add_op(&group->manager->trans_session, group, MANAGER_GROUP_CREATE_WORKSPACE, event);
 
     if (operation == NULL)
     {
+        free(event->name);
+        free(event);
         wl_client_post_no_memory(client);
         return;
     }
