@@ -66,8 +66,6 @@ static const struct zcosmic_workspace_handle_v1_interface workspace_interface = 
 
 static void e_cosmic_workspace_v1_resource_destroy(struct wl_resource* resource)
 {
-    //TODO: clean up resource
-
     wl_list_remove(wl_resource_get_link(resource));
 }
 
