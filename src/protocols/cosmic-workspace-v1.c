@@ -177,7 +177,7 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
     wl_signal_init(&workspace->events.request_remove);
     wl_signal_init(&workspace->events.destroy);
 
-    wl_list_insert(&group->workspaces, &workspace->link);
+    wl_list_append(group->workspaces, &workspace->link);
 
     //create workspace resource for each client that has binded to manager
 
@@ -304,7 +304,7 @@ struct e_cosmic_workspace_group_v1* e_cosmic_workspace_group_v1_create(struct e_
     wl_signal_init(&group->events.request_create_workspace);
     wl_signal_init(&group->events.destroy);
 
-    wl_list_insert(&manager->groups, &group->link);
+    wl_list_append(manager->groups, &group->link);
 
     //create group resource for each client that binded to manager
 
