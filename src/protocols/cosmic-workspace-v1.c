@@ -250,9 +250,10 @@ static void e_cosmic_workspace_group_v1_create_workspace(struct wl_client* clien
     SIGNAL_CONNECT(operation->destroy, event->destroy, group_create_workspace_event_destroy);
 }
 
+// Client does not want group object anymore.
 static void e_cosmic_workspace_group_v1_destroy(struct wl_client* client, struct wl_resource* resource)
 {
-    //TODO: Implement e_cosmic_workspace_group_v1_destroy, destroy group and its workspaces.
+    wl_resource_destroy(resource);
 }
 
 static const struct zcosmic_workspace_group_handle_v1_interface workspace_group_interface = {
