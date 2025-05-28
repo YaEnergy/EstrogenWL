@@ -34,17 +34,20 @@ enum manager_op_type
 
 static void e_cosmic_workspace_v1_request_activate(struct wl_client* client, struct wl_resource* resource)
 {
-    //TODO: implement e_cosmic_workspace_v1_request_activate 
+    struct e_cosmic_workspace_v1* workspace = wl_resource_get_user_data(resource);
+    e_trans_session_add_op(&workspace->group->manager->trans_session, workspace, MANAGER_WORKSPACE_ACTIVATE, NULL);
 }
 
 static void e_cosmic_workspace_v1_request_deactivate(struct wl_client* client, struct wl_resource* resource)
 {
-    //TODO: implement e_cosmic_workspace_v1_request_deactivate
+    struct e_cosmic_workspace_v1* workspace = wl_resource_get_user_data(resource);
+    e_trans_session_add_op(&workspace->group->manager->trans_session, workspace, MANAGER_WORKSPACE_DEACTIVATE, NULL);
 }
 
 static void e_cosmic_workspace_v1_request_remove(struct wl_client* client, struct wl_resource* resource)
 {
-    //TODO: implement e_cosmic_workspace_v1_request_remove
+    struct e_cosmic_workspace_v1* workspace = wl_resource_get_user_data(resource);
+    e_trans_session_add_op(&workspace->group->manager->trans_session, workspace, MANAGER_WORKSPACE_REMOVE, NULL);
 }
 
 static void e_cosmic_workspace_v1_destroy(struct wl_client* client, struct wl_resource* resource)
