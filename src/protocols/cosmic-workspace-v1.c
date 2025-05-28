@@ -19,6 +19,17 @@
 //REF 2: https://wayland.app/protocols/cosmic-workspace-unstable-v1
 //REF 3: labwc
 
+enum manager_op_type
+{
+    MANAGER_GROUP_CREATE_WORKSPACE,
+
+    MANAGER_WORKSPACE_ACTIVATE,
+    MANAGER_WORKSPACE_DEACTIVATE,
+    MANAGER_WORKSPACE_REMOVE
+    //MANAGER_WORKSPACE_RENAME (since minor version 2)
+    //MANAGER_WORKSPACE_SET_TILING_STATE (since minor version 2)
+};
+
 /* workspace interface */
 
 static void e_cosmic_workspace_v1_request_activate(struct wl_client* client, struct wl_resource* resource)
