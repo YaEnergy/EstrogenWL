@@ -16,6 +16,15 @@
 
 struct wlr_output;
 
+enum e_cosmic_workspace_manager_capability
+{
+    E_COSMIC_WORKSPACE_GROUP_CAPABILITY_CREATE_WORKSPACE = 1 << 0,
+    
+    E_COSMIC_WORKSPACE_CAPABILITY_ACTIVATE = 1 << 1,
+    E_COSMIC_WORKSPACE_CAPABILITY_DEACTIVATE = 1 << 2,
+    E_COSMIC_WORKSPACE_CAPABILITY_REMOVE = 1 << 3
+};
+
 struct e_cosmic_workspace_manager_v1
 {
     struct wl_global* global;
@@ -24,6 +33,8 @@ struct e_cosmic_workspace_manager_v1
     struct wl_event_source* done_idle_event;
 
     struct wl_list groups; //struct e_cosmic_workspace_group_v1*
+
+    uint32_t capabilities; //bitmask of enum e_cosmic_workspace_manager_capability
 
     // Resource for each client that has binded to manager.
     struct wl_list resources; //struct wl_resource*
@@ -44,11 +55,6 @@ struct e_cosmic_workspace_manager_v1
     } listeners;
 };
 
-enum e_cosmic_workspace_group_capability
-{
-    E_COSMIC_WORKSPACE_GROUP_CAPABILITY_CREATE_WORKSPACE = 1 << 0
-};
-
 struct e_cosmic_workspace_group_v1
 {
     struct e_cosmic_workspace_manager_v1* manager;
@@ -56,7 +62,7 @@ struct e_cosmic_workspace_group_v1
     struct wl_list outputs; //struct e_cosmic_workspace_v1_group_output*
     struct wl_list workspaces; //struct e_cosmic_workspace_v1*
 
-    struct wl_array capabilities; //contains bitmasks of enum e_cosmic_workspace_group_capability
+    struct wl_array capabilities;
 
     // Resource for each client that has binded to manager.
     struct wl_list resources; //struct wl_resource*
@@ -68,14 +74,6 @@ struct e_cosmic_workspace_group_v1
     } events;
 
     struct wl_list link; //e_cosmic_workspace_manager_v1::groups
-};
-
-enum e_cosmic_workspace_capability
-{
-    E_COSMIC_WORKSPACE_CAPABILITY_ACTIVATE = 1 << 0,
-    E_COSMIC_WORKSPACE_CAPABILITY_DEACTIVATE = 1 << 1,
-    E_COSMIC_WORKSPACE_CAPABILITY_ASSIGN = 1 << 2,
-    E_COSMIC_WORKSPACE_CAPABILITY_REMOVE = 1 << 3
 };
 
 enum e_cosmic_workspace_state
@@ -97,7 +95,7 @@ struct e_cosmic_workspace_v1
     uint32_t state; //bitmask enum e_cosmic_workspace_state
     uint32_t pending_state; //bitmask enum e_cosmic_workspace_state
 
-    struct wl_array capabilities; //bitmask enum e_cosmic_workspace_capability
+    struct wl_array capabilities;
 
     struct wl_array coords;
 
@@ -117,14 +115,12 @@ struct e_cosmic_workspace_v1
     struct wl_list link; //e_cosmic_workspace_group_v1::workspaces
 };
 
+// Capabilities is a bitmask of enum e_cosmic_workspace_manager_capability.
 // Returns NULL on fail.
-struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struct wl_display* display, uint32_t version);
+struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struct wl_display* display, uint32_t version, uint32_t capabilities);
 
 // Returns NULL on fail.
 struct e_cosmic_workspace_group_v1* e_cosmic_workspace_group_v1_create(struct e_cosmic_workspace_manager_v1* manager);
-
-// Set capabilities of workspace group, where capabilities contains bitmasks of enum e_cosmic_workspace_group_capability.
-void e_cosmic_workspace_group_v1_set_capabilities(struct e_cosmic_workspace_group_v1* group, struct wl_array* capabilities);
 
 // Assign output to workspace group.
 void e_cosmic_workspace_group_v1_output_enter(struct e_cosmic_workspace_group_v1* group, struct wlr_output* output);

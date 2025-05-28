@@ -155,6 +155,24 @@ static void e_cosmic_workspace_v1_create_resource(struct e_cosmic_workspace_v1* 
     wl_list_insert(&workspace->resources, wl_resource_get_link(workspace_resource));
 
     zcosmic_workspace_group_handle_v1_send_workspace(group_resource, workspace_resource);
+    zcosmic_workspace_handle_v1_send_capabilities(workspace_resource, &workspace->capabilities);
+}
+
+static void workspace_init_capabilities(struct e_cosmic_workspace_v1* workspace, uint32_t manager_capabilities)
+{
+    if (workspace == NULL)
+        return;
+
+    wl_array_init(&workspace->capabilities);
+
+    if (manager_capabilities & E_COSMIC_WORKSPACE_CAPABILITY_ACTIVATE)
+        wl_array_append_uint32_t(&workspace->capabilities, ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_ACTIVATE);
+
+    if (manager_capabilities & E_COSMIC_WORKSPACE_CAPABILITY_DEACTIVATE)
+        wl_array_append_uint32_t(&workspace->capabilities, ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_DEACTIVATE);
+
+    if (manager_capabilities & E_COSMIC_WORKSPACE_CAPABILITY_REMOVE)
+        wl_array_append_uint32_t(&workspace->capabilities, ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_REMOVE);
 }
 
 // Returns NULL on fail.
@@ -171,6 +189,8 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
     wl_array_init(&workspace->coords);
 
     wl_list_init(&workspace->resources);
+
+    workspace_init_capabilities(workspace, group->manager->capabilities);
 
     wl_signal_init(&workspace->events.request_activate);
     wl_signal_init(&workspace->events.request_deactivate);
@@ -283,6 +303,18 @@ static void e_cosmic_workspace_group_v1_create_resource(struct e_cosmic_workspac
     wl_list_insert(&group->resources, wl_resource_get_link(group_resource));
 
     zcosmic_workspace_manager_v1_send_workspace_group(manager_resource, group_resource);
+    zcosmic_workspace_group_handle_v1_send_capabilities(group_resource, &group->capabilities);
+}
+
+static void group_init_capabilities(struct e_cosmic_workspace_group_v1* group, uint32_t manager_capabilities)
+{
+    if (group == NULL)
+        return;
+
+    wl_array_init(&group->capabilities);
+
+    if (manager_capabilities & E_COSMIC_WORKSPACE_GROUP_CAPABILITY_CREATE_WORKSPACE)
+        wl_array_append_uint32_t(&group->capabilities, ZCOSMIC_WORKSPACE_GROUP_HANDLE_V1_ZCOSMIC_WORKSPACE_GROUP_CAPABILITIES_V1_CREATE_WORKSPACE);
 }
 
 // Returns NULL on fail.
@@ -299,7 +331,7 @@ struct e_cosmic_workspace_group_v1* e_cosmic_workspace_group_v1_create(struct e_
     wl_list_init(&group->workspaces);
     wl_list_init(&group->resources);
 
-    wl_array_init(&group->capabilities);
+    group_init_capabilities(group, manager->capabilities);
 
     wl_signal_init(&group->events.request_create_workspace);
     wl_signal_init(&group->events.destroy);
@@ -319,12 +351,6 @@ struct e_cosmic_workspace_group_v1* e_cosmic_workspace_group_v1_create(struct e_
     e_cosmic_workspace_manager_v1_schedule_done_event(group->manager);
 
     return group;
-}
-
-// Set capabilities of workspace group, where capabilities contains bitmasks of enum e_cosmic_workspace_group_capability.
-void e_cosmic_workspace_group_v1_set_capabilities(struct e_cosmic_workspace_group_v1* group, struct wl_array* capabilities)
-{
-    //TODO: implement e_cosmic_workspace_group_v1_set_capabilities
 }
 
 // Assign output to workspace group.
@@ -479,7 +505,7 @@ static void e_cosmic_workspace_manager_v1_display_destroy(struct wl_listener* li
 }
 
 // Returns NULL on fail.
-struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struct wl_display* display, uint32_t version)
+struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struct wl_display* display, uint32_t version, uint32_t capabilities)
 {
     assert(version <= COSMIC_WORKSPACE_V1_VERSION);
 
@@ -493,6 +519,7 @@ struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struc
 
     manager->event_loop = wl_display_get_event_loop(display);
     manager->done_idle_event = NULL;
+    manager->capabilities = capabilities;
     manager->global = wl_global_create(display, &zcosmic_workspace_manager_v1_interface, version, manager, e_cosmic_workspace_manager_v1_bind);
 
     if (manager->global == NULL)
