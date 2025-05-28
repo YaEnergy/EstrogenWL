@@ -379,7 +379,7 @@ static void e_cosmic_workspace_manager_v1_schedule_done_event(struct e_cosmic_wo
     if (manager->done_idle_event != NULL)
         return;
 
-    wl_event_loop_add_idle(manager->event_loop, manager_idle_send_done_event, manager);
+    manager->done_idle_event = wl_event_loop_add_idle(manager->event_loop, manager_idle_send_done_event, manager);
 }
 
 /* workspace manager interface */
