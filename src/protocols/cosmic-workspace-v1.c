@@ -451,7 +451,7 @@ static void e_cosmic_workspace_manager_v1_bind(struct wl_client* client, void* d
 {
     struct e_cosmic_workspace_manager_v1* manager = data;
 
-    struct wl_resource* resource = wl_resource_create(client, &zcosmic_workspace_manager_v1_interface, zcosmic_workspace_handle_v1_interface.version, id);
+    struct wl_resource* resource = wl_resource_create(client, &zcosmic_workspace_manager_v1_interface, version, id);
 
     wl_resource_set_implementation(resource, &workspace_manager_interface, manager, e_cosmic_workspace_manager_v1_resource_destroy);
     
