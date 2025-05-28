@@ -503,6 +503,7 @@ struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struc
         return NULL;
     }
 
+    wl_list_init(&manager->resources);
     wl_list_init(&manager->groups);
     e_trans_session_init(&manager->trans_session);
 
