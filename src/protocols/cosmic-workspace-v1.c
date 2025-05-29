@@ -140,7 +140,8 @@ static void e_cosmic_workspace_v1_resource_destroy(struct wl_resource* resource)
     wl_list_remove(wl_resource_get_link(resource));
 }
 
-static void e_cosmic_workspace_v1_create_resource(struct e_cosmic_workspace_v1* workspace, struct wl_resource* group_resource)
+// Returns NULL on fail.
+static struct wl_resource* e_cosmic_workspace_v1_create_resource(struct e_cosmic_workspace_v1* workspace, struct wl_resource* group_resource)
 {
     struct wl_client* client = wl_resource_get_client(group_resource);
 
@@ -149,7 +150,7 @@ static void e_cosmic_workspace_v1_create_resource(struct e_cosmic_workspace_v1* 
     if (workspace_resource == NULL)
     {
         wl_client_post_no_memory(client);
-        return;
+        return NULL;
     }
 
     wl_resource_set_implementation(workspace_resource, &workspace_interface, workspace, e_cosmic_workspace_v1_resource_destroy);
@@ -161,6 +162,8 @@ static void e_cosmic_workspace_v1_create_resource(struct e_cosmic_workspace_v1* 
 
     if (workspace->name != NULL)
         zcosmic_workspace_handle_v1_send_name(workspace_resource, workspace->name);
+    
+    return workspace_resource;
 }
 
 static void workspace_init_capabilities(struct e_cosmic_workspace_v1* workspace, uint32_t manager_capabilities)
@@ -317,7 +320,8 @@ static void e_cosmic_workspace_group_v1_resource_destroy(struct wl_resource* res
     wl_list_remove(wl_resource_get_link(resource));
 }
 
-static void e_cosmic_workspace_group_v1_create_resource(struct e_cosmic_workspace_group_v1* group, struct wl_resource* manager_resource)
+// Returns NULL on fail.
+static struct wl_resource* e_cosmic_workspace_group_v1_create_resource(struct e_cosmic_workspace_group_v1* group, struct wl_resource* manager_resource)
 {
     struct wl_client* client = wl_resource_get_client(manager_resource);
 
@@ -326,7 +330,7 @@ static void e_cosmic_workspace_group_v1_create_resource(struct e_cosmic_workspac
     if (group_resource == NULL)
     {
         wl_client_post_no_memory(client);
-        return;
+        return NULL;
     }
 
     wl_resource_set_implementation(group_resource, &workspace_group_interface, group, e_cosmic_workspace_group_v1_resource_destroy);
@@ -335,6 +339,8 @@ static void e_cosmic_workspace_group_v1_create_resource(struct e_cosmic_workspac
 
     zcosmic_workspace_manager_v1_send_workspace_group(manager_resource, group_resource);
     zcosmic_workspace_group_handle_v1_send_capabilities(group_resource, &group->capabilities);
+
+    return group_resource;
 }
 
 static void group_init_capabilities(struct e_cosmic_workspace_group_v1* group, uint32_t manager_capabilities)
