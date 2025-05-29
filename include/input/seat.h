@@ -91,3 +91,6 @@ bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface);
 bool e_seat_has_exclusive_layer_focus(struct e_seat* seat);
 
 void e_seat_clear_focus(struct e_seat* seat);
+
+// Destroy seat.
+void e_seat_destroy(struct e_seat* seat);
