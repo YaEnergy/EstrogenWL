@@ -249,7 +249,7 @@ void e_desktop_focus_view(struct e_desktop* desktop, struct e_view* view)
     e_log_info("desktop focus on view");
     #endif
 
-    if (desktop->seat)
+    if (desktop->seat == NULL)
     {
         e_log_error("e_desktop_focus_view: desktop has no seat!");
         return;
@@ -273,7 +273,7 @@ void e_desktop_focus_layer_surface(struct e_desktop* desktop, struct e_layer_sur
 {
     assert(desktop && layer_surface);
 
-    if (desktop->seat)
+    if (desktop->seat == NULL)
     {
         e_log_error("e_desktop_focus_layer_surface: desktop has no seat!");
         return;
@@ -288,7 +288,7 @@ void e_desktop_focus_surface(struct e_desktop* desktop, struct wlr_surface* surf
 {
     assert(desktop && surface);
 
-    if (desktop->seat)
+    if (desktop->seat == NULL)
     {
         e_log_error("e_desktop_focus_surface: desktop has no seat!");
         return;
@@ -349,7 +349,7 @@ void e_desktop_clear_focus(struct e_desktop* desktop)
 {
     assert(desktop);
 
-    if (desktop->seat)
+    if (desktop->seat == NULL)
     {
         e_log_error("e_desktop_clear_focus: desktop has no seat!");
         return;
