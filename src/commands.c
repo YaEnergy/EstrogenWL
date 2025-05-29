@@ -188,7 +188,7 @@ void e_commands_parse(struct e_desktop* desktop, const char* command)
     //TODO: next_workspace is for testing only, remove
     else if (strcmp(argument, "next_workspace") == 0)
     {
-        struct e_output* output = e_cursor_output_at(desktop->seat->cursor);
+        struct e_output* output = e_desktop_hovered_output(desktop);
 
         struct e_workspace* workspace = output->active_workspace;
 
@@ -212,7 +212,7 @@ void e_commands_parse(struct e_desktop* desktop, const char* command)
         if (focused_view == NULL)
             return;
 
-        struct e_output* output = e_cursor_output_at(desktop->seat->cursor);
+        struct e_output* output = e_desktop_hovered_output(desktop);
 
         struct e_workspace* workspace = output->active_workspace;
 
