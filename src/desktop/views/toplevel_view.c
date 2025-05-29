@@ -234,9 +234,6 @@ static void e_view_toplevel_set_activated(struct e_view* view, bool activated)
     struct e_toplevel_view* toplevel_view = view->data;
 
     wlr_xdg_toplevel_set_activated(toplevel_view->xdg_toplevel, activated);
-
-    if (activated)
-        wlr_scene_node_raise_to_top(&view->tree->node);
 }
 
 // Set the fullscreen mode of the view.

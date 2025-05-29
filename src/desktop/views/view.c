@@ -21,7 +21,6 @@
 #include "desktop/tree/container.h"
 #include "desktop/tree/workspace.h"
 
-#include "input/cursor.h"
 #include "input/seat.h"
 
 #include "util/list.h"
@@ -401,7 +400,7 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output)
 
     if (output == NULL || output->active_workspace == NULL)
     {
-        output = e_cursor_output_at(view->desktop->seat->cursor);
+        output = e_desktop_hovered_output(view->desktop);
 
         if (output == NULL || output->active_workspace == NULL)
         {
@@ -490,6 +489,24 @@ struct e_view* e_view_from_surface(struct e_desktop* desktop, struct wlr_surface
 
     //none found
     return NULL; 
+}
+
+// Raise view to the top of its parent tree.
+void e_view_raise_to_top(struct e_view* view)
+{
+    if (view == NULL)
+    {
+        e_log_error("e_view_raise_to_top: view is NULL!");
+        return;
+    }
+
+    if (view->tree == NULL)
+    {
+        e_log_error("e_view_raise_to_top: view has no tree!");
+        return;
+    }
+
+    wlr_scene_node_raise_to_top(&view->tree->node);
 }
 
 // Returns NULL on fail.

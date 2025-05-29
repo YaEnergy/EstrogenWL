@@ -375,6 +375,9 @@ void e_server_fini(struct e_server* server)
 
     wl_display_destroy_clients(server->display);
 
+    e_seat_destroy(server->seat);
+    e_desktop_set_seat(server->desktop, NULL);
+    
     e_desktop_destroy(server->desktop);
 
     wlr_allocator_destroy(server->allocator);
