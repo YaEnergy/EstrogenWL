@@ -128,7 +128,7 @@ static void e_cosmic_workspace_v1_send_state(struct e_cosmic_workspace_v1* works
         struct wl_resource* workspace_resource;
         wl_list_for_each(workspace_resource, &workspace->resources, link)
         {
-            zcosmic_workspace_handle_v1_send_state(resource, &state_array);
+            zcosmic_workspace_handle_v1_send_state(workspace_resource, &state_array);
         }
     }
 
