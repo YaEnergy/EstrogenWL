@@ -88,7 +88,7 @@ struct e_cosmic_workspace_v1
     // Group this workspace is assigned to.
     struct e_cosmic_workspace_group_v1* group;
 
-    const char* name;
+    char* name;
 
     uint32_t state; //bitmask enum e_cosmic_workspace_state
     uint32_t pending_state; //bitmask enum e_cosmic_workspace_state
@@ -133,6 +133,7 @@ void e_cosmic_workspace_group_v1_remove(struct e_cosmic_workspace_group_v1* grou
 // Returns NULL on fail.
 struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_workspace_group_v1* group);
 
+// Name is copied.
 void e_cosmic_workspace_v1_set_name(struct e_cosmic_workspace_v1* workspace, const char* name);
 
 void e_cosmic_workspace_v1_set_coords(struct e_cosmic_workspace_v1* workspace, struct wl_array* coords);

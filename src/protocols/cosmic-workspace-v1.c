@@ -43,6 +43,8 @@ char* e_strdup(const char* string)
         return NULL;
 
     strncpy(copy, string, len);
+    copy[len] = '\0'; //null-terminator
+    
     return copy;
 }
 
@@ -156,6 +158,9 @@ static void e_cosmic_workspace_v1_create_resource(struct e_cosmic_workspace_v1* 
 
     zcosmic_workspace_group_handle_v1_send_workspace(group_resource, workspace_resource);
     zcosmic_workspace_handle_v1_send_capabilities(workspace_resource, &workspace->capabilities);
+
+    if (workspace->name != NULL)
+        zcosmic_workspace_handle_v1_send_name(workspace_resource, workspace->name);
 }
 
 static void workspace_init_capabilities(struct e_cosmic_workspace_v1* workspace, uint32_t manager_capabilities)
@@ -183,6 +188,7 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
     if (workspace == NULL)
         return NULL;
 
+    workspace->name = NULL;
     workspace->group = group;
 
     wl_array_init(&workspace->capabilities);
@@ -212,6 +218,31 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
     e_cosmic_workspace_manager_v1_schedule_done_event(group->manager);
 
     return workspace;
+}
+
+// Name is copied.
+void e_cosmic_workspace_v1_set_name(struct e_cosmic_workspace_v1* workspace, const char* name)
+{
+    if (workspace == NULL)
+        return;
+
+    char* copy = e_strdup(name);
+
+    if (copy == NULL)
+        return;
+
+    if (workspace->name != NULL)
+        free(workspace->name);
+
+    workspace->name = copy;
+
+    struct wl_resource* resource;
+    wl_list_for_each(resource, &workspace->resources, link)
+    {
+        zcosmic_workspace_handle_v1_send_name(resource, copy);
+    }
+
+    e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
 }
 
 /* workspace group interface */
