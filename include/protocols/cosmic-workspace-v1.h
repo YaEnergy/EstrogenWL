@@ -85,8 +85,6 @@ enum e_cosmic_workspace_state
 
 struct e_cosmic_workspace_v1
 {
-    struct e_cosmic_workspace_manager_v1* manager;
-    
     // Group this workspace is assigned to.
     struct e_cosmic_workspace_group_v1* group;
 
