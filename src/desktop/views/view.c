@@ -500,7 +500,7 @@ void e_view_raise_to_top(struct e_view* view)
         return;
     }
 
-    if (view->tree)
+    if (view->tree == NULL)
     {
         e_log_error("e_view_raise_to_top: view has no tree!");
         return;
