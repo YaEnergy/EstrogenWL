@@ -102,6 +102,10 @@ struct wlr_scene_surface* e_desktop_scene_surface_at(struct wlr_scene_node* node
 // Returns NULL if no output is being hovered.
 struct e_output* e_desktop_hovered_output(struct e_desktop* desktop);
 
+// Returns view currently hovered by cursor.
+// Returns NULL if no view is being hovered.
+struct e_view* e_desktop_hovered_view(struct e_desktop* desktop);
+
 /* focus */
 
 // Set seat focus on a view if possible, and does whatever is necessary to do so.

@@ -275,6 +275,33 @@ struct e_output* e_desktop_hovered_output(struct e_desktop* desktop)
     return output;
 }
 
+// Returns view currently hovered by cursor.
+// Returns NULL if no view is being hovered.
+struct e_view* e_desktop_hovered_view(struct e_desktop* desktop)
+{
+    if (desktop == NULL)
+    {
+        e_log_error("e_desktop_hovered_output: desktop is NULL!");
+        return NULL;
+    }
+
+    if (desktop->seat == NULL)
+    {
+        e_log_error("e_desktop_hovered_output: desktop has no seat!");
+        return NULL;
+    }
+
+    if (desktop->seat->cursor == NULL)
+    {
+        e_log_error("e_desktop_hovered_output: desktop's seat has no cursor!");
+        return NULL;
+    }
+
+    struct e_cursor* cursor = desktop->seat->cursor;
+
+    return e_view_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
+}
+
 /* focus */
 
 // Set seat focus on a view if possible, and does whatever is necessary to do so.
