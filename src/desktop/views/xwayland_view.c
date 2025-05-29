@@ -148,9 +148,6 @@ static void e_view_xwayland_set_activated(struct e_view* view, bool activated)
     struct e_xwayland_view* xwayland_view = view->data;
 
     wlr_xwayland_surface_activate(xwayland_view->xwayland_surface, activated);
-
-    if (activated)
-        wlr_scene_node_raise_to_top(&view->tree->node);
 }
 
 static void e_view_xwayland_set_fullscreen(struct e_view* view, bool fullscreen)
