@@ -21,7 +21,6 @@
 #include "desktop/tree/container.h"
 #include "desktop/tree/workspace.h"
 
-#include "input/cursor.h"
 #include "input/seat.h"
 
 #include "util/list.h"
@@ -401,7 +400,7 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output)
 
     if (output == NULL || output->active_workspace == NULL)
     {
-        output = e_cursor_output_at(view->desktop->seat->cursor);
+        output = e_desktop_hovered_output(view->desktop);
 
         if (output == NULL || output->active_workspace == NULL)
         {

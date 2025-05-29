@@ -10,6 +10,7 @@
 #include <wlr/types/wlr_scene.h>
 
 #include "input/seat.h"
+#include "input/cursor.h"
 
 #include "desktop/views/view.h"
 #include "desktop/tree/workspace.h"
@@ -236,6 +237,69 @@ struct wlr_scene_surface* e_desktop_scene_surface_at(struct wlr_scene_node* node
         *sy = ny;
 
     return scene_surface;
+}
+
+/* hover */
+
+// Returns output currently hovered by cursor.
+// Returns NULL if no output is being hovered.
+struct e_output* e_desktop_hovered_output(struct e_desktop* desktop)
+{
+    if (desktop == NULL)
+    {
+        e_log_error("e_desktop_hovered_output: desktop is NULL!");
+        return NULL;
+    }
+
+    if (desktop->seat == NULL)
+    {
+        e_log_error("e_desktop_hovered_output: desktop has no seat!");
+        return NULL;
+    }
+
+    if (desktop->seat->cursor == NULL)
+    {
+        e_log_error("e_desktop_hovered_output: desktop's seat has no cursor!");
+        return NULL;
+    }
+
+    struct e_cursor* cursor = desktop->seat->cursor;
+
+    struct wlr_output* wlr_output = wlr_output_layout_output_at(desktop->output_layout, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
+    
+    if (wlr_output == NULL)
+        return NULL;
+    
+    struct e_output* output = wlr_output->data;
+
+    return output;
+}
+
+// Returns view currently hovered by cursor.
+// Returns NULL if no view is being hovered.
+struct e_view* e_desktop_hovered_view(struct e_desktop* desktop)
+{
+    if (desktop == NULL)
+    {
+        e_log_error("e_desktop_hovered_output: desktop is NULL!");
+        return NULL;
+    }
+
+    if (desktop->seat == NULL)
+    {
+        e_log_error("e_desktop_hovered_output: desktop has no seat!");
+        return NULL;
+    }
+
+    if (desktop->seat->cursor == NULL)
+    {
+        e_log_error("e_desktop_hovered_output: desktop's seat has no cursor!");
+        return NULL;
+    }
+
+    struct e_cursor* cursor = desktop->seat->cursor;
+
+    return e_view_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
 }
 
 /* focus */
