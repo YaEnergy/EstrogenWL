@@ -89,7 +89,7 @@ struct e_desktop* e_desktop_create(struct wl_display* display, struct wlr_compos
 
 void e_desktop_set_seat(struct e_desktop* desktop, struct e_seat* seat)
 {
-    assert(desktop && seat);
+    assert(desktop);
 
     desktop->seat = seat;
 }
