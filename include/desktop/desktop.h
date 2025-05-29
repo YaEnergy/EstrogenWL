@@ -98,7 +98,7 @@ struct wlr_scene_surface* e_desktop_scene_surface_at(struct wlr_scene_node* node
 
 /* focus */
 
-// Set seat focus on a view if possible, and activating view.
+// Set seat focus on a view if possible, and does whatever is necessary to do so.
 void e_desktop_focus_view(struct e_desktop* desktop, struct e_view* view);
 
 // Set seat focus on a layer surface if possible.

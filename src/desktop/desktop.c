@@ -240,7 +240,7 @@ struct wlr_scene_surface* e_desktop_scene_surface_at(struct wlr_scene_node* node
 
 /* focus */
 
-// Set seat focus on a view if possible, and activating view.
+// Set seat focus on a view if possible, and does whatever is necessary to do so.
 void e_desktop_focus_view(struct e_desktop* desktop, struct e_view* view)
 {
     assert(desktop && view);
@@ -249,6 +249,12 @@ void e_desktop_focus_view(struct e_desktop* desktop, struct e_view* view)
     e_log_info("desktop focus on view");
     #endif
 
+    if (desktop->seat == NULL)
+    {
+        e_log_error("e_desktop_focus_view: desktop has no seat!");
+        return;
+    }
+
     if (view->surface == NULL)
     {
         e_log_error("e_desktop_focus_view: view has no surface!");
@@ -256,13 +262,22 @@ void e_desktop_focus_view(struct e_desktop* desktop, struct e_view* view)
     }
 
     if (e_seat_focus_surface(desktop->seat, view->surface, false))
+    {
         e_view_set_activated(view, true);
+        e_view_raise_to_top(view);
+    }
 }
 
 // Set seat focus on a layer surface if possible.
 void e_desktop_focus_layer_surface(struct e_desktop* desktop, struct e_layer_surface* layer_surface)
 {
     assert(desktop && layer_surface);
+
+    if (desktop->seat == NULL)
+    {
+        e_log_error("e_desktop_focus_layer_surface: desktop has no seat!");
+        return;
+    }
 
     e_seat_focus_layer_surface(desktop->seat, layer_surface->scene_layer_surface_v1->layer_surface);
 }
@@ -272,6 +287,12 @@ void e_desktop_focus_layer_surface(struct e_desktop* desktop, struct e_layer_sur
 void e_desktop_focus_surface(struct e_desktop* desktop, struct wlr_surface* surface)
 {
     assert(desktop && surface);
+
+    if (desktop->seat == NULL)
+    {
+        e_log_error("e_desktop_focus_surface: desktop has no seat!");
+        return;
+    }
 
     struct e_seat* seat = desktop->seat;
 
@@ -306,7 +327,7 @@ struct e_view* e_desktop_focused_view(struct e_desktop* desktop)
 {
     assert(desktop);
 
-    if (desktop->seat->focus_surface == NULL)
+    if (desktop->seat == NULL || desktop->seat->focus_surface == NULL)
         return NULL;
 
     return e_view_from_surface(desktop, desktop->seat->focus_surface);
@@ -318,16 +339,21 @@ struct e_view* e_desktop_prev_focused_view(struct e_desktop* desktop)
 {
     assert(desktop);
 
-    if (desktop->seat->previous_focus_surface == NULL)
+    if (desktop->seat == NULL || desktop->seat->previous_focus_surface == NULL)
         return NULL;
 
     return e_view_from_surface(desktop, desktop->seat->previous_focus_surface);
 }
 
-
 void e_desktop_clear_focus(struct e_desktop* desktop)
 {
     assert(desktop);
+
+    if (desktop->seat == NULL)
+    {
+        e_log_error("e_desktop_clear_focus: desktop has no seat!");
+        return;
+    }
 
     struct e_view* focused_view = e_desktop_focused_view(desktop);
 
