@@ -106,9 +106,6 @@ struct e_keyboard* e_keyboard_create(struct wlr_keyboard* wlr_keyboard, struct e
     keyboard->seat = seat;
     keyboard->wlr_keyboard = wlr_keyboard;
 
-    //TODO: allow configuring of keyboard xkb keymaps -> environment file
-    //set up keymap (DEFAULT: US)
-
     struct xkb_context* xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
     struct xkb_keymap* keymap = xkb_keymap_new_from_names(xkb_context, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);
 
@@ -136,7 +133,7 @@ struct e_keyboard* e_keyboard_create(struct wlr_keyboard* wlr_keyboard, struct e
 void e_keyboard_destroy(struct e_keyboard* keyboard)
 {
     struct wlr_seat* wlr_seat = keyboard->seat->wlr_seat;
-    
+
     if (wlr_seat_get_keyboard(wlr_seat) == keyboard->wlr_keyboard)
         wlr_seat_set_keyboard(wlr_seat, NULL);
 
