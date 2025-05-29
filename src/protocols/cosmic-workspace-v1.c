@@ -100,14 +100,14 @@ static void workspace_state_to_wl_array(uint32_t workspace_state, struct wl_arra
     if (array == NULL)
         return;
 
-    if (workspace_state & E_COSMIC_WORKSPACE_STATE_ACTIVE)
-        wl_array_append_uint32_t(array, (uint32_t)E_COSMIC_WORKSPACE_STATE_ACTIVE);
+    if (workspace_state & ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_ACTIVE)
+        wl_array_append_uint32_t(array, (uint32_t)ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_ACTIVE);
 
-    if (workspace_state & E_COSMIC_WORKSPACE_STATE_URGENT)
-        wl_array_append_uint32_t(array, (uint32_t)E_COSMIC_WORKSPACE_STATE_URGENT);
+    if (workspace_state & ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_URGENT)
+        wl_array_append_uint32_t(array, (uint32_t)ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_URGENT);
 
-    if (workspace_state & E_COSMIC_WORKSPACE_STATE_HIDDEN)
-        wl_array_append_uint32_t(array, (uint32_t)E_COSMIC_WORKSPACE_STATE_HIDDEN);
+    if (workspace_state & ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_HIDDEN)
+        wl_array_append_uint32_t(array, (uint32_t)ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_HIDDEN);
 }
 
 // Sends state of workspace to all its resources if resource is NULL.
@@ -226,6 +226,8 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
 // Name is copied.
 void e_cosmic_workspace_v1_set_name(struct e_cosmic_workspace_v1* workspace, const char* name)
 {
+    assert(workspace);
+
     if (workspace == NULL)
         return;
 
@@ -244,6 +246,42 @@ void e_cosmic_workspace_v1_set_name(struct e_cosmic_workspace_v1* workspace, con
     {
         zcosmic_workspace_handle_v1_send_name(resource, copy);
     }
+
+    e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
+}
+
+void e_cosmic_workspace_v1_set_active(struct e_cosmic_workspace_v1* workspace)
+{
+    assert(workspace);
+
+    if (workspace == NULL)
+        return;
+
+    workspace->pending_state = ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_ACTIVE;
+
+    e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
+}
+
+void e_cosmic_workspace_v1_set_urgent(struct e_cosmic_workspace_v1* workspace)
+{
+    assert(workspace);
+
+    if (workspace == NULL)
+        return;
+
+    workspace->pending_state = ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_URGENT;
+
+    e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
+}
+
+void e_cosmic_workspace_v1_set_hidden(struct e_cosmic_workspace_v1* workspace)
+{
+    assert(workspace);
+
+    if (workspace == NULL)
+        return;
+
+    workspace->pending_state = ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_HIDDEN;
 
     e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
 }
@@ -459,7 +497,10 @@ static void manager_idle_send_done_event(void* data)
         wl_list_for_each(workspace, &group->workspaces, link)
         {
             if (workspace->pending_state != workspace->state)
+            {
+                workspace->state = workspace->pending_state;
                 e_cosmic_workspace_v1_send_state(workspace, NULL);
+            }
         }   
     }
 

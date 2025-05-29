@@ -76,13 +76,6 @@ struct e_cosmic_workspace_group_v1
     struct wl_list link; //e_cosmic_workspace_manager_v1::groups
 };
 
-enum e_cosmic_workspace_state
-{
-    E_COSMIC_WORKSPACE_STATE_ACTIVE = 1 << 0,
-    E_COSMIC_WORKSPACE_STATE_URGENT = 1 << 1,
-    E_COSMIC_WORKSPACE_STATE_HIDDEN = 1 << 2
-};
-
 struct e_cosmic_workspace_v1
 {
     // Group this workspace is assigned to.
@@ -90,8 +83,8 @@ struct e_cosmic_workspace_v1
 
     char* name;
 
-    uint32_t state; //bitmask enum e_cosmic_workspace_state
-    uint32_t pending_state; //bitmask enum e_cosmic_workspace_state
+    uint32_t state; //enum ZCOSMIC_WORKSPACE_HANDLE_V1_STATE
+    uint32_t pending_state; //enum ZCOSMIC_WORKSPACE_HANDLE_V1_STATE
 
     struct wl_array capabilities;
 
@@ -138,11 +131,14 @@ void e_cosmic_workspace_v1_set_name(struct e_cosmic_workspace_v1* workspace, con
 
 void e_cosmic_workspace_v1_set_coords(struct e_cosmic_workspace_v1* workspace, struct wl_array* coords);
 
-void e_cosmic_workspace_v1_set_active(struct e_cosmic_workspace_v1* workspace, bool active);
+// Set workspace to active.
+void e_cosmic_workspace_v1_set_active(struct e_cosmic_workspace_v1* workspace);
 
-void e_cosmic_workspace_v1_set_urgent(struct e_cosmic_workspace_v1* workspace, bool urgent);
+// Set workspace to want attention.
+void e_cosmic_workspace_v1_set_urgent(struct e_cosmic_workspace_v1* workspace);
 
-void e_cosmic_workspace_v1_set_hidden(struct e_cosmic_workspace_v1* workspace, bool hidden);
+// Set workspace to hidden.
+void e_cosmic_workspace_v1_set_hidden(struct e_cosmic_workspace_v1* workspace);
 
 // Destroys workspace.
 void e_cosmic_workspace_v1_remove(struct e_cosmic_workspace_v1* workspace);
