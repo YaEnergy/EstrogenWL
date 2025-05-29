@@ -84,17 +84,11 @@ static void e_keyboard_modifiers(struct wl_listener* listener, void* data)
     wlr_seat_keyboard_notify_modifiers(keyboard->seat->wlr_seat, &keyboard->wlr_keyboard->modifiers);
 }
 
-static void e_keyboard_destroy(struct wl_listener* listener, void* data)
+static void e_keyboard_handle_destroy(struct wl_listener* listener, void* data)
 {
     struct e_keyboard* keyboard = wl_container_of(listener, keyboard, destroy);
 
-    wl_list_remove(&keyboard->link);
-
-    SIGNAL_DISCONNECT(keyboard->key);
-    SIGNAL_DISCONNECT(keyboard->modifiers);
-    SIGNAL_DISCONNECT(keyboard->destroy);
-
-    free(keyboard);
+    e_keyboard_destroy(keyboard);
 }
 
 struct e_keyboard* e_keyboard_create(struct wlr_keyboard* wlr_keyboard, struct e_seat* seat)
@@ -133,7 +127,24 @@ struct e_keyboard* e_keyboard_create(struct wlr_keyboard* wlr_keyboard, struct e
     SIGNAL_CONNECT(wlr_keyboard->events.modifiers, keyboard->modifiers, e_keyboard_modifiers);
 
     //input device events
-    SIGNAL_CONNECT(wlr_keyboard->base.events.destroy, keyboard->destroy, e_keyboard_destroy);
+    SIGNAL_CONNECT(wlr_keyboard->base.events.destroy, keyboard->destroy, e_keyboard_handle_destroy);
 
     return keyboard;
+}
+
+// Destroy keyboard.
+void e_keyboard_destroy(struct e_keyboard* keyboard)
+{
+    struct wlr_seat* wlr_seat = keyboard->seat->wlr_seat;
+    
+    if (wlr_seat_get_keyboard(wlr_seat) == keyboard->wlr_keyboard)
+        wlr_seat_set_keyboard(wlr_seat, NULL);
+
+    wl_list_remove(&keyboard->link);
+
+    SIGNAL_DISCONNECT(keyboard->key);
+    SIGNAL_DISCONNECT(keyboard->modifiers);
+    SIGNAL_DISCONNECT(keyboard->destroy);
+
+    free(keyboard);
 }

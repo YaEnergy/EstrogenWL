@@ -189,7 +189,13 @@ static void e_seat_handle_destroy(struct wl_listener* listener, void* data)
 {
     struct e_seat* seat = wl_container_of(listener, seat, destroy);
 
-    //TODO: destroy keyboards
+    //destroy keyboards
+    struct e_keyboard* keyboard;
+    struct e_keyboard* tmp;
+    wl_list_for_each_safe(keyboard, tmp, &seat->keyboards, link)
+    {
+        e_keyboard_destroy(keyboard);
+    }
 
     e_cursor_destroy(seat->cursor);
 
