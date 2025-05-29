@@ -185,9 +185,17 @@ static void e_seat_init_dnd(struct e_seat* seat)
 
 /* end drag & drop */
 
-static void e_seat_destroy(struct wl_listener* listener, void* data)
+static void e_seat_handle_destroy(struct wl_listener* listener, void* data)
 {
     struct e_seat* seat = wl_container_of(listener, seat, destroy);
+
+    //destroy keyboards
+    struct e_keyboard* keyboard;
+    struct e_keyboard* tmp;
+    wl_list_for_each_safe(keyboard, tmp, &seat->keyboards, link)
+    {
+        e_keyboard_destroy(keyboard);
+    }
 
     e_cursor_destroy(seat->cursor);
 
@@ -239,7 +247,7 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
     SIGNAL_CONNECT(wlr_seat->events.request_set_selection, seat->request_set_selection, e_seat_request_set_selection);
     SIGNAL_CONNECT(wlr_seat->events.request_set_primary_selection, seat->request_set_primary_selection, e_seat_request_set_primary_selection);
     
-    SIGNAL_CONNECT(wlr_seat->events.destroy, seat->destroy, e_seat_destroy);
+    SIGNAL_CONNECT(wlr_seat->events.destroy, seat->destroy, e_seat_handle_destroy);
 
     SIGNAL_CONNECT(seat->cursor_shape_manager->events.request_set_shape, seat->request_set_cursor_shape, e_seat_request_set_cursor_shape);
 
@@ -404,4 +412,10 @@ void e_seat_clear_focus(struct e_seat* seat)
     
     seat->previous_focus_surface = seat->focus_surface;
     seat->focus_surface = NULL;
+}
+
+// Destroy seat.
+void e_seat_destroy(struct e_seat* seat)
+{
+    wlr_seat_destroy(seat->wlr_seat);
 }
