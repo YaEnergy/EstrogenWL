@@ -110,14 +110,14 @@ static void workspace_state_to_wl_array(uint32_t workspace_state, struct wl_arra
         wl_array_append_uint32_t(array, (uint32_t)E_COSMIC_WORKSPACE_STATE_HIDDEN);
 }
 
-// Sends pending state of workspace to all its resources if resource is NULL.
+// Sends state of workspace to all its resources if resource is NULL.
 // If resource is not NULL, only sends pending state to that resource.
 static void e_cosmic_workspace_v1_send_state(struct e_cosmic_workspace_v1* workspace, struct wl_resource* resource)
 {
     struct wl_array state_array;
     wl_array_init(&state_array);
 
-    workspace_state_to_wl_array(workspace->pending_state, &state_array);
+    workspace_state_to_wl_array(workspace->state, &state_array);
 
     if (resource != NULL)
     {
