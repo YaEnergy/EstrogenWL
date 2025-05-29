@@ -521,6 +521,34 @@ static void e_cosmic_workspace_manager_v1_bind(struct wl_client* client, void* d
     wl_resource_set_implementation(resource, &workspace_manager_interface, manager, e_cosmic_workspace_manager_v1_resource_destroy);
     
     wl_list_insert(&manager->resources, wl_resource_get_link(resource));
+
+    //create resources for every group & workspace for this client
+    if (!wl_list_empty(&manager->groups))
+    {
+        struct e_cosmic_workspace_group_v1* group;
+        wl_list_for_each(group, &manager->groups, link)
+        {
+            e_log_info("create group resource");
+
+            struct wl_resource* group_resource = e_cosmic_workspace_group_v1_create_resource(group, resource);
+            zcosmic_workspace_group_handle_v1_send_capabilities(group_resource, &group->capabilities);
+
+            if (wl_list_empty(&group->workspaces))
+                continue;
+
+            struct e_cosmic_workspace_v1* workspace;
+            wl_list_for_each(workspace, &group->workspaces, link)
+            {
+                e_log_info("create workspace resource");
+                
+                struct wl_resource* workspace_resource = e_cosmic_workspace_v1_create_resource(workspace, group_resource);
+                zcosmic_workspace_handle_v1_send_capabilities(workspace_resource, &workspace->capabilities);
+                e_cosmic_workspace_v1_send_state(workspace, workspace_resource);
+            }
+        }
+    }
+
+    zcosmic_workspace_manager_v1_send_done(resource);
 }
 
 static void e_cosmic_workspace_manager_v1_display_destroy(struct wl_listener* listener, void* data)
