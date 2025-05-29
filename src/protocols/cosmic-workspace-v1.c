@@ -248,6 +248,43 @@ void e_cosmic_workspace_v1_set_name(struct e_cosmic_workspace_v1* workspace, con
     e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
 }
 
+// Destroys workspace.
+void e_cosmic_workspace_v1_remove(struct e_cosmic_workspace_v1* workspace)
+{
+    assert(workspace);
+
+    if (workspace == NULL)
+        return;
+
+    wl_signal_emit_mutable(&workspace->events.destroy, NULL);
+
+    //remove transaction ops using this workspace
+    struct e_trans_session* session = &workspace->group->manager->trans_session;
+    struct e_trans_op* operation;
+    e_trans_session_for_each_safe(operation, session)
+    {
+        if (operation->src == workspace)
+            e_trans_op_destroy(operation);
+    }
+
+    struct wl_resource* resource;
+    wl_list_for_each(resource, &workspace->resources, link)
+    {
+        zcosmic_workspace_handle_v1_send_remove(resource);
+        wl_resource_destroy(resource);
+    }
+
+    wl_list_remove(&workspace->link);
+
+    wl_array_release(&workspace->capabilities);
+    wl_array_release(&workspace->coords);
+
+    if (workspace->name != NULL)
+        free(workspace->name);
+
+    free(workspace);
+}
+
 /* workspace group interface */
 
 struct group_create_workspace_event
