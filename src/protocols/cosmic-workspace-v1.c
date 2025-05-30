@@ -100,13 +100,13 @@ static void workspace_state_to_wl_array(uint32_t workspace_state, struct wl_arra
     if (array == NULL)
         return;
 
-    if (workspace_state & ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_ACTIVE)
+    if (workspace_state & E_COSMIC_WORKSPACE_STATE_ACTIVE)
         wl_array_append_uint32_t(array, (uint32_t)ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_ACTIVE);
 
-    if (workspace_state & ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_URGENT)
+    if (workspace_state & E_COSMIC_WORKSPACE_STATE_URGENT)
         wl_array_append_uint32_t(array, (uint32_t)ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_URGENT);
 
-    if (workspace_state & ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_HIDDEN)
+    if (workspace_state & E_COSMIC_WORKSPACE_STATE_HIDDEN)
         wl_array_append_uint32_t(array, (uint32_t)ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_HIDDEN);
 }
 
@@ -250,40 +250,38 @@ void e_cosmic_workspace_v1_set_name(struct e_cosmic_workspace_v1* workspace, con
     e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
 }
 
-void e_cosmic_workspace_v1_set_active(struct e_cosmic_workspace_v1* workspace)
+// Set whether or not workspace is in a specific state.
+static void workspace_set_state(struct e_cosmic_workspace_v1* workspace, enum e_cosmic_workspace_state state, bool enabled)
 {
     assert(workspace);
 
     if (workspace == NULL)
         return;
 
-    workspace->pending_state = ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_ACTIVE;
+    if (enabled)
+        workspace->pending_state |= state;
+    else
+        workspace->pending_state &= ~state;
 
     e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
 }
 
-void e_cosmic_workspace_v1_set_urgent(struct e_cosmic_workspace_v1* workspace)
+// Set whether or not workspace is active.
+void e_cosmic_workspace_v1_set_active(struct e_cosmic_workspace_v1* workspace, bool active)
 {
-    assert(workspace);
-
-    if (workspace == NULL)
-        return;
-
-    workspace->pending_state = ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_URGENT;
-
-    e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
+    workspace_set_state(workspace, E_COSMIC_WORKSPACE_STATE_ACTIVE, active);
 }
 
-void e_cosmic_workspace_v1_set_hidden(struct e_cosmic_workspace_v1* workspace)
+// Set whether or not workspace wants attention.
+void e_cosmic_workspace_v1_set_urgent(struct e_cosmic_workspace_v1* workspace, bool urgent)
 {
-    assert(workspace);
+    workspace_set_state(workspace, E_COSMIC_WORKSPACE_STATE_URGENT, urgent);
+}
 
-    if (workspace == NULL)
-        return;
-
-    workspace->pending_state = ZCOSMIC_WORKSPACE_HANDLE_V1_STATE_HIDDEN;
-
-    e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
+// Set whether or not workspace is hidden.
+void e_cosmic_workspace_v1_set_hidden(struct e_cosmic_workspace_v1* workspace, bool hidden)
+{
+    workspace_set_state(workspace, E_COSMIC_WORKSPACE_STATE_HIDDEN, hidden);
 }
 
 // Destroys workspace.
