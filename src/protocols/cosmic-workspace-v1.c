@@ -11,6 +11,8 @@
 #include <wayland-server.h>
 #include <wayland-util.h>
 
+#include <wlr/types/wlr_output.h>
+
 #include "util/wl_macros.h"
 
 #include "protocols/transactions.h"
@@ -30,6 +32,20 @@ enum manager_op_type
     MANAGER_WORKSPACE_REMOVE
     //MANAGER_WORKSPACE_RENAME (since minor version 2)
     //MANAGER_WORKSPACE_SET_TILING_STATE (since minor version 2)
+};
+
+// Output assigned to a group.
+struct group_output
+{
+    struct e_cosmic_workspace_group_v1* group;
+    struct wlr_output* output;
+
+    struct wl_listener group_destroy;
+
+    struct wl_listener output_bind;
+    struct wl_listener output_destroy;
+
+    struct wl_list link; //group::outputs
 };
 
 // Duplicates given null-terminated string.
@@ -59,6 +75,84 @@ static void wl_array_append_uint32_t(struct wl_array* array, uint32_t num)
 /* workspace manager schedule */
 
 static void e_cosmic_workspace_manager_v1_schedule_done_event(struct e_cosmic_workspace_manager_v1* manager);
+
+/* group output */
+
+static void group_output_destroy(struct group_output* group_output)
+{
+    assert(group_output);
+
+    if (group_output == NULL)
+        return;
+
+    //send output enter using every group resource to every output resource
+    struct wl_resource* group_resource;
+    wl_list_for_each(group_resource, &group_output->group->resources, link)
+    {
+        struct wl_resource* output_resource;
+        wl_list_for_each(output_resource, &group_output->output->resources, link)
+        {
+            zcosmic_workspace_group_handle_v1_send_output_leave(group_resource, output_resource);
+        }    
+    }
+
+    SIGNAL_DISCONNECT(group_output->group_destroy);
+
+    SIGNAL_DISCONNECT(group_output->output_bind);
+    SIGNAL_DISCONNECT(group_output->output_destroy);
+
+    wl_list_remove(&group_output->link);
+
+    free(group_output);
+}
+
+static void group_output_group_destroy(struct wl_listener* listener, void* data)
+{
+    struct group_output* group_output = wl_container_of(listener, group_output, group_destroy);
+
+    group_output_destroy(group_output);
+}
+
+// New client binded to output that is assigned to a group, we must send the output enter event for its new resource.
+static void group_output_output_bind(struct wl_listener* listener, void* data)
+{
+    struct group_output* group_output = wl_container_of(listener, group_output, output_bind);
+
+    struct wlr_output_event_bind* event = data;
+
+    struct wl_resource* group_resource;
+    wl_list_for_each(group_resource, &group_output->group->resources, link)
+    {
+        zcosmic_workspace_group_handle_v1_send_output_enter(group_resource, event->resource);
+    }
+
+    e_cosmic_workspace_manager_v1_schedule_done_event(group_output->group->manager);
+}
+
+static void group_output_output_destroy(struct wl_listener* listener, void* data)
+{
+    struct group_output* group_output = wl_container_of(listener, group_output, output_destroy);
+
+    group_output_destroy(group_output);
+}
+
+// Returns NULL if none.
+static struct group_output* group_output_from_wlr_output(struct e_cosmic_workspace_group_v1* group, struct wlr_output* output)
+{
+    assert(group && output);
+
+    if (group == NULL || output == NULL)
+        return NULL;
+
+    struct group_output* group_output;
+    wl_list_for_each(group_output, &group->outputs, link)
+    {
+        if (group_output->output == output)
+            return group_output;
+    }
+
+    return NULL;
+}
 
 /* workspace interface */
 
@@ -471,13 +565,50 @@ struct e_cosmic_workspace_group_v1* e_cosmic_workspace_group_v1_create(struct e_
 // Assign output to workspace group.
 void e_cosmic_workspace_group_v1_output_enter(struct e_cosmic_workspace_group_v1* group, struct wlr_output* output)
 {
-    //TODO: implement e_cosmic_workspace_group_v1_output_enter
+    assert(group && output);
+
+    if (group == NULL || output == NULL)
+        return;
+
+    struct group_output* group_output = calloc(1, sizeof(*group_output));
+
+    if (group_output == NULL)
+        return;
+
+    group_output->group = group;
+    group_output->output = output;
+
+    SIGNAL_CONNECT(group->events.destroy, group_output->group_destroy, group_output_group_destroy);
+    
+    SIGNAL_CONNECT(output->events.bind, group_output->output_bind, group_output_output_bind);
+    SIGNAL_CONNECT(output->events.destroy, group_output->output_destroy, group_output_output_destroy);
+
+    wl_list_insert(&group->outputs, &group_output->link);
+
+    //send output enter using every group resource to every output resource
+    struct wl_resource* group_resource;
+    wl_list_for_each(group_resource, &group->resources, link)
+    {
+        struct wl_resource* output_resource;
+        wl_list_for_each(output_resource, &output->resources, link)
+        {
+            zcosmic_workspace_group_handle_v1_send_output_enter(group_resource, output_resource);
+        }    
+    }
+
+    e_cosmic_workspace_manager_v1_schedule_done_event(group->manager);
 }
 
 // Remove output from workspace group.
 void e_cosmic_workspace_group_v1_output_leave(struct e_cosmic_workspace_group_v1* group, struct wlr_output* output)
 {
-    //TODO: implement e_cosmic_workspace_group_v1_output_leave
+    assert(group && output);
+
+    if (group == NULL || output == NULL)
+        return;
+
+    struct group_output* group_output = group_output_from_wlr_output(group, output);
+    group_output_destroy(group_output);
 }
 
 // Destroy workspace group and its workspaces.
@@ -488,7 +619,7 @@ void e_cosmic_workspace_group_v1_remove(struct e_cosmic_workspace_group_v1* grou
     if (group == NULL)
         return;
 
-    wl_signal_emit_mutable(&group->events.destroy, NULL);
+    wl_signal_emit_mutable(&group->events.destroy, NULL); //also destroys all group outputs
 
     //remove all of group's workspaces
     struct e_cosmic_workspace_v1* workspace;
