@@ -295,9 +295,9 @@ void e_cosmic_workspace_v1_remove(struct e_cosmic_workspace_v1* workspace)
     wl_signal_emit_mutable(&workspace->events.destroy, NULL);
 
     //remove transaction ops using this workspace
-    struct e_trans_session* session = &workspace->group->manager->trans_session;
     struct e_trans_op* operation;
-    e_trans_session_for_each_safe(operation, session)
+    struct e_trans_op* tmp;
+    e_trans_session_for_each_safe(operation, tmp, &workspace->group->manager->trans_session)
     {
         if (operation->src == workspace)
             e_trans_op_destroy(operation);
@@ -530,13 +530,12 @@ static void e_cosmic_workspace_manager_v1_commit(struct wl_client* client, struc
 {
     struct e_cosmic_workspace_manager_v1* manager = wl_resource_get_user_data(resource);
 
-    struct e_trans_session* trans_session = &manager->trans_session;
-
     struct e_cosmic_workspace_group_v1* group;
     struct e_cosmic_workspace_v1* workspace;
 
     struct e_trans_op* operation;
-    e_trans_session_for_each_safe(operation, trans_session)
+    struct e_trans_op* tmp;
+    e_trans_session_for_each_safe(operation, tmp, &manager->trans_session)
     {
         switch(operation->type)
         {
