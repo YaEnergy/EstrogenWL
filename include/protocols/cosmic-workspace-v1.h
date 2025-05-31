@@ -21,7 +21,7 @@ enum e_cosmic_workspace_manager_capability
     E_COSMIC_WORKSPACE_CAPABILITY_DEACTIVATE = 1 << 2,
     E_COSMIC_WORKSPACE_CAPABILITY_REMOVE = 1 << 3,
     E_COSMIC_WORKSPACE_CAPABILITY_RENAME = 1 << 4,
-    //E_COSMIC_WORKSPACE_CAPABILITY_SET_TILING_STATE = 1 << 5
+    E_COSMIC_WORKSPACE_CAPABILITY_SET_TILING_STATE = 1 << 5
 };
 
 struct e_cosmic_workspace_manager_v1
@@ -89,6 +89,14 @@ enum e_cosmic_workspace_tiling_state
     E_COSMIC_WORKSPACE_TILING_STATE_TILING_ENABLED = 1
 };
 
+struct e_cosmic_workspace_request_tiling_state_event
+{
+    enum e_cosmic_workspace_tiling_state tiling_state;
+
+    // Private
+    struct wl_listener destroy;
+};
+
 struct e_cosmic_workspace_v1
 {
     // Group this workspace is assigned to.
@@ -112,7 +120,7 @@ struct e_cosmic_workspace_v1
         struct wl_signal request_deactivate;
         struct wl_signal request_remove;
         struct wl_signal request_rename; //const char*, since minor version 2
-        //struct wl_signal request_set_tiling_state; //since minor version 2
+        struct wl_signal request_set_tiling_state; //struct e_cosmic_workspace_request_tiling_state_event*, since minor version 2
         struct wl_signal destroy;
     } events;
 

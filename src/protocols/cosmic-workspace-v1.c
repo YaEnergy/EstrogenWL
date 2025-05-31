@@ -31,7 +31,7 @@ enum manager_op_type
     MANAGER_WORKSPACE_DEACTIVATE,
     MANAGER_WORKSPACE_REMOVE,
     MANAGER_WORKSPACE_RENAME, //struct workspace_rename_event*, (since minor version 2)
-    //MANAGER_WORKSPACE_SET_TILING_STATE (since minor version 2)
+    MANAGER_WORKSPACE_SET_TILING_STATE, //struct e_cosmic_workspace_request_tiling_state_event* (since minor version 2)
 };
 
 // Output assigned to a group.
@@ -195,6 +195,15 @@ void workspace_rename_event_destroy(struct wl_listener* listener, void* data)
     free(event);
 }
 
+void e_cosmic_workspace_request_tiling_state_event_destroy(struct wl_listener* listener, void* data)
+{
+    struct e_cosmic_workspace_request_tiling_state_event* event = wl_container_of(listener, event, destroy);
+
+    SIGNAL_DISCONNECT(event->destroy);
+
+    free(event);
+}
+
 static void e_cosmic_workspace_v1_request_activate(struct wl_client* client, struct wl_resource* resource)
 {
     struct e_cosmic_workspace_v1* workspace = wl_resource_get_user_data(resource);
@@ -248,8 +257,39 @@ static void e_cosmic_workspace_v1_request_rename(struct wl_client* client, struc
 
 static void e_cosmic_workspace_v1_request_set_tiling_state(struct wl_client* client, struct wl_resource* resource, uint32_t tiling_state)
 {
-    //TODO: implement e_cosmic_workspace_v1_request_set_tiling_state
-    //ignore for now
+    struct e_cosmic_workspace_v1* workspace = wl_resource_get_user_data(resource);
+    struct e_cosmic_workspace_request_tiling_state_event* event = calloc(1, sizeof(*event));
+
+    if (event == NULL)
+    {
+        wl_client_post_no_memory(client);
+        return;
+    }
+
+    switch (tiling_state)
+    {
+        case ZCOSMIC_WORKSPACE_HANDLE_V1_TILING_STATE_FLOATING_ONLY:
+            event->tiling_state = E_COSMIC_WORKSPACE_TILING_STATE_FLOATING_ONLY;
+            break;
+        case ZCOSMIC_WORKSPACE_HANDLE_V1_TILING_STATE_TILING_ENABLED:
+            event->tiling_state = E_COSMIC_WORKSPACE_TILING_STATE_TILING_ENABLED;
+            break;
+        default:
+            //ignore request
+            free(event);
+            return;
+    }
+
+    struct e_trans_op* operation = e_trans_session_add_op(&workspace->group->manager->trans_session, workspace, MANAGER_WORKSPACE_SET_TILING_STATE, event);
+
+    if (operation == NULL)
+    {
+        free(event);
+        wl_client_post_no_memory(client);
+        return;
+    }
+
+    SIGNAL_CONNECT(operation->destroy, event->destroy, e_cosmic_workspace_request_tiling_state_event_destroy);
 }
 
 // Client does not want workspace object anymore.
@@ -339,6 +379,9 @@ static void workspace_resource_send_capabilities(struct e_cosmic_workspace_v1* w
     if (manager_capabilities & E_COSMIC_WORKSPACE_CAPABILITY_RENAME && version >= ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_RENAME_SINCE_VERSION)
         wl_array_append_uint32_t(&caps, ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_RENAME);
 
+    if (manager_capabilities & E_COSMIC_WORKSPACE_CAPABILITY_SET_TILING_STATE && version >= ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_SET_TILING_STATE_SINCE_VERSION)
+        wl_array_append_uint32_t(&caps, ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_SET_TILING_STATE);
+
     zcosmic_workspace_handle_v1_send_capabilities(resource, &caps);
 
     wl_array_release(&caps);
@@ -412,6 +455,7 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
     wl_signal_init(&workspace->events.request_deactivate);
     wl_signal_init(&workspace->events.request_remove);
     wl_signal_init(&workspace->events.request_rename);
+    wl_signal_init(&workspace->events.request_set_tiling_state);
     wl_signal_init(&workspace->events.destroy);
 
     wl_list_append(group->workspaces, &workspace->link);
@@ -904,6 +948,11 @@ static void e_cosmic_workspace_manager_v1_commit(struct wl_client* client, struc
                 workspace = operation->src;
                 struct workspace_rename_event* rename_event = operation->data;
                 wl_signal_emit_mutable(&workspace->events.request_rename, rename_event->name);
+                break;
+            case MANAGER_WORKSPACE_SET_TILING_STATE:
+                workspace = operation->src;
+                struct e_cosmic_workspace_request_tiling_state_event* tiling_event = operation->data;
+                wl_signal_emit_mutable(&workspace->events.request_set_tiling_state, tiling_event);
                 break;
         }
 
