@@ -83,6 +83,12 @@ enum e_cosmic_workspace_state
     E_COSMIC_WORKSPACE_STATE_HIDDEN = 1 << 2
 };
 
+enum e_cosmic_workspace_tiling_state
+{
+    E_COSMIC_WORKSPACE_TILING_STATE_FLOATING_ONLY = 0,
+    E_COSMIC_WORKSPACE_TILING_STATE_TILING_ENABLED = 1
+};
+
 struct e_cosmic_workspace_v1
 {
     // Group this workspace is assigned to.
@@ -92,6 +98,8 @@ struct e_cosmic_workspace_v1
 
     uint32_t state; //bitmask enum e_cosmic_workspace_state
     uint32_t pending_state; //bitmask enum e_cosmic_workspace_state
+
+    enum e_cosmic_workspace_tiling_state tiling_state;
 
     struct wl_array coords;
 
@@ -138,6 +146,9 @@ void e_cosmic_workspace_v1_set_name(struct e_cosmic_workspace_v1* workspace, con
 
 // Set coordinates of the workspace.
 void e_cosmic_workspace_v1_set_coords(struct e_cosmic_workspace_v1* workspace, struct wl_array* coords);
+
+// Set whether or not workspace has tiling behaviour.
+void e_cosmic_workspace_v1_set_tiling_state(struct e_cosmic_workspace_v1* workspace, enum e_cosmic_workspace_tiling_state tiling_state);
 
 // Set whether or not workspace is active.
 void e_cosmic_workspace_v1_set_active(struct e_cosmic_workspace_v1* workspace, bool active);

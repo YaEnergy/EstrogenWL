@@ -353,6 +353,8 @@ static void workspace_resource_send_init(struct e_cosmic_workspace_v1* workspace
     if (workspace == NULL || resource == NULL)
         return;
 
+    uint32_t version = wl_resource_get_version(resource);
+
     workspace_resource_send_capabilities(workspace, resource);
 
     if (workspace->coords.size != 0)
@@ -360,6 +362,9 @@ static void workspace_resource_send_init(struct e_cosmic_workspace_v1* workspace
 
     if (workspace->name != NULL)
         zcosmic_workspace_handle_v1_send_name(resource, workspace->name);
+
+    if (version >= ZCOSMIC_WORKSPACE_HANDLE_V1_SET_TILING_STATE_SINCE_VERSION)
+        zcosmic_workspace_handle_v1_send_tiling_state(resource, workspace->tiling_state);
 }
 
 static void e_cosmic_workspace_v1_resource_destroy(struct wl_resource* resource)
@@ -397,6 +402,7 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
 
     workspace->name = NULL;
     workspace->group = group;
+    workspace->tiling_state = E_COSMIC_WORKSPACE_TILING_STATE_FLOATING_ONLY;
 
     wl_array_init(&workspace->coords);
 
@@ -477,6 +483,28 @@ void e_cosmic_workspace_v1_set_coords(struct e_cosmic_workspace_v1* workspace, s
     wl_list_for_each(resource, &workspace->resources, link)
     {
         zcosmic_workspace_handle_v1_send_coordinates(resource, &workspace->coords);
+    }
+
+    e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
+}
+
+// Set whether or not workspace has tiling behaviour.
+void e_cosmic_workspace_v1_set_tiling_state(struct e_cosmic_workspace_v1* workspace, enum e_cosmic_workspace_tiling_state tiling_state)
+{
+    assert(workspace);
+
+    if (workspace == NULL)
+        return;
+
+    workspace->tiling_state = tiling_state;
+
+    struct wl_resource* resource;
+    wl_list_for_each(resource, &workspace->resources, link)
+    {
+        uint32_t version = wl_resource_get_version(resource);
+
+        if (version >= ZCOSMIC_WORKSPACE_HANDLE_V1_SET_TILING_STATE_SINCE_VERSION)
+            zcosmic_workspace_handle_v1_send_tiling_state(resource, tiling_state);
     }
 
     e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
