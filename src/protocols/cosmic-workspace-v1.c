@@ -29,8 +29,8 @@ enum manager_op_type
 
     MANAGER_WORKSPACE_ACTIVATE,
     MANAGER_WORKSPACE_DEACTIVATE,
-    MANAGER_WORKSPACE_REMOVE
-    //MANAGER_WORKSPACE_RENAME (since minor version 2)
+    MANAGER_WORKSPACE_REMOVE,
+    MANAGER_WORKSPACE_RENAME, //struct workspace_rename_event*, (since minor version 2)
     //MANAGER_WORKSPACE_SET_TILING_STATE (since minor version 2)
 };
 
@@ -177,6 +177,24 @@ static struct group_output* group_output_from_wlr_output(struct e_cosmic_workspa
 
 /* workspace interface */
 
+struct workspace_rename_event
+{
+    char* name;
+
+    struct wl_listener destroy;
+};
+
+void workspace_rename_event_destroy(struct wl_listener* listener, void* data)
+{
+    struct workspace_rename_event* event = wl_container_of(listener, event, destroy);
+
+    SIGNAL_DISCONNECT(event->destroy);
+
+    free(event->name);
+
+    free(event);
+}
+
 static void e_cosmic_workspace_v1_request_activate(struct wl_client* client, struct wl_resource* resource)
 {
     struct e_cosmic_workspace_v1* workspace = wl_resource_get_user_data(resource);
@@ -195,6 +213,39 @@ static void e_cosmic_workspace_v1_request_remove(struct wl_client* client, struc
     e_trans_session_add_op(&workspace->group->manager->trans_session, workspace, MANAGER_WORKSPACE_REMOVE, NULL);
 }
 
+static void e_cosmic_workspace_v1_request_rename(struct wl_client* client, struct wl_resource* resource, const char* name)
+{
+    struct e_cosmic_workspace_v1* workspace = wl_resource_get_user_data(resource);
+    struct workspace_rename_event* event = calloc(1, sizeof(*event));
+
+    if (event == NULL)
+    {
+        wl_client_post_no_memory(client);
+        return;
+    }
+
+    event->name = e_strdup(name);
+
+    if (event->name == NULL)
+    {
+        free(event);
+        wl_client_post_no_memory(client);
+        return;
+    }
+
+    struct e_trans_op* operation = e_trans_session_add_op(&workspace->group->manager->trans_session, workspace, MANAGER_WORKSPACE_RENAME, event);
+
+    if (operation == NULL)
+    {
+        free(event->name);
+        free(event);
+        wl_client_post_no_memory(client);
+        return;
+    }
+
+    SIGNAL_CONNECT(operation->destroy, event->destroy, workspace_rename_event_destroy);
+}
+
 // Client does not want workspace object anymore.
 static void e_cosmic_workspace_v1_destroy(struct wl_client* client, struct wl_resource* resource)
 {
@@ -205,6 +256,7 @@ static const struct zcosmic_workspace_handle_v1_interface workspace_interface = 
     .activate = e_cosmic_workspace_v1_request_activate,
     .deactivate = e_cosmic_workspace_v1_request_deactivate,
     .remove = e_cosmic_workspace_v1_request_remove,
+    .rename = e_cosmic_workspace_v1_request_rename,
     .destroy = e_cosmic_workspace_v1_destroy
 };
 
@@ -313,6 +365,9 @@ static void workspace_init_capabilities(struct e_cosmic_workspace_v1* workspace,
 
     if (manager_capabilities & E_COSMIC_WORKSPACE_CAPABILITY_REMOVE)
         wl_array_append_uint32_t(&workspace->capabilities, ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_REMOVE);
+
+    if (manager_capabilities & E_COSMIC_WORKSPACE_CAPABILITY_RENAME)
+        wl_array_append_uint32_t(&workspace->capabilities, ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_RENAME);
 }
 
 // Returns NULL on fail.
@@ -788,8 +843,8 @@ static void e_cosmic_workspace_manager_v1_commit(struct wl_client* client, struc
         {
             case MANAGER_GROUP_CREATE_WORKSPACE:
                 group = operation->src;
-                struct group_create_workspace_event* event = operation->data;
-                wl_signal_emit_mutable(&group->events.request_create_workspace, event->name);
+                struct group_create_workspace_event* create_workspace_event = operation->data;
+                wl_signal_emit_mutable(&group->events.request_create_workspace, create_workspace_event->name);
                 break;
             case MANAGER_WORKSPACE_ACTIVATE:
                 workspace = operation->src;
@@ -802,6 +857,11 @@ static void e_cosmic_workspace_manager_v1_commit(struct wl_client* client, struc
             case MANAGER_WORKSPACE_REMOVE:
                 workspace = operation->src;
                 wl_signal_emit_mutable(&workspace->events.request_remove, NULL);
+                break;
+            case MANAGER_WORKSPACE_RENAME:
+                workspace = operation->src;
+                struct workspace_rename_event* rename_event = operation->data;
+                wl_signal_emit_mutable(&workspace->events.request_rename, rename_event->name);
                 break;
         }
 
