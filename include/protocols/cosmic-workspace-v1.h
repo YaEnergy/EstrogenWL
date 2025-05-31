@@ -8,9 +8,6 @@
 
 #include "protocols/transactions.h"
 
-//TODO: group output
-//TODO: comments
-
 // First support minor version 1, later 2
 #define COSMIC_WORKSPACE_V1_VERSION 1
 
@@ -57,7 +54,7 @@ struct e_cosmic_workspace_group_v1
 {
     struct e_cosmic_workspace_manager_v1* manager;
 
-    struct wl_list outputs; //struct e_cosmic_workspace_v1_group_output*
+    struct wl_list outputs; //struct group_output*, internal struct
     struct wl_list workspaces; //struct e_cosmic_workspace_v1*
 
     struct wl_array capabilities;
@@ -114,10 +111,12 @@ struct e_cosmic_workspace_v1
     struct wl_list link; //e_cosmic_workspace_group_v1::workspaces
 };
 
+// Creates the manager for managing workspaces & workspace groups.
 // Capabilities is a bitmask of enum e_cosmic_workspace_manager_capability.
 // Returns NULL on fail.
 struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struct wl_display* display, uint32_t version, uint32_t capabilities);
 
+// Create a new group of workspaces for set of outputs.
 // Returns NULL on fail.
 struct e_cosmic_workspace_group_v1* e_cosmic_workspace_group_v1_create(struct e_cosmic_workspace_manager_v1* manager);
 
@@ -137,6 +136,7 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
 // Name is copied.
 void e_cosmic_workspace_v1_set_name(struct e_cosmic_workspace_v1* workspace, const char* name);
 
+// Set coordinates of the workspace.
 void e_cosmic_workspace_v1_set_coords(struct e_cosmic_workspace_v1* workspace, struct wl_array* coords);
 
 // Set whether or not workspace is active.
