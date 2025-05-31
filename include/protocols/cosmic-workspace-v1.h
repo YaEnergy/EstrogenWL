@@ -43,8 +43,6 @@ struct e_cosmic_workspace_manager_v1
     
     struct
     {
-        struct wl_signal commit;
-        struct wl_signal stop;
         struct wl_signal destroy;
     } events;
 
