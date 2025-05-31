@@ -37,7 +37,7 @@ enum manager_op_type
 // Output assigned to a group.
 struct group_output
 {
-    struct e_cosmic_workspace_group_v1* group;
+    struct e_cosmic_workspace_group* group;
     struct wlr_output* output;
 
     struct wl_listener group_destroy;
@@ -74,7 +74,7 @@ static void wl_array_append_uint32_t(struct wl_array* array, uint32_t num)
 
 /* workspace manager schedule */
 
-static void e_cosmic_workspace_manager_v1_schedule_done_event(struct e_cosmic_workspace_manager_v1* manager);
+static void e_cosmic_workspace_manager_schedule_done_event(struct e_cosmic_workspace_manager* manager);
 
 /* group output */
 
@@ -158,7 +158,7 @@ static void group_output_output_destroy(struct wl_listener* listener, void* data
 }
 
 // Returns NULL if none.
-static struct group_output* group_output_from_wlr_output(struct e_cosmic_workspace_group_v1* group, struct wlr_output* output)
+static struct group_output* group_output_from_wlr_output(struct e_cosmic_workspace_group* group, struct wlr_output* output)
 {
     assert(group && output);
 
@@ -204,27 +204,27 @@ void e_cosmic_workspace_request_tiling_state_event_destroy(struct wl_listener* l
     free(event);
 }
 
-static void e_cosmic_workspace_v1_request_activate(struct wl_client* client, struct wl_resource* resource)
+static void e_cosmic_workspace_request_activate(struct wl_client* client, struct wl_resource* resource)
 {
-    struct e_cosmic_workspace_v1* workspace = wl_resource_get_user_data(resource);
+    struct e_cosmic_workspace* workspace = wl_resource_get_user_data(resource);
     e_trans_session_add_op(&workspace->group->manager->trans_session, workspace, MANAGER_WORKSPACE_ACTIVATE, NULL);
 }
 
-static void e_cosmic_workspace_v1_request_deactivate(struct wl_client* client, struct wl_resource* resource)
+static void e_cosmic_workspace_request_deactivate(struct wl_client* client, struct wl_resource* resource)
 {
-    struct e_cosmic_workspace_v1* workspace = wl_resource_get_user_data(resource);
+    struct e_cosmic_workspace* workspace = wl_resource_get_user_data(resource);
     e_trans_session_add_op(&workspace->group->manager->trans_session, workspace, MANAGER_WORKSPACE_DEACTIVATE, NULL);
 }
 
-static void e_cosmic_workspace_v1_request_remove(struct wl_client* client, struct wl_resource* resource)
+static void e_cosmic_workspace_request_remove(struct wl_client* client, struct wl_resource* resource)
 {
-    struct e_cosmic_workspace_v1* workspace = wl_resource_get_user_data(resource);
+    struct e_cosmic_workspace* workspace = wl_resource_get_user_data(resource);
     e_trans_session_add_op(&workspace->group->manager->trans_session, workspace, MANAGER_WORKSPACE_REMOVE, NULL);
 }
 
-static void e_cosmic_workspace_v1_request_rename(struct wl_client* client, struct wl_resource* resource, const char* name)
+static void e_cosmic_workspace_request_rename(struct wl_client* client, struct wl_resource* resource, const char* name)
 {
-    struct e_cosmic_workspace_v1* workspace = wl_resource_get_user_data(resource);
+    struct e_cosmic_workspace* workspace = wl_resource_get_user_data(resource);
     struct workspace_rename_event* event = calloc(1, sizeof(*event));
 
     if (event == NULL)
@@ -255,9 +255,9 @@ static void e_cosmic_workspace_v1_request_rename(struct wl_client* client, struc
     SIGNAL_CONNECT(operation->destroy, event->destroy, workspace_rename_event_destroy);
 }
 
-static void e_cosmic_workspace_v1_request_set_tiling_state(struct wl_client* client, struct wl_resource* resource, uint32_t tiling_state)
+static void e_cosmic_workspace_request_set_tiling_state(struct wl_client* client, struct wl_resource* resource, uint32_t tiling_state)
 {
-    struct e_cosmic_workspace_v1* workspace = wl_resource_get_user_data(resource);
+    struct e_cosmic_workspace* workspace = wl_resource_get_user_data(resource);
     struct e_cosmic_workspace_request_tiling_state_event* event = calloc(1, sizeof(*event));
 
     if (event == NULL)
@@ -293,18 +293,18 @@ static void e_cosmic_workspace_v1_request_set_tiling_state(struct wl_client* cli
 }
 
 // Client does not want workspace object anymore.
-static void e_cosmic_workspace_v1_destroy(struct wl_client* client, struct wl_resource* resource)
+static void e_cosmic_workspace_destroy(struct wl_client* client, struct wl_resource* resource)
 {
     wl_resource_destroy(resource);
 }
 
 static const struct zcosmic_workspace_handle_v1_interface workspace_interface = {
-    .activate = e_cosmic_workspace_v1_request_activate,
-    .deactivate = e_cosmic_workspace_v1_request_deactivate,
-    .remove = e_cosmic_workspace_v1_request_remove,
-    .rename = e_cosmic_workspace_v1_request_rename,
-    .set_tiling_state = e_cosmic_workspace_v1_request_set_tiling_state,
-    .destroy = e_cosmic_workspace_v1_destroy
+    .activate = e_cosmic_workspace_request_activate,
+    .deactivate = e_cosmic_workspace_request_deactivate,
+    .remove = e_cosmic_workspace_request_remove,
+    .rename = e_cosmic_workspace_request_rename,
+    .set_tiling_state = e_cosmic_workspace_request_set_tiling_state,
+    .destroy = e_cosmic_workspace_destroy
 };
 
 /* workspace */
@@ -326,7 +326,7 @@ static void workspace_state_to_wl_array(uint32_t workspace_state, struct wl_arra
 
 // Sends state of workspace to all its resources if resource is NULL.
 // If resource is not NULL, only sends state to that resource.
-static void workspace_send_state(struct e_cosmic_workspace_v1* workspace, struct wl_resource* resource)
+static void workspace_send_state(struct e_cosmic_workspace* workspace, struct wl_resource* resource)
 {
     assert(workspace);
 
@@ -354,7 +354,7 @@ static void workspace_send_state(struct e_cosmic_workspace_v1* workspace, struct
     wl_array_release(&state_array);
 }
 
-static void workspace_resource_send_capabilities(struct e_cosmic_workspace_v1* workspace, struct wl_resource* resource)
+static void workspace_resource_send_capabilities(struct e_cosmic_workspace* workspace, struct wl_resource* resource)
 {
     assert(workspace && resource);
 
@@ -389,7 +389,7 @@ static void workspace_resource_send_capabilities(struct e_cosmic_workspace_v1* w
 
 // Sends workspace's name, capabilities and coordinates to resource.
 // State is sent separately.
-static void workspace_resource_send_init(struct e_cosmic_workspace_v1* workspace, struct wl_resource* resource)
+static void workspace_resource_send_init(struct e_cosmic_workspace* workspace, struct wl_resource* resource)
 {
     assert(workspace && resource);
 
@@ -410,13 +410,13 @@ static void workspace_resource_send_init(struct e_cosmic_workspace_v1* workspace
         zcosmic_workspace_handle_v1_send_tiling_state(resource, workspace->tiling_state);
 }
 
-static void e_cosmic_workspace_v1_resource_destroy(struct wl_resource* resource)
+static void e_cosmic_workspace_resource_destroy(struct wl_resource* resource)
 {
     wl_list_remove(wl_resource_get_link(resource));
 }
 
 // Returns NULL on fail.
-static struct wl_resource* e_cosmic_workspace_v1_create_resource(struct e_cosmic_workspace_v1* workspace, struct wl_resource* group_resource)
+static struct wl_resource* e_cosmic_workspace_create_resource(struct e_cosmic_workspace* workspace, struct wl_resource* group_resource)
 {
     struct wl_client* client = wl_resource_get_client(group_resource);
 
@@ -428,7 +428,7 @@ static struct wl_resource* e_cosmic_workspace_v1_create_resource(struct e_cosmic
         return NULL;
     }
 
-    wl_resource_set_implementation(workspace_resource, &workspace_interface, workspace, e_cosmic_workspace_v1_resource_destroy);
+    wl_resource_set_implementation(workspace_resource, &workspace_interface, workspace, e_cosmic_workspace_resource_destroy);
 
     wl_list_insert(&workspace->resources, wl_resource_get_link(workspace_resource));
     
@@ -436,9 +436,9 @@ static struct wl_resource* e_cosmic_workspace_v1_create_resource(struct e_cosmic
 }
 
 // Returns NULL on fail.
-struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_workspace_group_v1* group)
+struct e_cosmic_workspace* e_cosmic_workspace_create(struct e_cosmic_workspace_group* group)
 {
-    struct e_cosmic_workspace_v1* workspace = calloc(1, sizeof(*workspace));
+    struct e_cosmic_workspace* workspace = calloc(1, sizeof(*workspace));
 
     if (workspace == NULL)
         return NULL;
@@ -467,7 +467,7 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
 
     wl_list_for_each_safe(group_resource, tmp, &group->resources, link)
     {
-        struct wl_resource* workspace_resource = e_cosmic_workspace_v1_create_resource(workspace, group_resource);
+        struct wl_resource* workspace_resource = e_cosmic_workspace_create_resource(workspace, group_resource);
 
         if (workspace_resource != NULL)
         {
@@ -478,13 +478,13 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
 
     workspace_send_state(workspace, NULL);
 
-    e_cosmic_workspace_manager_v1_schedule_done_event(group->manager);
+    e_cosmic_workspace_manager_schedule_done_event(group->manager);
 
     return workspace;
 }
 
 // Name is copied.
-void e_cosmic_workspace_v1_set_name(struct e_cosmic_workspace_v1* workspace, const char* name)
+void e_cosmic_workspace_set_name(struct e_cosmic_workspace* workspace, const char* name)
 {
     assert(workspace);
 
@@ -507,11 +507,11 @@ void e_cosmic_workspace_v1_set_name(struct e_cosmic_workspace_v1* workspace, con
         zcosmic_workspace_handle_v1_send_name(resource, copy);
     }
 
-    e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
+    e_cosmic_workspace_manager_schedule_done_event(workspace->group->manager);
 }
 
 // Set coordinates of the workspace.
-void e_cosmic_workspace_v1_set_coords(struct e_cosmic_workspace_v1* workspace, struct wl_array* coords)
+void e_cosmic_workspace_set_coords(struct e_cosmic_workspace* workspace, struct wl_array* coords)
 {
     assert(workspace && coords);
 
@@ -529,11 +529,11 @@ void e_cosmic_workspace_v1_set_coords(struct e_cosmic_workspace_v1* workspace, s
         zcosmic_workspace_handle_v1_send_coordinates(resource, &workspace->coords);
     }
 
-    e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
+    e_cosmic_workspace_manager_schedule_done_event(workspace->group->manager);
 }
 
 // Set whether or not workspace has tiling behaviour.
-void e_cosmic_workspace_v1_set_tiling_state(struct e_cosmic_workspace_v1* workspace, enum e_cosmic_workspace_tiling_state tiling_state)
+void e_cosmic_workspace_set_tiling_state(struct e_cosmic_workspace* workspace, enum e_cosmic_workspace_tiling_state tiling_state)
 {
     assert(workspace);
 
@@ -551,11 +551,11 @@ void e_cosmic_workspace_v1_set_tiling_state(struct e_cosmic_workspace_v1* worksp
             zcosmic_workspace_handle_v1_send_tiling_state(resource, tiling_state);
     }
 
-    e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
+    e_cosmic_workspace_manager_schedule_done_event(workspace->group->manager);
 }
 
 // Set whether or not workspace is in a specific state.
-static void workspace_set_state(struct e_cosmic_workspace_v1* workspace, enum e_cosmic_workspace_state state, bool enabled)
+static void workspace_set_state(struct e_cosmic_workspace* workspace, enum e_cosmic_workspace_state state, bool enabled)
 {
     assert(workspace);
 
@@ -567,29 +567,29 @@ static void workspace_set_state(struct e_cosmic_workspace_v1* workspace, enum e_
     else
         workspace->pending_state &= ~state;
 
-    e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
+    e_cosmic_workspace_manager_schedule_done_event(workspace->group->manager);
 }
 
 // Set whether or not workspace is active.
-void e_cosmic_workspace_v1_set_active(struct e_cosmic_workspace_v1* workspace, bool active)
+void e_cosmic_workspace_set_active(struct e_cosmic_workspace* workspace, bool active)
 {
     workspace_set_state(workspace, E_COSMIC_WORKSPACE_STATE_ACTIVE, active);
 }
 
 // Set whether or not workspace wants attention.
-void e_cosmic_workspace_v1_set_urgent(struct e_cosmic_workspace_v1* workspace, bool urgent)
+void e_cosmic_workspace_set_urgent(struct e_cosmic_workspace* workspace, bool urgent)
 {
     workspace_set_state(workspace, E_COSMIC_WORKSPACE_STATE_URGENT, urgent);
 }
 
 // Set whether or not workspace is hidden.
-void e_cosmic_workspace_v1_set_hidden(struct e_cosmic_workspace_v1* workspace, bool hidden)
+void e_cosmic_workspace_set_hidden(struct e_cosmic_workspace* workspace, bool hidden)
 {
     workspace_set_state(workspace, E_COSMIC_WORKSPACE_STATE_HIDDEN, hidden);
 }
 
 // Destroys workspace.
-void e_cosmic_workspace_v1_remove(struct e_cosmic_workspace_v1* workspace)
+void e_cosmic_workspace_remove(struct e_cosmic_workspace* workspace)
 {
     assert(workspace);
 
@@ -649,9 +649,9 @@ void group_create_workspace_event_destroy(struct wl_listener* listener, void* da
     free(event);
 }
 
-static void e_cosmic_workspace_group_v1_create_workspace(struct wl_client* client, struct wl_resource* resource, const char* workspace_name)
+static void e_cosmic_workspace_group_create_workspace(struct wl_client* client, struct wl_resource* resource, const char* workspace_name)
 {
-    struct e_cosmic_workspace_group_v1* group = wl_resource_get_user_data(resource);
+    struct e_cosmic_workspace_group* group = wl_resource_get_user_data(resource);
 
     struct group_create_workspace_event* event = calloc(1, sizeof(*event));
 
@@ -684,25 +684,25 @@ static void e_cosmic_workspace_group_v1_create_workspace(struct wl_client* clien
 }
 
 // Client does not want group object anymore.
-static void e_cosmic_workspace_group_v1_destroy(struct wl_client* client, struct wl_resource* resource)
+static void e_cosmic_workspace_group_destroy(struct wl_client* client, struct wl_resource* resource)
 {
     wl_resource_destroy(resource);
 }
 
 static const struct zcosmic_workspace_group_handle_v1_interface workspace_group_interface = {
-    .create_workspace = e_cosmic_workspace_group_v1_create_workspace,
-    .destroy = e_cosmic_workspace_group_v1_destroy
+    .create_workspace = e_cosmic_workspace_group_create_workspace,
+    .destroy = e_cosmic_workspace_group_destroy
 };
 
 /* workspace group */
 
-static void e_cosmic_workspace_group_v1_resource_destroy(struct wl_resource* resource)
+static void e_cosmic_workspace_group_resource_destroy(struct wl_resource* resource)
 {
     wl_list_remove(wl_resource_get_link(resource));
 }
 
 // Returns NULL on fail.
-static struct wl_resource* e_cosmic_workspace_group_v1_create_resource(struct e_cosmic_workspace_group_v1* group, struct wl_resource* manager_resource)
+static struct wl_resource* e_cosmic_workspace_group_create_resource(struct e_cosmic_workspace_group* group, struct wl_resource* manager_resource)
 {
     struct wl_client* client = wl_resource_get_client(manager_resource);
 
@@ -714,14 +714,14 @@ static struct wl_resource* e_cosmic_workspace_group_v1_create_resource(struct e_
         return NULL;
     }
 
-    wl_resource_set_implementation(group_resource, &workspace_group_interface, group, e_cosmic_workspace_group_v1_resource_destroy);
+    wl_resource_set_implementation(group_resource, &workspace_group_interface, group, e_cosmic_workspace_group_resource_destroy);
 
     wl_list_insert(&group->resources, wl_resource_get_link(group_resource));
 
     return group_resource;
 }
 
-static void group_init_capabilities(struct e_cosmic_workspace_group_v1* group, uint32_t manager_capabilities)
+static void group_init_capabilities(struct e_cosmic_workspace_group* group, uint32_t manager_capabilities)
 {
     if (group == NULL)
         return;
@@ -733,9 +733,9 @@ static void group_init_capabilities(struct e_cosmic_workspace_group_v1* group, u
 }
 
 // Returns NULL on fail.
-struct e_cosmic_workspace_group_v1* e_cosmic_workspace_group_v1_create(struct e_cosmic_workspace_manager_v1* manager)
+struct e_cosmic_workspace_group* e_cosmic_workspace_group_create(struct e_cosmic_workspace_manager* manager)
 {
-    struct e_cosmic_workspace_group_v1* group = calloc(1, sizeof(*group));
+    struct e_cosmic_workspace_group* group = calloc(1, sizeof(*group));
 
     if (group == NULL)
         return NULL;
@@ -760,7 +760,7 @@ struct e_cosmic_workspace_group_v1* e_cosmic_workspace_group_v1_create(struct e_
 
     wl_list_for_each_safe(manager_resource, tmp, &manager->resources, link)
     {
-        struct wl_resource* group_resource = e_cosmic_workspace_group_v1_create_resource(group, manager_resource);
+        struct wl_resource* group_resource = e_cosmic_workspace_group_create_resource(group, manager_resource);
 
         if (group_resource == NULL)
             continue;
@@ -769,13 +769,13 @@ struct e_cosmic_workspace_group_v1* e_cosmic_workspace_group_v1_create(struct e_
         zcosmic_workspace_group_handle_v1_send_capabilities(group_resource, &group->capabilities);
     }
 
-    e_cosmic_workspace_manager_v1_schedule_done_event(group->manager);
+    e_cosmic_workspace_manager_schedule_done_event(group->manager);
 
     return group;
 }
 
 // Assign output to workspace group.
-void e_cosmic_workspace_group_v1_output_enter(struct e_cosmic_workspace_group_v1* group, struct wlr_output* output)
+void e_cosmic_workspace_group_output_enter(struct e_cosmic_workspace_group* group, struct wlr_output* output)
 {
     assert(group && output);
 
@@ -808,11 +808,11 @@ void e_cosmic_workspace_group_v1_output_enter(struct e_cosmic_workspace_group_v1
         }    
     }
 
-    e_cosmic_workspace_manager_v1_schedule_done_event(group->manager);
+    e_cosmic_workspace_manager_schedule_done_event(group->manager);
 }
 
 // Remove output from workspace group.
-void e_cosmic_workspace_group_v1_output_leave(struct e_cosmic_workspace_group_v1* group, struct wlr_output* output)
+void e_cosmic_workspace_group_output_leave(struct e_cosmic_workspace_group* group, struct wlr_output* output)
 {
     assert(group && output);
 
@@ -824,7 +824,7 @@ void e_cosmic_workspace_group_v1_output_leave(struct e_cosmic_workspace_group_v1
 }
 
 // Destroy workspace group and its workspaces.
-void e_cosmic_workspace_group_v1_remove(struct e_cosmic_workspace_group_v1* group)
+void e_cosmic_workspace_group_remove(struct e_cosmic_workspace_group* group)
 {
     assert(group);
 
@@ -834,11 +834,11 @@ void e_cosmic_workspace_group_v1_remove(struct e_cosmic_workspace_group_v1* grou
     wl_signal_emit_mutable(&group->events.destroy, NULL); //also destroys all group outputs
 
     //remove all of group's workspaces
-    struct e_cosmic_workspace_v1* workspace;
-    struct e_cosmic_workspace_v1* tmp_workspace;
+    struct e_cosmic_workspace* workspace;
+    struct e_cosmic_workspace* tmp_workspace;
     wl_list_for_each_safe(workspace, tmp_workspace, &group->workspaces, link)
     {
-        e_cosmic_workspace_v1_remove(workspace);
+        e_cosmic_workspace_remove(workspace);
     }
 
     //remove transaction ops using this group
@@ -873,13 +873,13 @@ void e_cosmic_workspace_group_v1_remove(struct e_cosmic_workspace_group_v1* grou
 
 static void manager_idle_send_done_event(void* data)
 {
-    struct e_cosmic_workspace_manager_v1* manager = data;
+    struct e_cosmic_workspace_manager* manager = data;
 
     //send pending workspace state
-    struct e_cosmic_workspace_group_v1* group;
+    struct e_cosmic_workspace_group* group;
     wl_list_for_each(group, &manager->groups, link)
     {
-        struct e_cosmic_workspace_v1* workspace;
+        struct e_cosmic_workspace* workspace;
         wl_list_for_each(workspace, &group->workspaces, link)
         {
             if (workspace->pending_state != workspace->state)
@@ -899,7 +899,7 @@ static void manager_idle_send_done_event(void* data)
     manager->done_idle_event = NULL;
 }
 
-static void e_cosmic_workspace_manager_v1_schedule_done_event(struct e_cosmic_workspace_manager_v1* manager)
+static void e_cosmic_workspace_manager_schedule_done_event(struct e_cosmic_workspace_manager* manager)
 {
     if (manager == NULL || manager->event_loop == NULL)
         return;
@@ -914,12 +914,12 @@ static void e_cosmic_workspace_manager_v1_schedule_done_event(struct e_cosmic_wo
 /* workspace manager interface */
 
 // Handle all requested operations at once.
-static void e_cosmic_workspace_manager_v1_commit(struct wl_client* client, struct wl_resource* resource)
+static void e_cosmic_workspace_manager_commit(struct wl_client* client, struct wl_resource* resource)
 {
-    struct e_cosmic_workspace_manager_v1* manager = wl_resource_get_user_data(resource);
+    struct e_cosmic_workspace_manager* manager = wl_resource_get_user_data(resource);
 
-    struct e_cosmic_workspace_group_v1* group;
-    struct e_cosmic_workspace_v1* workspace;
+    struct e_cosmic_workspace_group* group;
+    struct e_cosmic_workspace* workspace;
 
     struct e_trans_op* operation;
     struct e_trans_op* tmp;
@@ -959,44 +959,44 @@ static void e_cosmic_workspace_manager_v1_commit(struct wl_client* client, struc
         e_trans_op_destroy(operation);
     }
 
-    e_cosmic_workspace_manager_v1_schedule_done_event(manager);
+    e_cosmic_workspace_manager_schedule_done_event(manager);
 }
 
 // Clients no longer wants to receive events.
-static void e_cosmic_workspace_manager_v1_stop(struct wl_client* client, struct wl_resource* resource)
+static void e_cosmic_workspace_manager_stop(struct wl_client* client, struct wl_resource* resource)
 {
     zcosmic_workspace_manager_v1_send_finished(resource);
     wl_resource_destroy(resource);
 }
 
 static const struct zcosmic_workspace_manager_v1_interface workspace_manager_interface = {
-    .commit = e_cosmic_workspace_manager_v1_commit,
-    .stop = e_cosmic_workspace_manager_v1_stop
+    .commit = e_cosmic_workspace_manager_commit,
+    .stop = e_cosmic_workspace_manager_stop
 };
 
 /* workspace manager */
 
-static void e_cosmic_workspace_manager_v1_resource_destroy(struct wl_resource* resource)
+static void e_cosmic_workspace_manager_resource_destroy(struct wl_resource* resource)
 {
     wl_list_remove(wl_resource_get_link(resource));
 }
 
 // Client wants to bind to manager's global.
-static void e_cosmic_workspace_manager_v1_bind(struct wl_client* client, void* data, uint32_t version, uint32_t id)
+static void e_cosmic_workspace_manager_bind(struct wl_client* client, void* data, uint32_t version, uint32_t id)
 {
-    struct e_cosmic_workspace_manager_v1* manager = data;
+    struct e_cosmic_workspace_manager* manager = data;
 
     struct wl_resource* resource = wl_resource_create(client, &zcosmic_workspace_manager_v1_interface, version, id);
 
-    wl_resource_set_implementation(resource, &workspace_manager_interface, manager, e_cosmic_workspace_manager_v1_resource_destroy);
+    wl_resource_set_implementation(resource, &workspace_manager_interface, manager, e_cosmic_workspace_manager_resource_destroy);
     
     wl_list_insert(&manager->resources, wl_resource_get_link(resource));
 
     //create resources for every group & workspace for this client
-    struct e_cosmic_workspace_group_v1* group;
+    struct e_cosmic_workspace_group* group;
     wl_list_for_each(group, &manager->groups, link)
     {
-        struct wl_resource* group_resource = e_cosmic_workspace_group_v1_create_resource(group, resource);
+        struct wl_resource* group_resource = e_cosmic_workspace_group_create_resource(group, resource);
 
         if (group_resource == NULL)
             continue;
@@ -1004,10 +1004,10 @@ static void e_cosmic_workspace_manager_v1_bind(struct wl_client* client, void* d
         zcosmic_workspace_manager_v1_send_workspace_group(resource, group_resource);
         zcosmic_workspace_group_handle_v1_send_capabilities(group_resource, &group->capabilities);
 
-        struct e_cosmic_workspace_v1* workspace;
+        struct e_cosmic_workspace* workspace;
         wl_list_for_each(workspace, &group->workspaces, link)
         {
-            struct wl_resource* workspace_resource = e_cosmic_workspace_v1_create_resource(workspace, group_resource);
+            struct wl_resource* workspace_resource = e_cosmic_workspace_create_resource(workspace, group_resource);
 
             if (workspace_resource == NULL)
                 continue;
@@ -1021,18 +1021,18 @@ static void e_cosmic_workspace_manager_v1_bind(struct wl_client* client, void* d
     zcosmic_workspace_manager_v1_send_done(resource);
 }
 
-static void e_cosmic_workspace_manager_v1_display_destroy(struct wl_listener* listener, void* data)
+static void e_cosmic_workspace_manager_display_destroy(struct wl_listener* listener, void* data)
 {
-    struct e_cosmic_workspace_manager_v1* manager = wl_container_of(listener, manager, listeners.display_destroy);
+    struct e_cosmic_workspace_manager* manager = wl_container_of(listener, manager, listeners.display_destroy);
 
     wl_signal_emit_mutable(&manager->events.destroy, NULL);
 
     //destroy all groups, including their workspaces
-    struct e_cosmic_workspace_group_v1* group;
-    struct e_cosmic_workspace_group_v1* tmp;
+    struct e_cosmic_workspace_group* group;
+    struct e_cosmic_workspace_group* tmp;
     wl_list_for_each_safe(group, tmp, &manager->groups, link)
     {
-        e_cosmic_workspace_group_v1_remove(group);
+        e_cosmic_workspace_group_remove(group);
     }
 
     e_trans_session_clear(&manager->trans_session);
@@ -1046,14 +1046,14 @@ static void e_cosmic_workspace_manager_v1_display_destroy(struct wl_listener* li
 }
 
 // Returns NULL on fail.
-struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struct wl_display* display, uint32_t version, uint32_t capabilities)
+struct e_cosmic_workspace_manager* e_cosmic_workspace_manager_create(struct wl_display* display, uint32_t version, uint32_t capabilities)
 {
     assert(version <= COSMIC_WORKSPACE_V1_VERSION);
 
     if (display == NULL)
         return NULL;
 
-    struct e_cosmic_workspace_manager_v1* manager = calloc(1, sizeof(*manager));
+    struct e_cosmic_workspace_manager* manager = calloc(1, sizeof(*manager));
 
     if (manager == NULL)
         return NULL;
@@ -1061,7 +1061,7 @@ struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struc
     manager->event_loop = wl_display_get_event_loop(display);
     manager->done_idle_event = NULL;
     manager->capabilities = capabilities;
-    manager->global = wl_global_create(display, &zcosmic_workspace_manager_v1_interface, version, manager, e_cosmic_workspace_manager_v1_bind);
+    manager->global = wl_global_create(display, &zcosmic_workspace_manager_v1_interface, version, manager, e_cosmic_workspace_manager_bind);
 
     if (manager->global == NULL)
     {
@@ -1078,7 +1078,7 @@ struct e_cosmic_workspace_manager_v1* e_cosmic_workspace_manager_v1_create(struc
     wl_signal_init(&manager->events.destroy);
 
     //destroy automatically on destruction of display
-    manager->listeners.display_destroy.notify = e_cosmic_workspace_manager_v1_display_destroy;
+    manager->listeners.display_destroy.notify = e_cosmic_workspace_manager_display_destroy;
     wl_display_add_destroy_listener(display, &manager->listeners.display_destroy);
     
     return manager;
