@@ -296,18 +296,23 @@ void e_cosmic_workspace_v1_remove(struct e_cosmic_workspace_v1* workspace)
 
     //remove transaction ops using this workspace
     struct e_trans_op* operation;
-    struct e_trans_op* tmp;
-    e_trans_session_for_each_safe(operation, tmp, &workspace->group->manager->trans_session)
+    struct e_trans_op* tmp_operation;
+    e_trans_session_for_each_safe(operation, tmp_operation, &workspace->group->manager->trans_session)
     {
         if (operation->src == workspace)
             e_trans_op_destroy(operation);
     }
 
     struct wl_resource* resource;
-    wl_list_for_each(resource, &workspace->resources, link)
+    struct wl_resource* tmp_resource;
+    wl_list_for_each_safe(resource, tmp_resource, &workspace->resources, link)
     {
         zcosmic_workspace_handle_v1_send_remove(resource);
-        wl_resource_destroy(resource);
+
+        wl_list_remove(wl_resource_get_link(resource)); //remove from resources
+
+        wl_resource_set_user_data(resource, NULL);
+        wl_list_init(wl_resource_get_link(resource)); //resource will destroy itself later, and remove itself again
     }
 
     wl_list_remove(&workspace->link);
@@ -503,10 +508,15 @@ void e_cosmic_workspace_group_v1_remove(struct e_cosmic_workspace_group_v1* grou
     }
 
     struct wl_resource* resource;
-    wl_list_for_each(resource, &group->resources, link)
+    struct wl_resource* tmp_resource;
+    wl_list_for_each_safe(resource, tmp_resource, &group->resources, link)
     {
         zcosmic_workspace_group_handle_v1_send_remove(resource);
-        wl_resource_destroy(resource);
+        
+        wl_list_remove(wl_resource_get_link(resource)); //remove from resources
+
+        wl_resource_set_user_data(resource, NULL);
+        wl_list_init(wl_resource_get_link(resource)); //resource will destroy itself later, and remove itself again
     }
 
     wl_list_remove(&group->link);
