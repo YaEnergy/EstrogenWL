@@ -50,6 +50,9 @@ estrogenwl_src = files(
     'src/util/filesystem.c',
     'src/util/list.c',
     'src/util/log.c',
+
+    'src/protocols/transactions.c',
+    'src/protocols/cosmic-workspace-v1.c',
 )
 
 cc = meson.get_compiler('c')
