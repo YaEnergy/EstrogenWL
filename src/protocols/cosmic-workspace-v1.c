@@ -113,20 +113,41 @@ static void group_output_group_destroy(struct wl_listener* listener, void* data)
     group_output_destroy(group_output);
 }
 
-// New client binded to output that is assigned to a group, we must send the output enter event for its new resource.
+// New client bound to output that is assigned to a group, we must send the output enter event for its new resource.
 static void group_output_output_bind(struct wl_listener* listener, void* data)
 {
     struct group_output* group_output = wl_container_of(listener, group_output, output_bind);
 
     struct wlr_output_event_bind* event = data;
 
+    //client that bound to output
+    struct wl_client* client = wl_resource_get_client(event->resource);
+
+    bool event_sent = false;
+
+    //TODO: Can there be multiple resources for the same client? I don't think there can be, but just in case it can happen, I won't break the loop.
+
+    //send output enter event to group resources for this client.
     struct wl_resource* group_resource;
     wl_list_for_each(group_resource, &group_output->group->resources, link)
     {
-        zcosmic_workspace_group_handle_v1_send_output_enter(group_resource, event->resource);
+        if (wl_resource_get_client(group_resource) == client)
+        {
+            zcosmic_workspace_group_handle_v1_send_output_enter(group_resource, event->resource);
+            event_sent = true;
+        }
     }
 
-    e_cosmic_workspace_manager_v1_schedule_done_event(group_output->group->manager);
+    if (!event_sent)
+        return;
+
+    //if we sent an event, send done event to manager resource for this client
+    struct wl_resource* manager_resource;
+    wl_list_for_each(manager_resource, &group_output->group->manager->resources, link)
+    {
+        if (wl_resource_get_client(manager_resource) == client)
+            zcosmic_workspace_manager_v1_send_done(manager_resource);
+    }
 }
 
 static void group_output_output_destroy(struct wl_listener* listener, void* data)
