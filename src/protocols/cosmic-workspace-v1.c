@@ -478,7 +478,42 @@ void e_cosmic_workspace_group_v1_output_leave(struct e_cosmic_workspace_group_v1
 // Destroy workspace group and its workspaces.
 void e_cosmic_workspace_group_v1_remove(struct e_cosmic_workspace_group_v1* group)
 {
-    //TODO: implement e_cosmic_workspace_group_v1_remove
+    assert(group);
+
+    if (group == NULL)
+        return;
+
+    wl_signal_emit_mutable(&group->events.destroy, NULL);
+
+    //remove all of group's workspaces
+    struct e_cosmic_workspace_v1* workspace;
+    struct e_cosmic_workspace_v1* tmp_workspace;
+    wl_list_for_each_safe(workspace, tmp_workspace, &group->workspaces, link)
+    {
+        e_cosmic_workspace_v1_remove(workspace);
+    }
+
+    //remove transaction ops using this group
+    struct e_trans_op* operation;
+    struct e_trans_op* tmp_operation;
+    e_trans_session_for_each_safe(operation, tmp_operation, &group->manager->trans_session)
+    {
+        if (operation->src == group)
+            e_trans_op_destroy(operation);
+    }
+
+    struct wl_resource* resource;
+    wl_list_for_each(resource, &group->resources, link)
+    {
+        zcosmic_workspace_group_handle_v1_send_remove(resource);
+        wl_resource_destroy(resource);
+    }
+
+    wl_list_remove(&group->link);
+
+    wl_array_release(&group->capabilities);
+
+    free(group);
 }
 
 /* workspace manager done schedule */
