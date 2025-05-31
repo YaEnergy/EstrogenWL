@@ -93,8 +93,6 @@ struct e_cosmic_workspace_v1
     uint32_t state; //bitmask enum e_cosmic_workspace_state
     uint32_t pending_state; //bitmask enum e_cosmic_workspace_state
 
-    struct wl_array capabilities;
-
     struct wl_array coords;
 
     // Resource for each client that has binded to manager.

@@ -307,6 +307,36 @@ static void workspace_send_state(struct e_cosmic_workspace_v1* workspace, struct
     wl_array_release(&state_array);
 }
 
+static void workspace_resource_send_capabilities(struct e_cosmic_workspace_v1* workspace, struct wl_resource* resource)
+{
+    assert(workspace && resource);
+
+    if (workspace == NULL || resource == NULL)
+        return;
+
+    struct wl_array caps;
+    wl_array_init(&caps);
+
+    uint32_t version = wl_resource_get_version(resource);
+    uint32_t manager_capabilities = workspace->group->manager->capabilities;
+
+    if (manager_capabilities & E_COSMIC_WORKSPACE_CAPABILITY_ACTIVATE)
+        wl_array_append_uint32_t(&caps, ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_ACTIVATE);
+
+    if (manager_capabilities & E_COSMIC_WORKSPACE_CAPABILITY_DEACTIVATE)
+        wl_array_append_uint32_t(&caps, ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_DEACTIVATE);
+
+    if (manager_capabilities & E_COSMIC_WORKSPACE_CAPABILITY_REMOVE)
+        wl_array_append_uint32_t(&caps, ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_REMOVE);
+
+    if (manager_capabilities & E_COSMIC_WORKSPACE_CAPABILITY_RENAME && version >= ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_RENAME_SINCE_VERSION)
+        wl_array_append_uint32_t(&caps, ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_RENAME);
+
+    zcosmic_workspace_handle_v1_send_capabilities(resource, &caps);
+
+    wl_array_release(&caps);
+}
+
 // Sends workspace's name, capabilities and coordinates to resource.
 // State is sent separately.
 static void workspace_resource_send_init(struct e_cosmic_workspace_v1* workspace, struct wl_resource* resource)
@@ -316,7 +346,7 @@ static void workspace_resource_send_init(struct e_cosmic_workspace_v1* workspace
     if (workspace == NULL || resource == NULL)
         return;
 
-    zcosmic_workspace_handle_v1_send_capabilities(resource, &workspace->capabilities);
+    workspace_resource_send_capabilities(workspace, resource);
 
     if (workspace->coords.size != 0)
         zcosmic_workspace_handle_v1_send_coordinates(resource, &workspace->coords);
@@ -350,26 +380,6 @@ static struct wl_resource* e_cosmic_workspace_v1_create_resource(struct e_cosmic
     return workspace_resource;
 }
 
-static void workspace_init_capabilities(struct e_cosmic_workspace_v1* workspace, uint32_t manager_capabilities)
-{
-    if (workspace == NULL)
-        return;
-
-    wl_array_init(&workspace->capabilities);
-
-    if (manager_capabilities & E_COSMIC_WORKSPACE_CAPABILITY_ACTIVATE)
-        wl_array_append_uint32_t(&workspace->capabilities, ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_ACTIVATE);
-
-    if (manager_capabilities & E_COSMIC_WORKSPACE_CAPABILITY_DEACTIVATE)
-        wl_array_append_uint32_t(&workspace->capabilities, ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_DEACTIVATE);
-
-    if (manager_capabilities & E_COSMIC_WORKSPACE_CAPABILITY_REMOVE)
-        wl_array_append_uint32_t(&workspace->capabilities, ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_REMOVE);
-
-    if (manager_capabilities & E_COSMIC_WORKSPACE_CAPABILITY_RENAME)
-        wl_array_append_uint32_t(&workspace->capabilities, ZCOSMIC_WORKSPACE_HANDLE_V1_ZCOSMIC_WORKSPACE_CAPABILITIES_V1_RENAME);
-}
-
 // Returns NULL on fail.
 struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_workspace_group_v1* group)
 {
@@ -381,12 +391,9 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
     workspace->name = NULL;
     workspace->group = group;
 
-    wl_array_init(&workspace->capabilities);
     wl_array_init(&workspace->coords);
 
     wl_list_init(&workspace->resources);
-
-    workspace_init_capabilities(workspace, group->manager->capabilities);
 
     wl_signal_init(&workspace->events.request_activate);
     wl_signal_init(&workspace->events.request_deactivate);
@@ -534,7 +541,6 @@ void e_cosmic_workspace_v1_remove(struct e_cosmic_workspace_v1* workspace)
 
     wl_list_remove(&workspace->link);
 
-    wl_array_release(&workspace->capabilities);
     wl_array_release(&workspace->coords);
 
     if (workspace->name != NULL)
