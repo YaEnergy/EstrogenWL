@@ -405,6 +405,7 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
     wl_signal_init(&workspace->events.request_activate);
     wl_signal_init(&workspace->events.request_deactivate);
     wl_signal_init(&workspace->events.request_remove);
+    wl_signal_init(&workspace->events.request_rename);
     wl_signal_init(&workspace->events.destroy);
 
     wl_list_append(group->workspaces, &workspace->link);
