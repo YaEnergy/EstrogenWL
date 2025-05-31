@@ -40,7 +40,8 @@ struct e_trans_op* e_trans_session_add_op(struct e_trans_session* session, void*
 void e_trans_session_clear(struct e_trans_session* session)
 {
     struct e_trans_op* op;
-    e_trans_session_for_each_safe(op, session)
+    struct e_trans_op* tmp;
+    e_trans_session_for_each_safe(op, tmp, session)
     {
         e_trans_op_destroy(op);
     }
