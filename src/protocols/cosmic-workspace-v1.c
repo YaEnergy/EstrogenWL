@@ -847,9 +847,13 @@ static void e_cosmic_workspace_manager_v1_display_destroy(struct wl_listener* li
 
     wl_signal_emit_mutable(&manager->events.destroy, NULL);
 
-    //TODO: destroy all workspaces?
-    //TODO: destroy all groups?
-    //TODO: check signal listeners
+    //destroy all groups, including their workspaces
+    struct e_cosmic_workspace_group_v1* group;
+    struct e_cosmic_workspace_group_v1* tmp;
+    wl_list_for_each_safe(group, tmp, &manager->groups, link)
+    {
+        e_cosmic_workspace_group_v1_remove(group);
+    }
 
     e_trans_session_clear(&manager->trans_session);
 
