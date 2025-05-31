@@ -365,6 +365,28 @@ void e_cosmic_workspace_v1_set_name(struct e_cosmic_workspace_v1* workspace, con
     e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
 }
 
+// Set coordinates of the workspace.
+void e_cosmic_workspace_v1_set_coords(struct e_cosmic_workspace_v1* workspace, struct wl_array* coords)
+{
+    assert(workspace && coords);
+
+    if (workspace == NULL || coords == NULL)
+        return;
+
+    wl_array_release(&workspace->coords);
+
+    wl_array_init(&workspace->coords);
+    wl_array_copy(&workspace->coords, coords);
+
+    struct wl_resource* resource;
+    wl_list_for_each(resource, &workspace->resources, link)
+    {
+        zcosmic_workspace_handle_v1_send_coordinates(resource, &workspace->coords);
+    }
+
+    e_cosmic_workspace_manager_v1_schedule_done_event(workspace->group->manager);
+}
+
 // Set whether or not workspace is in a specific state.
 static void workspace_set_state(struct e_cosmic_workspace_v1* workspace, enum e_cosmic_workspace_state state, bool enabled)
 {
@@ -800,7 +822,6 @@ static void e_cosmic_workspace_manager_v1_bind(struct wl_client* client, void* d
             e_log_info("create group resource");
 
             struct wl_resource* group_resource = e_cosmic_workspace_group_v1_create_resource(group, resource);
-            zcosmic_workspace_group_handle_v1_send_capabilities(group_resource, &group->capabilities);
 
             if (wl_list_empty(&group->workspaces))
                 continue;
@@ -811,7 +832,7 @@ static void e_cosmic_workspace_manager_v1_bind(struct wl_client* client, void* d
                 e_log_info("create workspace resource");
                 
                 struct wl_resource* workspace_resource = e_cosmic_workspace_v1_create_resource(workspace, group_resource);
-                zcosmic_workspace_handle_v1_send_capabilities(workspace_resource, &workspace->capabilities);
+                zcosmic_workspace_handle_v1_send_coordinates(workspace_resource, &workspace->coords);
                 e_cosmic_workspace_v1_send_state(workspace, workspace_resource);
             }
         }
