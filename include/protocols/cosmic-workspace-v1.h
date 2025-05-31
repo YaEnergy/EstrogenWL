@@ -8,7 +8,6 @@
 
 #include "protocols/transactions.h"
 
-// First support minor version 1, later 2
 #define COSMIC_WORKSPACE_V1_VERSION 2
 
 struct wlr_output;
