@@ -246,6 +246,12 @@ static void e_cosmic_workspace_v1_request_rename(struct wl_client* client, struc
     SIGNAL_CONNECT(operation->destroy, event->destroy, workspace_rename_event_destroy);
 }
 
+static void e_cosmic_workspace_v1_request_set_tiling_state(struct wl_client* client, struct wl_resource* resource, uint32_t tiling_state)
+{
+    //TODO: implement e_cosmic_workspace_v1_request_set_tiling_state
+    //ignore for now
+}
+
 // Client does not want workspace object anymore.
 static void e_cosmic_workspace_v1_destroy(struct wl_client* client, struct wl_resource* resource)
 {
@@ -257,6 +263,7 @@ static const struct zcosmic_workspace_handle_v1_interface workspace_interface = 
     .deactivate = e_cosmic_workspace_v1_request_deactivate,
     .remove = e_cosmic_workspace_v1_request_remove,
     .rename = e_cosmic_workspace_v1_request_rename,
+    .set_tiling_state = e_cosmic_workspace_v1_request_set_tiling_state,
     .destroy = e_cosmic_workspace_v1_destroy
 };
 
