@@ -674,6 +674,8 @@ static void e_cosmic_workspace_manager_v1_display_destroy(struct wl_listener* li
 
     wl_global_remove(manager->global);
     wl_global_destroy(manager->global);
+
+    free(manager);
 }
 
 // Returns NULL on fail.
