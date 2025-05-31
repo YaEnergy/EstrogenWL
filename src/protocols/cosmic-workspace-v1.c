@@ -227,7 +227,7 @@ static void workspace_state_to_wl_array(uint32_t workspace_state, struct wl_arra
 
 // Sends state of workspace to all its resources if resource is NULL.
 // If resource is not NULL, only sends state to that resource.
-static void e_cosmic_workspace_v1_send_state(struct e_cosmic_workspace_v1* workspace, struct wl_resource* resource)
+static void workspace_send_state(struct e_cosmic_workspace_v1* workspace, struct wl_resource* resource)
 {
     assert(workspace);
 
@@ -255,6 +255,24 @@ static void e_cosmic_workspace_v1_send_state(struct e_cosmic_workspace_v1* works
     wl_array_release(&state_array);
 }
 
+// Sends workspace's name, capabilities and coordinates to resource.
+// State is sent separately.
+static void workspace_resource_send_init(struct e_cosmic_workspace_v1* workspace, struct wl_resource* resource)
+{
+    assert(workspace && resource);
+
+    if (workspace == NULL || resource == NULL)
+        return;
+
+    zcosmic_workspace_handle_v1_send_capabilities(resource, &workspace->capabilities);
+
+    if (workspace->coords.size != 0)
+        zcosmic_workspace_handle_v1_send_coordinates(resource, &workspace->coords);
+
+    if (workspace->name != NULL)
+        zcosmic_workspace_handle_v1_send_name(resource, workspace->name);
+}
+
 static void e_cosmic_workspace_v1_resource_destroy(struct wl_resource* resource)
 {
     wl_list_remove(wl_resource_get_link(resource));
@@ -276,12 +294,6 @@ static struct wl_resource* e_cosmic_workspace_v1_create_resource(struct e_cosmic
     wl_resource_set_implementation(workspace_resource, &workspace_interface, workspace, e_cosmic_workspace_v1_resource_destroy);
 
     wl_list_insert(&workspace->resources, wl_resource_get_link(workspace_resource));
-
-    zcosmic_workspace_group_handle_v1_send_workspace(group_resource, workspace_resource);
-    zcosmic_workspace_handle_v1_send_capabilities(workspace_resource, &workspace->capabilities);
-
-    if (workspace->name != NULL)
-        zcosmic_workspace_handle_v1_send_name(workspace_resource, workspace->name);
     
     return workspace_resource;
 }
@@ -335,7 +347,13 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
 
     wl_list_for_each_safe(group_resource, tmp, &group->resources, link)
     {
-        e_cosmic_workspace_v1_create_resource(workspace, group_resource);
+        struct wl_resource* workspace_resource = e_cosmic_workspace_v1_create_resource(workspace, group_resource);
+
+        if (workspace_resource != NULL)
+        {
+            zcosmic_workspace_group_handle_v1_send_workspace(group_resource, workspace_resource);
+            workspace_resource_send_init(workspace, workspace_resource);
+        }
     }
 
     e_cosmic_workspace_manager_v1_schedule_done_event(group->manager);
@@ -557,9 +575,6 @@ static struct wl_resource* e_cosmic_workspace_group_v1_create_resource(struct e_
 
     wl_list_insert(&group->resources, wl_resource_get_link(group_resource));
 
-    zcosmic_workspace_manager_v1_send_workspace_group(manager_resource, group_resource);
-    zcosmic_workspace_group_handle_v1_send_capabilities(group_resource, &group->capabilities);
-
     return group_resource;
 }
 
@@ -602,7 +617,13 @@ struct e_cosmic_workspace_group_v1* e_cosmic_workspace_group_v1_create(struct e_
 
     wl_list_for_each_safe(manager_resource, tmp, &manager->resources, link)
     {
-        e_cosmic_workspace_group_v1_create_resource(group, manager_resource);
+        struct wl_resource* group_resource = e_cosmic_workspace_group_v1_create_resource(group, manager_resource);
+
+        if (group_resource == NULL)
+            continue;
+
+        zcosmic_workspace_manager_v1_send_workspace_group(manager_resource, group_resource);
+        zcosmic_workspace_group_handle_v1_send_capabilities(group_resource, &group->capabilities);
     }
 
     e_cosmic_workspace_manager_v1_schedule_done_event(group->manager);
@@ -721,7 +742,7 @@ static void manager_idle_send_done_event(void* data)
             if (workspace->pending_state != workspace->state)
             {
                 workspace->state = workspace->pending_state;
-                e_cosmic_workspace_v1_send_state(workspace, NULL);
+                workspace_send_state(workspace, NULL);
             }
         }   
     }
@@ -819,27 +840,28 @@ static void e_cosmic_workspace_manager_v1_bind(struct wl_client* client, void* d
     wl_list_insert(&manager->resources, wl_resource_get_link(resource));
 
     //create resources for every group & workspace for this client
-    if (!wl_list_empty(&manager->groups))
+    struct e_cosmic_workspace_group_v1* group;
+    wl_list_for_each(group, &manager->groups, link)
     {
-        struct e_cosmic_workspace_group_v1* group;
-        wl_list_for_each(group, &manager->groups, link)
+        struct wl_resource* group_resource = e_cosmic_workspace_group_v1_create_resource(group, resource);
+
+        if (group_resource == NULL)
+            continue;
+
+        zcosmic_workspace_manager_v1_send_workspace_group(resource, group_resource);
+        zcosmic_workspace_group_handle_v1_send_capabilities(group_resource, &group->capabilities);
+
+        struct e_cosmic_workspace_v1* workspace;
+        wl_list_for_each(workspace, &group->workspaces, link)
         {
-            e_log_info("create group resource");
+            struct wl_resource* workspace_resource = e_cosmic_workspace_v1_create_resource(workspace, group_resource);
 
-            struct wl_resource* group_resource = e_cosmic_workspace_group_v1_create_resource(group, resource);
-
-            if (wl_list_empty(&group->workspaces))
+            if (workspace_resource == NULL)
                 continue;
 
-            struct e_cosmic_workspace_v1* workspace;
-            wl_list_for_each(workspace, &group->workspaces, link)
-            {
-                e_log_info("create workspace resource");
-                
-                struct wl_resource* workspace_resource = e_cosmic_workspace_v1_create_resource(workspace, group_resource);
-                zcosmic_workspace_handle_v1_send_coordinates(workspace_resource, &workspace->coords);
-                e_cosmic_workspace_v1_send_state(workspace, workspace_resource);
-            }
+            zcosmic_workspace_group_handle_v1_send_workspace(group_resource, workspace_resource);
+            workspace_send_state(workspace, workspace_resource);
+            workspace_resource_send_init(workspace, workspace_resource);
         }
     }
 
