@@ -356,6 +356,8 @@ struct e_cosmic_workspace_v1* e_cosmic_workspace_v1_create(struct e_cosmic_works
         }
     }
 
+    workspace_send_state(workspace, NULL);
+
     e_cosmic_workspace_manager_v1_schedule_done_event(group->manager);
 
     return workspace;
