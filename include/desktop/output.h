@@ -43,7 +43,7 @@ struct e_output
     struct wl_list link; //e_desktop::outputs
 };
 
-struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* wlr_output);
+struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_scene_output* scene_output);
 
 // Get topmost layer surface that requests exclusive focus.
 // Returns NULL if none.

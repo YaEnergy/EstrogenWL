@@ -13,6 +13,8 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/backend.h>
 
+#include <wlr/util/box.h>
+
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #include "desktop/tree/workspace.h"
@@ -69,7 +71,7 @@ static void e_output_handle_destroy(struct wl_listener* listener, void* data)
     free(output);
 }
 
-struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* wlr_output)
+struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_scene_output* scene_output)
 {
     struct e_output* output = calloc(1, sizeof(*output));
 
@@ -79,16 +81,19 @@ struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* w
         return NULL;
     }
 
-    output->wlr_output = wlr_output;
-    output->desktop = desktop;
+    struct wlr_output* wlr_output = scene_output->output;
 
-    output->scene_output = NULL;
+    output->desktop = desktop;
+    output->wlr_output = wlr_output;
+    output->layout = desktop->output_layout;
+    output->scene_output = scene_output;
 
     output->active_workspace = NULL;
-
-    wl_list_init(&output->link);
+    output->usable_area = (struct wlr_box){0, 0, 0, 0};
 
     wl_list_init(&output->layer_surfaces);
+
+    wl_list_insert(&desktop->outputs, &output->link);
 
     wlr_output->data = output;
 
