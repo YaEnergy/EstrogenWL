@@ -8,6 +8,7 @@ wayland_server_protocols = [
     wayland_protocols_dir / 'staging/ext-image-capture-source/ext-image-capture-source-v1.xml',
     wayland_protocols_dir / 'staging/ext-image-copy-capture/ext-image-copy-capture-v1.xml',
     wayland_protocols_dir / 'staging/cursor-shape/cursor-shape-v1.xml',
+    wayland_protocols_dir / 'staging/ext-workspace/ext-workspace-v1.xml',
     'cosmic-workspace-unstable-v1.xml',
     'wlr-layer-shell-unstable-v1.xml',
 ]
