@@ -73,6 +73,11 @@ static void e_output_handle_destroy(struct wl_listener* listener, void* data)
 
 struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_scene_output* scene_output)
 {
+    assert(desktop && scene_output);
+
+    if (desktop == NULL || scene_output == NULL)
+        return NULL;
+
     struct e_output* output = calloc(1, sizeof(*output));
 
     if (output == NULL)
