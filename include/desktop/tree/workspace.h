@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 
+#include <wayland-server-core.h>
 #include <wayland-util.h>
 
 #include <wlr/util/box.h>
@@ -10,10 +11,25 @@
 
 #include "desktop/tree/container.h"
 
+#include "protocols/cosmic-workspace-v1.h"
+
 #include "util/list.h"
 
 struct e_desktop;
 struct e_view;
+
+// A group of workspaces, bound to a specific set of outputs. (In our case will always be just 1)
+// Only one of which can be displayed here.
+//TODO: functions
+struct e_workspace_group
+{
+    struct e_list workspaces; //struct e_workspace*
+    int activeIndex;
+
+    struct e_cosmic_workspace_group* cosmic_group;
+
+    //TODO: struct wl_listener cosmic_create_workspace;
+};
 
 struct e_workspace_layers
 {
