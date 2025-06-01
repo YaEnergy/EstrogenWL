@@ -24,7 +24,7 @@ struct e_view;
 struct e_workspace_group
 {
     struct e_list workspaces; //struct e_workspace*
-    int activeIndex;
+    int active_index;
 
     struct e_cosmic_workspace_group* cosmic_group;
 
