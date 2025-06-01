@@ -50,7 +50,7 @@ struct group_output
 
 // Duplicates given null-terminated string.
 // Returned string must be freed, returns NULL on fail.
-char* e_strdup(const char* string)
+static char* e_strdup(const char* string)
 {
     size_t len = strlen(string);
     char* copy = calloc(len + 1, sizeof(*copy));
