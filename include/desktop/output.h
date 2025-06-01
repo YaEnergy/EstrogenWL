@@ -21,6 +21,7 @@ struct e_output
     struct wlr_output* wlr_output;
 
     struct wlr_output_layout* layout;
+    struct wlr_scene_output* scene_output;
 
     // Area tiled views are allowed to use.
     struct wlr_box usable_area;

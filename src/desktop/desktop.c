@@ -146,6 +146,7 @@ struct e_output* e_desktop_add_output(struct e_desktop* desktop, struct wlr_outp
     struct wlr_scene_output* scene_output = wlr_scene_output_create(desktop->scene, output->wlr_output);
     wlr_scene_output_layout_add_output(desktop->scene_layout, layout_output, scene_output);
     output->layout = desktop->output_layout;
+    output->scene_output = scene_output;
 
     e_desktop_init_output(desktop, output);
 

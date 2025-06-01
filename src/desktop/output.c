@@ -25,19 +25,17 @@
 static void e_output_frame(struct wl_listener* listener, void* data)
 {
     struct e_output* output = wl_container_of(listener, output, frame);
-    struct wlr_scene* scene = output->desktop->scene;
-    
-    //render scene, commit its output to show it, and send frame from this timestamp
 
-    struct wlr_scene_output* scene_output = wlr_scene_get_scene_output(scene, output->wlr_output);
+    if (output->scene_output == NULL)
+        return;
 
-    //render scene and commit output
-    wlr_scene_output_commit(scene_output, NULL);
+    //render scene output viewport, commit its output to show it, and send frame from this timestamp
+    wlr_scene_output_commit(output->scene_output, NULL);
 
     //send frame from this timestamp
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
-    wlr_scene_output_send_frame_done(scene_output, &now);
+    wlr_scene_output_send_frame_done(output->scene_output, &now);
 }
 
 static void e_output_request_state(struct wl_listener* listener, void* data)
@@ -83,6 +81,8 @@ struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* w
 
     output->wlr_output = wlr_output;
     output->desktop = desktop;
+
+    output->scene_output = NULL;
 
     output->active_workspace = NULL;
 
