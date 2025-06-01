@@ -13,11 +13,11 @@
 
 struct e_desktop;
 
-// Desktop output, possibly displaying a workspace.
+// Compositor output region, usually a monitor, for a desktop. (Desktop output)
 struct e_output
 {
-    struct wl_list link; //e_desktop::outputs
     struct e_desktop* desktop;
+    
     struct wlr_output* wlr_output;
 
     struct wlr_output_layout* layout;
@@ -29,15 +29,18 @@ struct e_output
     // Workspace that output is currently displaying, may be NULL.
     struct e_workspace* active_workspace;
 
-    //output has a new frame ready
+    struct wl_list layer_surfaces; //struct e_layer_surface*
+    //TODO: struct wl_list xwayland_unmanaged_surfaces; //struct e_xwayland_unmanaged*
+
+    // Output has a new frame ready
     struct wl_listener frame;
 
-    //new state for X11 or wayland backend, must be committed
+    // New state from X11 or wayland output backends to commit
     struct wl_listener request_state;
 
     struct wl_listener destroy;
 
-    struct wl_list layer_surfaces; //struct e_layer_surface*
+    struct wl_list link; //e_desktop::outputs
 };
 
 struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* wlr_output);
