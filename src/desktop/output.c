@@ -52,7 +52,7 @@ static void e_output_request_state(struct wl_listener* listener, void* data)
         e_log_error("Failed to commit output request state");
 }
 
-static void e_output_destroy(struct wl_listener* listener, void* data)
+static void e_output_handle_destroy(struct wl_listener* listener, void* data)
 {
     struct e_output* output = wl_container_of(listener, output, destroy);
 
@@ -96,7 +96,7 @@ struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* w
 
     SIGNAL_CONNECT(wlr_output->events.frame, output->frame, e_output_frame);
     SIGNAL_CONNECT(wlr_output->events.request_state, output->request_state, e_output_request_state);
-    SIGNAL_CONNECT(wlr_output->events.destroy, output->destroy, e_output_destroy);
+    SIGNAL_CONNECT(wlr_output->events.destroy, output->destroy, e_output_handle_destroy);
 
     return output;
 }
@@ -213,4 +213,13 @@ void e_output_arrange(struct e_output* output)
     #endif
 
     output->usable_area = remaining_area;
+}
+
+// Destroy the output.
+void e_output_destroy(struct e_output* output)
+{
+    assert(output);
+
+    if (output != NULL)
+        wlr_output_destroy(output->wlr_output);
 }

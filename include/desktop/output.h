@@ -54,3 +54,6 @@ struct e_layer_surface* e_output_get_exclusive_topmost_layer_surface(struct e_ou
 bool e_output_display_workspace(struct e_output* output, struct e_workspace* workspace);
 
 void e_output_arrange(struct e_output* output);
+
+// Destroy the output.
+void e_output_destroy(struct e_output* output);
