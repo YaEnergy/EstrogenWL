@@ -63,6 +63,13 @@ static void e_server_new_output(struct wl_listener* listener, void* data)
     struct e_server* server = wl_container_of(listener, server, new_output);
     struct wlr_output* wlr_output = data;
 
+    //non-desktop outputs such as VR are unsupported
+    if (wlr_output->non_desktop)
+    {
+        e_log_info("e_server_new_output: new unsupported non-desktop output, skipping...");
+        return;
+    }
+
     //configure output by backend to use allocator and renderer
     //before committing output
     if (!wlr_output_init_render(wlr_output, server->allocator, server->renderer))

@@ -135,17 +135,31 @@ struct e_output* e_desktop_add_output(struct e_desktop* desktop, struct wlr_outp
 {
     assert(desktop && wlr_output);
 
-    struct e_output* output = e_output_create(desktop, wlr_output);
-
-    wl_list_insert(&desktop->outputs, &output->link);
-
+    if (desktop == NULL || wlr_output == NULL)
+        return NULL;
+    
     //output layout auto adds wl_output to the display, allows wl clients to find out information about the display
     //TODO: allow configuring the arrangement of outputs in the layout
-    //TODO: check for possible memory allocation error?
-    struct wlr_output_layout_output* layout_output = wlr_output_layout_add_auto(desktop->output_layout, output->wlr_output);
-    struct wlr_scene_output* scene_output = wlr_scene_output_create(desktop->scene, output->wlr_output);
+    struct wlr_output_layout_output* layout_output = wlr_output_layout_add_auto(desktop->output_layout, wlr_output);
+
+    if (layout_output == NULL)
+    {
+        e_log_error("e_desktop_add_output: failed to add output to layout");
+        return NULL;
+    }
+
+    struct wlr_scene_output* scene_output = wlr_scene_output_create(desktop->scene, wlr_output);
+
+    if (scene_output == NULL)
+    {
+        e_log_error("e_desktop_add_output: failed to create scene output");
+        wlr_output_layout_remove(desktop->output_layout, wlr_output);
+        return NULL;
+    }
+    
     wlr_scene_output_layout_add_output(desktop->scene_layout, layout_output, scene_output);
-    output->layout = desktop->output_layout;
+    
+    struct e_output* output = e_output_create(desktop, scene_output);
 
     e_desktop_init_output(desktop, output);
 

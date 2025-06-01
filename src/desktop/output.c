@@ -13,6 +13,8 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/backend.h>
 
+#include <wlr/util/box.h>
+
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #include "desktop/tree/workspace.h"
@@ -25,19 +27,17 @@
 static void e_output_frame(struct wl_listener* listener, void* data)
 {
     struct e_output* output = wl_container_of(listener, output, frame);
-    struct wlr_scene* scene = output->desktop->scene;
-    
-    //render scene, commit its output to show it, and send frame from this timestamp
 
-    struct wlr_scene_output* scene_output = wlr_scene_get_scene_output(scene, output->wlr_output);
+    if (output->scene_output == NULL)
+        return;
 
-    //render scene and commit output
-    wlr_scene_output_commit(scene_output, NULL);
+    //render scene output viewport, commit its output to show it, and send frame from this timestamp
+    wlr_scene_output_commit(output->scene_output, NULL);
 
     //send frame from this timestamp
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
-    wlr_scene_output_send_frame_done(scene_output, &now);
+    wlr_scene_output_send_frame_done(output->scene_output, &now);
 }
 
 static void e_output_request_state(struct wl_listener* listener, void* data)
@@ -54,7 +54,7 @@ static void e_output_request_state(struct wl_listener* listener, void* data)
         e_log_error("Failed to commit output request state");
 }
 
-static void e_output_destroy(struct wl_listener* listener, void* data)
+static void e_output_handle_destroy(struct wl_listener* listener, void* data)
 {
     struct e_output* output = wl_container_of(listener, output, destroy);
 
@@ -71,8 +71,13 @@ static void e_output_destroy(struct wl_listener* listener, void* data)
     free(output);
 }
 
-struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* wlr_output)
+struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_scene_output* scene_output)
 {
+    assert(desktop && scene_output);
+
+    if (desktop == NULL || scene_output == NULL)
+        return NULL;
+
     struct e_output* output = calloc(1, sizeof(*output));
 
     if (output == NULL)
@@ -81,14 +86,19 @@ struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* w
         return NULL;
     }
 
-    output->wlr_output = wlr_output;
+    struct wlr_output* wlr_output = scene_output->output;
+
     output->desktop = desktop;
+    output->wlr_output = wlr_output;
+    output->layout = desktop->output_layout;
+    output->scene_output = scene_output;
 
     output->active_workspace = NULL;
-
-    wl_list_init(&output->link);
+    output->usable_area = (struct wlr_box){0, 0, 0, 0};
 
     wl_list_init(&output->layer_surfaces);
+
+    wl_list_insert(&desktop->outputs, &output->link);
 
     wlr_output->data = output;
 
@@ -96,7 +106,7 @@ struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_output* w
 
     SIGNAL_CONNECT(wlr_output->events.frame, output->frame, e_output_frame);
     SIGNAL_CONNECT(wlr_output->events.request_state, output->request_state, e_output_request_state);
-    SIGNAL_CONNECT(wlr_output->events.destroy, output->destroy, e_output_destroy);
+    SIGNAL_CONNECT(wlr_output->events.destroy, output->destroy, e_output_handle_destroy);
 
     return output;
 }
@@ -213,4 +223,13 @@ void e_output_arrange(struct e_output* output)
     #endif
 
     output->usable_area = remaining_area;
+}
+
+// Destroy the output.
+void e_output_destroy(struct e_output* output)
+{
+    assert(output);
+
+    if (output != NULL)
+        wlr_output_destroy(output->wlr_output);
 }
