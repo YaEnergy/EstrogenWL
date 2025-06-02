@@ -9,20 +9,7 @@
 
 #include "views/view.h"
 
-#define E_XDG_WM_BASE_VERSION 6
-
 struct e_desktop;
-
-struct e_xdg_shell
-{
-    struct wlr_xdg_shell* xdg_shell;
-    struct e_desktop* desktop;
-
-    //clients create new top level view
-    struct wl_listener new_toplevel_view;
-
-    struct wl_listener destroy;
-};
 
 struct e_toplevel_view
 {

@@ -23,6 +23,9 @@ struct e_xwayland;
 #include "config.h"
 
 #define E_COMPOSITOR_VERSION 6
+
+#define E_XDG_WM_BASE_VERSION 6
+
 #define E_PRESENTATION_TIME_VERSION 2
 #define E_EXT_DATA_CONTROL_V1_VERSION 1
 #define E_EXT_IMAGE_CAPTURE_SOURCE_VERSION 1
@@ -57,7 +60,9 @@ struct e_server
     struct wlr_compositor* compositor;
 
     // handles xdg shell protocol for xdg application views
-    struct e_xdg_shell* xdg_shell;
+    struct wlr_xdg_shell* xdg_shell;
+    struct wl_listener new_toplevel;
+    
     // handles wlr layer shell protocol for layer surfaces
     struct e_layer_shell* layer_shell;
 
