@@ -25,6 +25,7 @@ struct e_xwayland;
 #define E_COMPOSITOR_VERSION 6
 
 #define E_XDG_WM_BASE_VERSION 6
+#define E_LAYER_SHELL_VERSION 4
 
 #define E_PRESENTATION_TIME_VERSION 2
 #define E_EXT_DATA_CONTROL_V1_VERSION 1
@@ -64,7 +65,8 @@ struct e_server
     struct wl_listener new_toplevel;
     
     // handles wlr layer shell protocol for layer surfaces
-    struct e_layer_shell* layer_shell;
+    struct wlr_layer_shell_v1* layer_shell;
+    struct wl_listener new_layer_surface;
 
 #if E_XWAYLAND_SUPPORT
     // handles xwayland protocol, server and wm for xwayland application views
@@ -80,6 +82,9 @@ struct e_server
 
 bool e_server_init_xdg_shell(struct e_server* server);
 void e_server_fini_xdg_shell(struct e_server* server);
+
+bool e_server_init_layer_shell(struct e_server* server);
+void e_server_fini_layer_shell(struct e_server* server);
 
 int e_server_init(struct e_server* server, struct e_config* config);
 

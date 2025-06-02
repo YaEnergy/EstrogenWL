@@ -283,9 +283,18 @@ int e_server_init(struct e_server* server, struct e_config* config)
     e_desktop_set_seat(server->desktop, server->seat);
 
     //xdg shell v6, protocol for application views
-    e_server_init_xdg_shell(server);
+    if (!e_server_init_xdg_shell(server))
+    {
+        e_log_error("e_server_init: failed to init xdg shell");
+        return 1;
+    }
+
     //protocol for layer surfaces
-    server->layer_shell = e_layer_shell_create(server->display, server->desktop);
+    if (!e_server_init_layer_shell(server))
+    {
+        e_log_error("e_server_init: failed to init layer shell");
+        return 1;
+    }
 
     #if E_XWAYLAND_SUPPORT
     //create & start xwayland server, xwayland shell protocol
@@ -387,6 +396,7 @@ void e_server_fini(struct e_server* server)
     e_desktop_set_seat(server->desktop, NULL);
     
     e_server_fini_xdg_shell(server);
+    e_server_fini_layer_shell(server);
 
     e_desktop_destroy(server->desktop);
 

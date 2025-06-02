@@ -12,7 +12,7 @@
 
 #include "server.h"
 
-static void e_server_new_toplevel(struct wl_listener* listener, void* data)
+static void xdg_shell_new_toplevel(struct wl_listener* listener, void* data)
 {
     struct e_server* server = wl_container_of(listener, server, new_toplevel);
     struct wlr_xdg_toplevel* xdg_toplevel = data;
@@ -38,7 +38,7 @@ bool e_server_init_xdg_shell(struct e_server* server)
         return false;
     }
 
-    SIGNAL_CONNECT(server->xdg_shell->events.new_toplevel, server->new_toplevel, e_server_new_toplevel);
+    SIGNAL_CONNECT(server->xdg_shell->events.new_toplevel, server->new_toplevel, xdg_shell_new_toplevel);
 
     return true;
 }
