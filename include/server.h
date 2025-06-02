@@ -78,6 +78,9 @@ struct e_server
     struct e_seat* seat;
 };
 
+bool e_server_init_xdg_shell(struct e_server* server);
+void e_server_fini_xdg_shell(struct e_server* server);
+
 int e_server_init(struct e_server* server, struct e_config* config);
 
 bool e_server_start(struct e_server* server);

@@ -171,48 +171,6 @@ static void e_server_renderer_lost(struct wl_listener* listener, void* data)
     }
 }
 
-static void e_server_new_toplevel(struct wl_listener* listener, void* data)
-{
-    struct e_server* server = wl_container_of(listener, server, new_toplevel);
-
-    struct wlr_xdg_toplevel* xdg_toplevel = data;
-
-    e_log_info("New toplevel view");
-
-    //creates a top level view on the desktop
-    e_toplevel_view_create(server->desktop, xdg_toplevel);
-}
-
-static bool init_xdg_shell(struct e_server* server)
-{
-    assert(server);
-
-    if (server == NULL)
-        return false;
-
-    server->xdg_shell = wlr_xdg_shell_create(server->display, E_XDG_WM_BASE_VERSION);
-
-    if (server->xdg_shell == NULL)
-    {
-        e_log_error("init_xdg_shell: failed to create xdg shell!");
-        return false;
-    }
-
-    SIGNAL_CONNECT(server->xdg_shell->events.new_toplevel, server->new_toplevel, e_server_new_toplevel);
-
-    return true;
-}
-
-static void fini_xdg_shell(struct e_server* server)
-{
-    assert(server);
-
-    if (server == NULL)
-        return;
-
-    SIGNAL_DISCONNECT(server->new_toplevel);
-}
-
 int e_server_init(struct e_server* server, struct e_config* config)
 {
     server->config = config;
@@ -325,7 +283,7 @@ int e_server_init(struct e_server* server, struct e_config* config)
     e_desktop_set_seat(server->desktop, server->seat);
 
     //xdg shell v6, protocol for application views
-    init_xdg_shell(server);
+    e_server_init_xdg_shell(server);
     //protocol for layer surfaces
     server->layer_shell = e_layer_shell_create(server->display, server->desktop);
 
@@ -428,7 +386,7 @@ void e_server_fini(struct e_server* server)
     e_seat_destroy(server->seat);
     e_desktop_set_seat(server->desktop, NULL);
     
-    fini_xdg_shell(server);
+    e_server_fini_xdg_shell(server);
 
     e_desktop_destroy(server->desktop);
 

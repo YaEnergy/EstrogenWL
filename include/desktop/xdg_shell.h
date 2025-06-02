@@ -42,8 +42,5 @@ struct e_toplevel_view
     //TODO: request resize, fullscreen, ... events
 };
 
-// Returns NULL on fail.
-struct e_xdg_shell* e_xdg_shell_create(struct wl_display* display, struct e_desktop* desktop);
-
 //creates new top level view on desktop
 struct e_toplevel_view* e_toplevel_view_create(struct e_desktop* desktop, struct wlr_xdg_toplevel* xdg_toplevel);
