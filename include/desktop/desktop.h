@@ -80,10 +80,6 @@ void e_desktop_set_seat(struct e_desktop* desktop, struct e_seat* seat);
 
 /* outputs */
 
-// Adds the given output to the given desktop and handles its layout for it.
-// Returns desktop output on success, otherwise NULL on fail.
-struct e_output* e_desktop_add_output(struct e_desktop* desktop, struct wlr_output* output);
-
 // Get output at specified index.
 // Returns NULL on fail.
 struct e_output* e_desktop_get_output(struct e_desktop* desktop, int index);

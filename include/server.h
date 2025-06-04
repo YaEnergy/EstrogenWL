@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
@@ -79,6 +81,9 @@ struct e_server
     // collection & management of input devices: keyboard, mouse, ...
     struct e_seat* seat;
 };
+
+bool e_server_init_outputs(struct e_server* server);
+void e_server_fini_outputs(struct e_server* server);
 
 bool e_server_init_xdg_shell(struct e_server* server);
 void e_server_fini_xdg_shell(struct e_server* server);

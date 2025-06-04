@@ -59,60 +59,11 @@ static void e_server_new_input(struct wl_listener* listener, void* data)
         e_seat_add_input_device(server->desktop->seat, input);
 }
 
-static void e_server_new_output(struct wl_listener* listener, void* data)
-{
-    struct e_server* server = wl_container_of(listener, server, new_output);
-    struct wlr_output* wlr_output = data;
-
-    //non-desktop outputs such as VR are unsupported
-    if (wlr_output->non_desktop)
-    {
-        e_log_info("e_server_new_output: new unsupported non-desktop output, skipping...");
-        return;
-    }
-
-    //configure output by backend to use allocator and renderer
-    //before committing output
-    if (!wlr_output_init_render(wlr_output, server->allocator, server->renderer))
-    {
-        e_log_error("e_server_new_output: failed to init output's rendering subsystem");
-        return;
-    }
-
-    //enable state if neccessary
-    struct wlr_output_state state;
-    wlr_output_state_init(&state);
-    wlr_output_state_set_enabled(&state, true);
-
-    //set mode if backend is DRM+KMS, otherwise can't use the output
-    //automatically pick preferred mode for now
-    struct wlr_output_mode* mode = wlr_output_preferred_mode(wlr_output);
-    if (!wl_list_empty(&wlr_output->modes))
-        wlr_output_state_set_mode(&state, mode);
-
-    //apply new output state
-    wlr_output_commit_state(wlr_output, &state);
-    wlr_output_state_finish(&state);
-
-    //allocate & configure output
-    if (e_desktop_add_output(server->desktop, wlr_output) == NULL)
-    {
-        e_log_error("e_server_new_output: failed to add output to desktop!");
-        return;
-    }
-
-#if E_XWAYLAND_SUPPORT
-    if (server->xwayland != NULL)
-        e_xwayland_update_workarea(server->xwayland);
-#endif
-}
-
 static void e_server_backend_destroy(struct wl_listener* listener, void* data)
 {
     struct e_server* server = wl_container_of(listener, server, backend_destroy);
 
     SIGNAL_DISCONNECT(server->new_input);
-    SIGNAL_DISCONNECT(server->new_output);
     SIGNAL_DISCONNECT(server->backend_destroy);
 }
 
@@ -205,7 +156,6 @@ int e_server_init(struct e_server* server, struct e_config* config)
 
     //backend events
     SIGNAL_CONNECT(server->backend->events.new_input, server->new_input, e_server_new_input);
-    SIGNAL_CONNECT(server->backend->events.new_output, server->new_output, e_server_new_output);
     SIGNAL_CONNECT(server->backend->events.destroy, server->backend_destroy, e_server_backend_destroy);
 
     //renderer handles rendering
@@ -281,6 +231,12 @@ int e_server_init(struct e_server* server, struct e_config* config)
     }
 
     e_desktop_set_seat(server->desktop, server->seat);
+
+    if (!e_server_init_outputs(server))
+    {
+        e_log_error("e_server_init: failed to init outputs");
+        return 1;
+    }
 
     //xdg shell v6, protocol for application views
     if (!e_server_init_xdg_shell(server))
@@ -397,6 +353,8 @@ void e_server_fini(struct e_server* server)
     
     e_server_fini_xdg_shell(server);
     e_server_fini_layer_shell(server);
+
+    e_server_fini_outputs(server);
 
     e_desktop_destroy(server->desktop);
 
