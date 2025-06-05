@@ -35,13 +35,12 @@
 #include <wlr/types/wlr_ext_image_capture_source_v1.h>
 #include <wlr/types/wlr_ext_image_copy_capture_v1.h>
 
+#if E_XWAYLAND_SUPPORT
+#include <wlr/xwayland.h>
+#endif
+
 #include "desktop/desktop.h"
 #include "desktop/output.h"
-#include "desktop/layer_shell.h"
-#include "desktop/xdg_shell.h"
-#if E_XWAYLAND_SUPPORT
-#include "desktop/xwayland.h"
-#endif
 
 #include "util/log.h"
 #include "util/wl_macros.h"
@@ -254,7 +253,11 @@ int e_server_init(struct e_server* server, struct e_config* config)
 
     #if E_XWAYLAND_SUPPORT
     //create & start xwayland server, xwayland shell protocol
-    server->xwayland = e_xwayland_create(server->desktop, server->display, server->compositor, server->desktop->seat->wlr_seat, config->xwayland_lazy); 
+    if (!e_server_init_xwayland(server, server->seat, server->config->xwayland_lazy))
+    {
+        e_log_error("e_server_init: failed to init xwayland");
+        return 1;
+    }
     #endif
 
     //protocol to describe output regions
@@ -312,8 +315,8 @@ bool e_server_start(struct e_server* server)
     //set DISPLAY env var for xwayland server
     if (server->xwayland != NULL)
     {
-        e_log_info("xwayland DISPLAY=%s", server->xwayland->wlr_xwayland->display_name);
-        setenv("DISPLAY", server->xwayland->wlr_xwayland->display_name, true);
+        e_log_info("xwayland DISPLAY=%s", server->xwayland->display_name);
+        setenv("DISPLAY", server->xwayland->display_name, true);
     }
 #endif
 
@@ -343,7 +346,7 @@ void e_server_fini(struct e_server* server)
     SIGNAL_DISCONNECT(server->renderer_lost);
 
 #if E_XWAYLAND_SUPPORT
-    e_xwayland_destroy(server->xwayland);
+    e_server_fini_xwayland(server);
 #endif
 
     wl_display_destroy_clients(server->display);

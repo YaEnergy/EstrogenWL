@@ -17,19 +17,8 @@
 
 #include "desktop/views/view.h"
 
+struct e_server;
 struct e_desktop;
-
-// Handles xwayland shell v1 protocol, server and X11 wm.
-struct e_xwayland
-{
-    struct e_desktop* desktop;
-
-    struct wlr_xwayland* wlr_xwayland;
-
-    // XCB connection is valid.
-    struct wl_listener ready;
-    struct wl_listener new_surface;
-};
 
 // Xwayland implementation of a view.
 struct e_xwayland_view
@@ -100,19 +89,11 @@ struct e_xwayland_unmanaged
     // Xwayland surface is destroyed.
     struct wl_listener destroy;
 
-    //struct wl_list link; //desktop::unmanaged_surfaces
+    //struct wl_list link; //output::unmanaged_surfaces
 };
 
-/* xwayland functions */
-
-// Creates a struct handling xwayland shell v1 protocol, server and X11 wm.
-// Returns NULL on fail.
-struct e_xwayland* e_xwayland_create(struct e_desktop* desktop, struct wl_display* display, struct wlr_compositor* compositor, struct wlr_seat* seat, bool lazy);
-
-// Update useable geometry not covered by panels, docks, etc.
-void e_xwayland_update_workarea(struct e_xwayland* xwayland);
-
-void e_xwayland_destroy(struct e_xwayland* xwayland);
+// Update useable geometry not covered by panels, docks, etc. for xwayland.
+void e_server_update_xwayland_workareas(struct e_server* server);
 
 /* xwayland view functions */
 

@@ -16,10 +16,10 @@
 struct e_desktop;
 struct e_seat;
 
-struct e_xdg_shell;
-struct e_layer_shell;
+struct wlr_xdg_shell;
+struct wlr_layer_shell_v1;
 #if E_XWAYLAND_SUPPORT
-struct e_xwayland;
+struct wlr_xwayland;
 #endif
 
 #include "config.h"
@@ -72,7 +72,10 @@ struct e_server
 
 #if E_XWAYLAND_SUPPORT
     // handles xwayland protocol, server and wm for xwayland application views
-    struct e_xwayland* xwayland;
+    struct wlr_xwayland* xwayland;
+    // XCB connection is valid.
+    struct wl_listener xwayland_ready;
+    struct wl_listener new_xwayland_surface;
 #endif
 
     // what the user interacts with
@@ -90,6 +93,11 @@ void e_server_fini_xdg_shell(struct e_server* server);
 
 bool e_server_init_layer_shell(struct e_server* server);
 void e_server_fini_layer_shell(struct e_server* server);
+
+#if E_XWAYLAND_SUPPORT
+bool e_server_init_xwayland(struct e_server* server, struct e_seat* seat, bool lazy);
+void e_server_fini_xwayland(struct e_server* server);
+#endif
 
 int e_server_init(struct e_server* server, struct e_config* config);
 
