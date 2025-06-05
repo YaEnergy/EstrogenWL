@@ -374,10 +374,6 @@ void e_desktop_destroy(struct e_desktop* desktop)
     wlr_scene_node_destroy(&desktop->scene->tree.node);
 
     wlr_output_layout_destroy(desktop->output_layout);
-    
-    wl_list_remove(&desktop->outputs);
-
-    wl_list_remove(&desktop->views);
 
     free(desktop);
 }
