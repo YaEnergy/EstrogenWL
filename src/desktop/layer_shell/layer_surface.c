@@ -156,7 +156,6 @@ static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
 
     wlr_scene_node_set_enabled(&unmapped_layer_surface->scene_layer_surface_v1->tree->node, false);
 
-    wl_list_init(&unmapped_layer_surface->link);
     wl_list_remove(&unmapped_layer_surface->link);
 
     if (unmapped_layer_surface->output == NULL)
