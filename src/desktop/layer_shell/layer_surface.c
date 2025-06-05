@@ -156,7 +156,12 @@ static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
 
     wlr_scene_node_set_enabled(&unmapped_layer_surface->scene_layer_surface_v1->tree->node, false);
 
+    wl_list_init(&unmapped_layer_surface->link);
     wl_list_remove(&unmapped_layer_surface->link);
+
+    if (unmapped_layer_surface->output == NULL)
+        return;
+    
     e_output_arrange(unmapped_layer_surface->output);
 
     //get next topmost layer surface that requests exclusive focus, and focus on it
@@ -167,9 +172,9 @@ static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
         e_desktop_focus_layer_surface(next_layer_surface->desktop, next_layer_surface);
 }
 
-static void e_layer_surface_destroy(struct wl_listener* listener, void* data)
+static void e_layer_surface_handle_node_destroy(struct wl_listener* listener, void* data)
 {
-    struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, destroy);
+    struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, node_destroy);
 
     SIGNAL_DISCONNECT(layer_surface->new_popup);
 
@@ -177,9 +182,19 @@ static void e_layer_surface_destroy(struct wl_listener* listener, void* data)
     SIGNAL_DISCONNECT(layer_surface->map);
     SIGNAL_DISCONNECT(layer_surface->unmap);
 
-    SIGNAL_DISCONNECT(layer_surface->destroy);
+    SIGNAL_DISCONNECT(layer_surface->node_destroy);
+    SIGNAL_DISCONNECT(layer_surface->output_destroy);
 
     free(layer_surface);
+}
+
+static void e_layer_surface_handle_output_destroy(struct wl_listener* listener, void* data)
+{
+    struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, output_destroy);
+
+    layer_surface->scene_layer_surface_v1->layer_surface->output = NULL;
+    layer_surface->output = NULL;
+    wlr_layer_surface_v1_destroy(layer_surface->scene_layer_surface_v1->layer_surface);
 }
 
 // Create a layer surface for the given desktop.
@@ -239,7 +254,8 @@ struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct
     SIGNAL_CONNECT(wlr_layer_surface_v1->surface->events.map, layer_surface->map, e_layer_surface_map);
     SIGNAL_CONNECT(wlr_layer_surface_v1->surface->events.unmap, layer_surface->unmap, e_layer_surface_unmap);
 
-    SIGNAL_CONNECT(scene_layer_surface->tree->node.events.destroy, layer_surface->destroy, e_layer_surface_destroy);
+    SIGNAL_CONNECT(scene_layer_surface->tree->node.events.destroy, layer_surface->node_destroy, e_layer_surface_handle_node_destroy);
+    SIGNAL_CONNECT(wlr_layer_surface_v1->output->events.destroy, layer_surface->output_destroy, e_layer_surface_handle_output_destroy);
 
     return layer_surface;
 }
