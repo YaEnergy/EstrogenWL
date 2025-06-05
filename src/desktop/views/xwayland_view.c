@@ -372,7 +372,7 @@ static const struct e_view_impl view_xwayland_implementation = {
 
 // Creates new xwayland view on desktop.
 // Returns NULL on fail.
-struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct e_xwayland* xwayland, struct wlr_xwayland_surface* xwayland_surface)
+struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct wlr_xwayland_surface* xwayland_surface)
 {
     assert(desktop && xwayland_surface);
     
@@ -384,7 +384,6 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct
         return NULL;
     }
 
-    xwayland_view->xwayland = xwayland;
     xwayland_view->xwayland_surface = xwayland_surface;
 
     e_view_init(&xwayland_view->base, desktop, E_VIEW_XWAYLAND, xwayland_view, &view_xwayland_implementation);

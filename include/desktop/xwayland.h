@@ -118,7 +118,7 @@ void e_xwayland_destroy(struct e_xwayland* xwayland);
 
 // Creates new xwayland view on desktop.
 // Returns NULL on fail.
-struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct e_xwayland* xwayland, struct wlr_xwayland_surface* xwayland_surface);
+struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct wlr_xwayland_surface* xwayland_surface);
 
 /* xwayland unmanaged functions */
 
