@@ -61,7 +61,6 @@ static void e_output_handle_destroy(struct wl_listener* listener, void* data)
     if (output->active_workspace != NULL)
         e_workspace_set_activated(output->active_workspace, false);
     
-    wl_list_init(&output->link);
     wl_list_remove(&output->link);
 
     SIGNAL_DISCONNECT(output->frame);

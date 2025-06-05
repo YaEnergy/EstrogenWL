@@ -50,10 +50,13 @@ struct e_layer_surface
 
     // New layer popup.
     struct wl_listener new_popup;
-    // Layer surface got destroyed.
-    struct wl_listener destroy;
 
-    struct wl_list link; //e_desktop::layer_surfaces
+    // Layer scene surface was destroyed.
+    struct wl_listener node_destroy;
+    // Layer surface's output was destroyed.
+    struct wl_listener output_destroy;
+
+    struct wl_list link; //e_output::layer_surfaces
 };
 
 /* layer shell functions */
