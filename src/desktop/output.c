@@ -80,7 +80,6 @@ static void e_output_handle_destroy(struct wl_listener* listener, void* data)
     SIGNAL_DISCONNECT(output->request_state);
     SIGNAL_DISCONNECT(output->destroy);
 
-    wl_list_init(&output->link);
     wl_list_remove(&output->link);
 
     output->wlr_output->data = NULL;
@@ -111,6 +110,7 @@ struct e_output* e_output_create(struct wlr_output* wlr_output)
     output->active_workspace = NULL;
     output->usable_area = (struct wlr_box){0, 0, 0, 0};
 
+    wl_list_init(&output->link);
     wl_list_init(&output->layer_surfaces);
 
     wlr_output->data = output;
