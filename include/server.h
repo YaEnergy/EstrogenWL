@@ -13,6 +13,8 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output_layout.h>
 
+#include "config.h"
+
 struct e_desktop;
 struct e_seat;
 
@@ -21,8 +23,6 @@ struct wlr_layer_shell_v1;
 #if E_XWAYLAND_SUPPORT
 struct wlr_xwayland;
 #endif
-
-#include "config.h"
 
 #define E_COMPOSITOR_VERSION 6
 
