@@ -19,8 +19,6 @@
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_seat.h>
-#include <wlr/types/wlr_screencopy_v1.h>
-#include <wlr/types/wlr_export_dmabuf_v1.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_viewporter.h>
 #include <wlr/types/wlr_presentation_time.h>
@@ -32,8 +30,6 @@
 #include <wlr/types/wlr_xdg_foreign_v2.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
-#include <wlr/types/wlr_ext_image_capture_source_v1.h>
-#include <wlr/types/wlr_ext_image_copy_capture_v1.h>
 
 #if E_XWAYLAND_SUPPORT
 #include <wlr/xwayland.h>
@@ -194,19 +190,6 @@ int e_server_init(struct e_server* server, struct e_config* config)
     wlr_data_device_manager_create(server->display);
     
     //TODO: log more errors here
-
-    //allows clients to ask to copy part of the screen content to a client buffer, seems to be fully implemented by wlroots already
-    wlr_screencopy_manager_v1_create(server->display);
-    //low overhead screen content capturing
-    wlr_export_dmabuf_manager_v1_create(server->display);
-    
-    //more screen capturing
-    if (wlr_ext_output_image_capture_source_manager_v1_create(server->display, E_EXT_IMAGE_CAPTURE_SOURCE_VERSION) == NULL)
-        e_log_error("e_server_init: failed to create wlr ext output image capture source manager v1");
-
-    //output toplevel capturing
-    if (wlr_ext_image_copy_capture_manager_v1_create(server->display, E_EXT_IMAGE_COPY_CAPTURE_VERSION) == NULL)
-        e_log_error("e_server_init: failed to creat wlr ext image copy capture manager v1");
 
     //allows clients to control selection and take the role of a clipboard manager
     wlr_data_control_manager_v1_create(server->display);

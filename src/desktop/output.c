@@ -8,10 +8,15 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
+#include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
+
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output.h>
-#include <wlr/backend.h>
+#include <wlr/types/wlr_screencopy_v1.h>
+#include <wlr/types/wlr_export_dmabuf_v1.h>
+#include <wlr/types/wlr_ext_image_capture_source_v1.h>
+#include <wlr/types/wlr_ext_image_copy_capture_v1.h>
 
 #include <wlr/util/box.h>
 
@@ -416,7 +421,23 @@ bool e_server_init_outputs(struct e_server* server)
 
     SIGNAL_CONNECT(server->backend->events.new_output, server->new_output, server_new_output);
 
-    //TODO: move output specific protocols to here aswell (mostly copy part of output stuff)
+    //TODO: move all output specific protocols to here aswell (mostly copy part of output stuff)
+
+    //allows clients to ask to copy part of the screen content to a client buffer, seems to be fully implemented by wlroots already
+    if (wlr_screencopy_manager_v1_create(server->display) == NULL)
+        e_log_error("e_server_init_outputs: failed to create wlr screencopy manager");
+
+    //low overhead screen content capturing
+    if (wlr_export_dmabuf_manager_v1_create(server->display) == NULL)
+        e_log_error("e_server_init_outputs: failed to create wlr export dmabuf manager v1");
+    
+    //more screen capturing
+    if (wlr_ext_output_image_capture_source_manager_v1_create(server->display, E_EXT_IMAGE_CAPTURE_SOURCE_VERSION) == NULL)
+        e_log_error("e_server_init_outputs: failed to create wlr ext output image capture source manager v1");
+
+    //output toplevel capturing
+    if (wlr_ext_image_copy_capture_manager_v1_create(server->display, E_EXT_IMAGE_COPY_CAPTURE_VERSION) == NULL)
+        e_log_error("e_server_init_outputs: failed to create wlr ext image copy capture manager v1");
 
     return true;
 }
