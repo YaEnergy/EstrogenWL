@@ -214,6 +214,7 @@ static void e_desktop_remove_output(struct e_desktop* desktop, struct e_output* 
     wlr_output_layout_remove(desktop->output_layout, output->wlr_output);
 
     wl_list_remove(&output->link);
+    wl_list_init(&output->link);
 }
 
 /* scene */
