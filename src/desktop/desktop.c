@@ -30,15 +30,7 @@ static void e_desktop_init_scene(struct e_desktop* desktop)
     desktop->scene = wlr_scene_create();
     desktop->scene_layout = wlr_scene_attach_output_layout(desktop->scene, desktop->output_layout);
 
-    //create scene trees for all layers
-
-    desktop->layers.background = wlr_scene_tree_create(&desktop->scene->tree);
-    desktop->layers.bottom = wlr_scene_tree_create(&desktop->scene->tree);
-    desktop->layers.tiling = wlr_scene_tree_create(&desktop->scene->tree);
-    desktop->layers.floating = wlr_scene_tree_create(&desktop->scene->tree);
-    desktop->layers.top = wlr_scene_tree_create(&desktop->scene->tree);
-    desktop->layers.overlay = wlr_scene_tree_create(&desktop->scene->tree);
-    desktop->layers.unmanaged = wlr_scene_tree_create(&desktop->scene->tree);
+    desktop->unmanaged = wlr_scene_tree_create(&desktop->scene->tree);
 
     desktop->pending = wlr_scene_tree_create(&desktop->scene->tree);
     wlr_scene_node_set_enabled(&desktop->pending->node, false);
