@@ -27,6 +27,8 @@ struct e_output
     // Area tiled views are allowed to use.
     struct wlr_box usable_area;
 
+    struct e_list workspaces; //struct e_workspace*
+    
     // Workspace that output is currently displaying, may be NULL.
     struct e_workspace* active_workspace;
 

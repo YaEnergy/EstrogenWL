@@ -17,7 +17,6 @@
 #include "desktop/layer_shell.h"
 #include "desktop/output.h"
 
-#include "util/list.h"
 #include "util/log.h"
 
 // creates scene and scene layer trees
@@ -66,19 +65,6 @@ struct e_desktop* e_desktop_create(struct wl_display* display, struct wlr_compos
     desktop->output_layout = wlr_output_layout_create(display);
 
     e_desktop_init_scene(desktop);
-
-    //create 3 workspaces for desktop
-    e_list_init(&desktop->workspaces, 3);
-
-    for (int i = 0; i < 3; i++)
-    {
-        struct e_workspace* workspace = e_workspace_create(desktop);
-
-        if (workspace != NULL)
-            e_list_add(&desktop->workspaces, workspace);
-        else
-            e_log_error("e_desktop_create: failed to create workspace %i", i + 1);
-    }
     
     wl_list_init(&desktop->views);
 
@@ -358,17 +344,6 @@ void e_desktop_destroy(struct e_desktop* desktop)
     {
         e_output_destroy(output);
     }
-    
-    //destroy all workspaces
-    for (int i = 0; i < desktop->workspaces.count; i++)
-    {
-        struct e_workspace* workspace = e_list_at(&desktop->workspaces, i);
-
-        if (workspace != NULL)
-            e_workspace_destroy(workspace);
-    }
-
-    e_list_fini(&desktop->workspaces);
     
     //destroy root node
     wlr_scene_node_destroy(&desktop->scene->tree.node);
