@@ -84,16 +84,20 @@ struct e_server
     struct e_seat* seat;
 };
 
+// Init server output handling.
 bool e_server_init_outputs(struct e_server* server);
 void e_server_fini_outputs(struct e_server* server);
 
+// Init xdg shell handling.
 bool e_server_init_xdg_shell(struct e_server* server);
 void e_server_fini_xdg_shell(struct e_server* server);
 
+// Init layer shell handling.
 bool e_server_init_layer_shell(struct e_server* server);
 void e_server_fini_layer_shell(struct e_server* server);
 
 #if E_XWAYLAND_SUPPORT
+// Init xwayland.
 bool e_server_init_xwayland(struct e_server* server, struct e_seat* seat, bool lazy);
 void e_server_fini_xwayland(struct e_server* server);
 #endif
