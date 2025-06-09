@@ -15,22 +15,7 @@
 
 #include "output.h"
 
-#define E_LAYER_SHELL_VERSION 4
-
 struct e_desktop;
-
-// Handles protocol for arranging clients in layers.
-struct e_layer_shell
-{
-    struct e_desktop* desktop;
-
-    struct wlr_layer_shell_v1* wlr_layer_shell_v1;
-
-    // New wlr_layer_surface_v1.
-    struct wl_listener new_surface;
-
-    struct wl_listener destroy;
-};
 
 // Surfaces meant to be arranged in layers.
 struct e_layer_surface
@@ -58,12 +43,6 @@ struct e_layer_surface
 
     struct wl_list link; //e_output::layer_surfaces
 };
-
-/* layer shell functions */
-
-// Create a layer shell.
-// Returns NULL on fail.
-struct e_layer_shell* e_layer_shell_create(struct wl_display* display, struct e_desktop* desktop);
 
 /* layer surface functions */
 

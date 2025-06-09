@@ -8,10 +8,15 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
+#include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
+
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output.h>
-#include <wlr/backend.h>
+#include <wlr/types/wlr_screencopy_v1.h>
+#include <wlr/types/wlr_export_dmabuf_v1.h>
+#include <wlr/types/wlr_ext_image_capture_source_v1.h>
+#include <wlr/types/wlr_ext_image_copy_capture_v1.h>
 
 #include <wlr/util/box.h>
 
@@ -21,8 +26,11 @@
 #include "desktop/desktop.h"
 #include "desktop/layer_shell.h"
 
+#include "util/list.h"
 #include "util/log.h"
 #include "util/wl_macros.h"
+
+#include "server.h"
 
 static void e_output_frame(struct wl_listener* listener, void* data)
 {
@@ -58,23 +66,37 @@ static void e_output_handle_destroy(struct wl_listener* listener, void* data)
 {
     struct e_output* output = wl_container_of(listener, output, destroy);
 
+    if (output->scene_output != NULL)
+    {
+        wlr_scene_output_destroy(output->scene_output);
+        output->scene_output = NULL;
+    }
+
+    if (output->layout != NULL)
+    {
+        wlr_output_layout_remove(output->layout, output->wlr_output);
+        output->layout = NULL;
+    }
+
     if (output->active_workspace != NULL)
         e_workspace_set_activated(output->active_workspace, false);
-    
-    wl_list_remove(&output->link);
 
     SIGNAL_DISCONNECT(output->frame);
     SIGNAL_DISCONNECT(output->request_state);
     SIGNAL_DISCONNECT(output->destroy);
+
+    wl_list_remove(&output->link);
+
+    output->wlr_output->data = NULL;
     
     free(output);
 }
 
-struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_scene_output* scene_output)
+struct e_output* e_output_create(struct wlr_output* wlr_output)
 {
-    assert(desktop && scene_output);
+    assert(wlr_output);
 
-    if (desktop == NULL || scene_output == NULL)
+    if (wlr_output == NULL)
         return NULL;
 
     struct e_output* output = calloc(1, sizeof(*output));
@@ -85,19 +107,16 @@ struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_scene_out
         return NULL;
     }
 
-    struct wlr_output* wlr_output = scene_output->output;
-
-    output->desktop = desktop;
+    output->server = NULL;
     output->wlr_output = wlr_output;
-    output->layout = desktop->output_layout;
-    output->scene_output = scene_output;
+    output->layout = NULL;
+    output->scene_output = NULL;
 
     output->active_workspace = NULL;
     output->usable_area = (struct wlr_box){0, 0, 0, 0};
 
+    wl_list_init(&output->link);
     wl_list_init(&output->layer_surfaces);
-
-    wl_list_insert(&desktop->outputs, &output->link);
 
     wlr_output->data = output;
 
@@ -204,14 +223,16 @@ void e_output_arrange(struct e_output* output)
 {
     assert(output && output->layout);
 
+    if (output == NULL || output->layout == NULL)
+        return;
+
     struct wlr_box full_area = (struct wlr_box){0, 0, 0, 0};
     wlr_output_layout_get_box(output->layout, output->wlr_output, &full_area);
 
     //FIXME: remaining area can become too small, I'm not sure what to do in those edge cases yet
     struct wlr_box remaining_area = full_area;
 
-    if (output->desktop != NULL)
-        e_output_arrange_all_layers(output, &full_area, &remaining_area);
+    e_output_arrange_all_layers(output, &full_area, &remaining_area);
 
     if (output->active_workspace != NULL)
         e_workspace_arrange(output->active_workspace, full_area, remaining_area);
@@ -231,4 +252,202 @@ void e_output_destroy(struct e_output* output)
 
     if (output != NULL)
         wlr_output_destroy(output->wlr_output);
+}
+
+static void output_init_mode(struct wlr_output* output)
+{
+    assert(output);
+
+    if (output == NULL)
+        return;
+
+    //enable state if neccessary
+    struct wlr_output_state state;
+    wlr_output_state_init(&state);
+    wlr_output_state_set_enabled(&state, true);
+
+    //set mode if backend is DRM+KMS, otherwise can't use the output
+    //automatically pick preferred mode for now
+    struct wlr_output_mode* mode = wlr_output_preferred_mode(output);
+    if (!wl_list_empty(&output->modes))
+        wlr_output_state_set_mode(&state, mode);
+
+    //apply new output state
+    wlr_output_commit_state(output, &state);
+    wlr_output_state_finish(&state);    
+}
+
+static bool output_init_layout(struct e_desktop* desktop, struct e_output* output)
+{
+    assert(desktop && output);
+
+    if (desktop == NULL || output == NULL)
+        return false;
+
+    struct wlr_output* wlr_output = output->wlr_output;
+
+    //output layout auto adds wl_output to the display, allows wl clients to find out information about the display
+    //TODO: allow configuring the arrangement of outputs in the layout
+    struct wlr_output_layout_output* layout_output = wlr_output_layout_add_auto(desktop->output_layout, wlr_output);
+
+    if (layout_output == NULL)
+    {
+        e_log_error("e_output_init_layout: failed to add output to layout");
+        return false;
+    }
+
+    struct wlr_scene_output* scene_output = wlr_scene_output_create(desktop->scene, wlr_output);
+
+    if (scene_output == NULL)
+    {
+        e_log_error("e_output_init_layout: failed to create scene output");
+        wlr_output_layout_remove(desktop->output_layout, wlr_output);
+        return false;
+    }
+
+    wlr_scene_output_layout_add_output(desktop->scene_layout, layout_output, scene_output);
+
+    output->layout = desktop->output_layout;
+    output->scene_output = scene_output;
+
+    wl_list_insert(&desktop->outputs, &output->link);
+
+    return true;
+}
+
+static bool output_init_workspaces(struct e_server* server, struct e_output* output)
+{
+    assert(server && server->desktop && output);
+
+    if (server == NULL || server->desktop == NULL || output == NULL)
+        return false;
+
+    //TODO: create a set of workspaces for each output instead of sharing workspaces
+
+    struct e_desktop* desktop = output->server->desktop;
+
+    if (output->active_workspace == NULL)
+    {
+        // set active workspace to first inactive workspace in desktop
+        for (int i = 0; i < desktop->workspaces.count; i++)
+        {
+            struct e_workspace* workspace = e_list_at(&desktop->workspaces, i);
+
+            if (workspace != NULL && !workspace->active)
+            {
+                e_output_display_workspace(output, workspace);
+                break;
+            }
+        }
+
+        //just create new workspace for now
+        if (output->active_workspace == NULL)
+        {
+            struct e_workspace* workspace = e_workspace_create(desktop);
+
+            if (workspace != NULL)
+            {
+                e_output_display_workspace(output, workspace);
+                e_list_add(&desktop->workspaces, workspace);
+            }
+            else
+            {
+                e_log_error("e_output_init_workspaces: failed to create workspace");
+            }
+        }
+    }
+
+    e_output_arrange(output);
+
+    return true;
+}
+
+static void server_new_output(struct wl_listener* listener, void* data)
+{
+    struct e_server* server = wl_container_of(listener, server, new_output);
+    struct wlr_output* wlr_output = data;
+
+    //non-desktop outputs such as VR are unsupported
+    if (wlr_output->non_desktop)
+    {
+        e_log_info("e_server_new_output: new unsupported non-desktop output, skipping...");
+        return;
+    }
+
+    //configure output by backend to use allocator and renderer
+    //before committing output
+    if (!wlr_output_init_render(wlr_output, server->allocator, server->renderer))
+    {
+        e_log_error("e_server_new_output: failed to init output's rendering subsystem");
+        return;
+    }
+
+    output_init_mode(wlr_output);
+
+    //allocate & configure output
+    struct e_output* output = e_output_create(wlr_output);
+
+    if (output == NULL)
+    {
+        e_log_error("server_new_output: failed to create desktop output!");
+        return;
+    }
+
+    output->server = server;
+    
+    if (!output_init_layout(server->desktop, output))
+    {
+        e_log_error("server_new_output: failed to init layout!");
+        e_output_destroy(output);
+        return;
+    }
+
+    if (!output_init_workspaces(server, output))
+    {
+        e_log_info("server_new_output: failed to init workspaces");
+        e_output_destroy(output);
+        return;
+    }
+
+    //TODO: update xwayland workarea
+}
+
+bool e_server_init_outputs(struct e_server* server)
+{
+    assert(server);
+
+    if (server == NULL)
+        return false;
+
+    SIGNAL_CONNECT(server->backend->events.new_output, server->new_output, server_new_output);
+
+    //TODO: move all output specific protocols to here aswell (mostly copy part of output stuff)
+
+    //allows clients to ask to copy part of the screen content to a client buffer, seems to be fully implemented by wlroots already
+    if (wlr_screencopy_manager_v1_create(server->display) == NULL)
+        e_log_error("e_server_init_outputs: failed to create wlr screencopy manager");
+
+    //low overhead screen content capturing
+    if (wlr_export_dmabuf_manager_v1_create(server->display) == NULL)
+        e_log_error("e_server_init_outputs: failed to create wlr export dmabuf manager v1");
+    
+    //more screen capturing
+    if (wlr_ext_output_image_capture_source_manager_v1_create(server->display, E_EXT_IMAGE_CAPTURE_SOURCE_VERSION) == NULL)
+        e_log_error("e_server_init_outputs: failed to create wlr ext output image capture source manager v1");
+
+    //output toplevel capturing
+    if (wlr_ext_image_copy_capture_manager_v1_create(server->display, E_EXT_IMAGE_COPY_CAPTURE_VERSION) == NULL)
+        e_log_error("e_server_init_outputs: failed to create wlr ext image copy capture manager v1");
+
+    return true;
+}
+
+void e_server_fini_outputs(struct e_server* server)
+{
+    assert(server);
+
+    if (server == NULL)
+        return;
+
+    SIGNAL_DISCONNECT(server->new_output);
 }
