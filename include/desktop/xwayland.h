@@ -23,9 +23,6 @@ struct e_desktop;
 // Xwayland implementation of a view.
 struct e_xwayland_view
 {
-    // Created this view.
-    struct e_xwayland* xwayland;
-
     struct e_view base;
 
     struct wlr_xwayland_surface* xwayland_surface;
