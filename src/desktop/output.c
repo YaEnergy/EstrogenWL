@@ -66,6 +66,20 @@ static void e_output_handle_destroy(struct wl_listener* listener, void* data)
 {
     struct e_output* output = wl_container_of(listener, output, destroy);
 
+    if (output->active_workspace != NULL)
+        e_output_display_workspace(output, NULL);
+
+    //destroy all workspaces
+    for (int i = 0; i < output->workspaces.count; i++)
+    {
+        struct e_workspace* workspace = e_list_at(&output->workspaces, i);
+
+        if (workspace != NULL)
+            e_workspace_destroy(workspace);
+    }
+
+    e_list_fini(&output->workspaces);
+
     if (output->scene_output != NULL)
     {
         wlr_scene_output_destroy(output->scene_output);
@@ -77,9 +91,6 @@ static void e_output_handle_destroy(struct wl_listener* listener, void* data)
         wlr_output_layout_remove(output->layout, output->wlr_output);
         output->layout = NULL;
     }
-
-    if (output->active_workspace != NULL)
-        e_workspace_set_activated(output->active_workspace, false);
 
     SIGNAL_DISCONNECT(output->frame);
     SIGNAL_DISCONNECT(output->request_state);
@@ -315,47 +326,27 @@ static bool output_init_layout(struct e_desktop* desktop, struct e_output* outpu
     return true;
 }
 
-static bool output_init_workspaces(struct e_server* server, struct e_output* output)
+static bool output_init_workspaces(struct e_output* output)
 {
-    assert(server && server->desktop && output);
+    assert(output && output->server && output->layout);
 
-    if (server == NULL || server->desktop == NULL || output == NULL)
+    if (output == NULL || output->server == NULL || output->layout == NULL)
         return false;
 
-    //TODO: create a set of workspaces for each output instead of sharing workspaces
+    //create 5 workspaces for output
+    e_list_init(&output->workspaces, 5);
 
-    struct e_desktop* desktop = output->server->desktop;
-
-    if (output->active_workspace == NULL)
+    for (int i = 0; i < 5; i++)
     {
-        // set active workspace to first inactive workspace in desktop
-        for (int i = 0; i < desktop->workspaces.count; i++)
-        {
-            struct e_workspace* workspace = e_list_at(&desktop->workspaces, i);
+        struct e_workspace* workspace = e_workspace_create(output);
 
-            if (workspace != NULL && !workspace->active)
-            {
-                e_output_display_workspace(output, workspace);
-                break;
-            }
-        }
-
-        //just create new workspace for now
-        if (output->active_workspace == NULL)
-        {
-            struct e_workspace* workspace = e_workspace_create(desktop);
-
-            if (workspace != NULL)
-            {
-                e_output_display_workspace(output, workspace);
-                e_list_add(&desktop->workspaces, workspace);
-            }
-            else
-            {
-                e_log_error("e_output_init_workspaces: failed to create workspace");
-            }
-        }
+        if (workspace != NULL)
+            e_list_add(&output->workspaces, workspace);
+        else
+            e_log_error("e_output_init_workspaces: failed to create workspace %i", i + 1);
     }
+
+    e_output_display_workspace(output, e_list_at(&output->workspaces, 0));
 
     e_output_arrange(output);
 
@@ -402,7 +393,7 @@ static void server_new_output(struct wl_listener* listener, void* data)
         return;
     }
 
-    if (!output_init_workspaces(server, output))
+    if (!output_init_workspaces(output))
     {
         e_log_info("server_new_output: failed to init workspaces");
         e_output_destroy(output);

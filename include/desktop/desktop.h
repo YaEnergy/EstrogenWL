@@ -11,8 +11,6 @@
 
 #include "output.h"
 
-#include "util/list.h"
-
 struct e_config;
 struct e_seat;
 
@@ -58,8 +56,6 @@ struct e_desktop
     struct wlr_scene* scene;
     // layout of outputs in the scene
     struct wlr_scene_output_layout* scene_layout;
-
-    struct e_list workspaces; //struct e_workspace*
     
     struct e_desktop_layers layers;
 
