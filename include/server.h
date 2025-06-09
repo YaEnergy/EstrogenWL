@@ -49,7 +49,6 @@ struct e_server
     struct wlr_backend* backend;
     struct wl_listener new_input;
     struct wl_listener new_output;
-    struct wl_listener backend_destroy;
     
     // allocates memory for pixel buffers 
     struct wlr_allocator* allocator;

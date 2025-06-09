@@ -54,14 +54,6 @@ static void e_server_new_input(struct wl_listener* listener, void* data)
         e_seat_add_input_device(server->desktop->seat, input);
 }
 
-static void e_server_backend_destroy(struct wl_listener* listener, void* data)
-{
-    struct e_server* server = wl_container_of(listener, server, backend_destroy);
-
-    SIGNAL_DISCONNECT(server->new_input);
-    SIGNAL_DISCONNECT(server->backend_destroy);
-}
-
 // GPU lost, destroy and recreate renderer
 static void e_server_renderer_lost(struct wl_listener* listener, void* data)
 {
@@ -151,7 +143,6 @@ int e_server_init(struct e_server* server, struct e_config* config)
 
     //backend events
     SIGNAL_CONNECT(server->backend->events.new_input, server->new_input, e_server_new_input);
-    SIGNAL_CONNECT(server->backend->events.destroy, server->backend_destroy, e_server_backend_destroy);
 
     //renderer handles rendering
     e_log_info("creating renderer...");
@@ -326,6 +317,7 @@ void e_server_run(struct e_server* server)
 
 void e_server_fini(struct e_server* server)
 {
+    SIGNAL_DISCONNECT(server->new_input);
     SIGNAL_DISCONNECT(server->renderer_lost);
 
 #if E_XWAYLAND_SUPPORT
