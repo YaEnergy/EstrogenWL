@@ -80,6 +80,9 @@ static void e_output_handle_destroy(struct wl_listener* listener, void* data)
 
     e_list_fini(&output->workspaces);
 
+    wlr_scene_node_destroy(&output->tree->node);
+    output->tree = NULL;
+    
     if (output->scene_output != NULL)
     {
         wlr_scene_output_destroy(output->scene_output);
@@ -288,6 +291,26 @@ static void output_init_mode(struct wlr_output* output)
     wlr_output_state_finish(&state);    
 }
 
+static void output_init_scene(struct e_server* server, struct e_output* output)
+{
+    assert(output && server);
+
+    if (output == NULL || server == NULL)
+        return;
+
+    output->tree = wlr_scene_tree_create(&server->desktop->scene->tree);
+    wlr_scene_node_lower_to_bottom(&output->tree->node);
+    
+    //create scene trees for all layers
+
+    output->layers.background = wlr_scene_tree_create(output->tree);
+    output->layers.bottom = wlr_scene_tree_create(output->tree);
+    output->layers.tiling = wlr_scene_tree_create(output->tree);
+    output->layers.floating = wlr_scene_tree_create(output->tree);
+    output->layers.top = wlr_scene_tree_create(output->tree);
+    output->layers.overlay = wlr_scene_tree_create(output->tree);
+}
+
 static bool output_init_layout(struct e_desktop* desktop, struct e_output* output)
 {
     assert(desktop && output);
@@ -392,6 +415,8 @@ static void server_new_output(struct wl_listener* listener, void* data)
         e_output_destroy(output);
         return;
     }
+
+    output_init_scene(server, output);
 
     if (!output_init_workspaces(output))
     {

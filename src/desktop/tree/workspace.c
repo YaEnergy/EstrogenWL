@@ -55,12 +55,9 @@ struct e_workspace* e_workspace_create(struct e_output* output)
     }
 
     //layer trees
-    //TODO: make layer trees per output
-    struct e_desktop* desktop = output->server->desktop;
-
-    NEW_SCENE_TREE(workspace->layers.floating, desktop->layers.floating, E_NODE_DESC_WORKSPACE, workspace);
-    NEW_SCENE_TREE(workspace->layers.tiling, desktop->layers.tiling, E_NODE_DESC_WORKSPACE, workspace);
-    NEW_SCENE_TREE(workspace->layers.fullscreen, desktop->layers.overlay, E_NODE_DESC_WORKSPACE, workspace);
+    NEW_SCENE_TREE(workspace->layers.floating, output->layers.floating, E_NODE_DESC_WORKSPACE, workspace);
+    NEW_SCENE_TREE(workspace->layers.tiling, output->layers.tiling, E_NODE_DESC_WORKSPACE, workspace);
+    NEW_SCENE_TREE(workspace->layers.fullscreen, output->layers.overlay, E_NODE_DESC_WORKSPACE, workspace);
 
     e_list_init(&workspace->floating_views, 10);
 

@@ -14,6 +14,24 @@
 struct e_server;
 struct e_desktop;
 
+//see: wlr-layer-shell-unstable-v1-protocol.h @ enum zwlr_layer_shell_v1_layer
+struct e_output_desktop_layers
+{
+    //desktop background
+    struct wlr_scene_tree* background;
+    //layer shell surfaces unders views
+    struct wlr_scene_tree* bottom;
+    //tiled views
+    struct wlr_scene_tree* tiling;
+    //floating views
+    struct wlr_scene_tree* floating; 
+    //layer shell surfaces above views
+    struct wlr_scene_tree* top;
+    //layer shell surfaces that display above everything
+    //or fullscreen surfaces
+    struct wlr_scene_tree* overlay;
+};
+
 // Server compositor output region, usually a monitor, here always for a desktop. (Desktop output)
 struct e_output
 {
@@ -32,8 +50,10 @@ struct e_output
     // Workspace that output is currently displaying, may be NULL.
     struct e_workspace* active_workspace;
 
+    struct wlr_scene_tree* tree;
+    struct e_output_desktop_layers layers;
+
     struct wl_list layer_surfaces; //struct e_layer_surface*
-    //TODO: struct wl_list xwayland_unmanaged_surfaces; //struct e_xwayland_unmanaged*
 
     // Output has a new frame ready
     struct wl_listener frame;
