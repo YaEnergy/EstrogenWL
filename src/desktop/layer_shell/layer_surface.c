@@ -34,9 +34,13 @@ static void e_layer_surface_new_popup(struct wl_listener* listener, void* data)
     e_xdg_popup_create(xdg_popup, layer_surface->scene_layer_surface_v1->tree);
 }
 
+// Returns NULL on fail.
 static struct wlr_scene_tree* e_output_get_layer_tree(struct e_output* output, enum zwlr_layer_shell_v1_layer layer)
 {
     assert(output);
+
+    if (output == NULL)
+        return NULL;
 
     switch(layer)
     {
