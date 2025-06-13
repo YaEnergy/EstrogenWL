@@ -198,11 +198,11 @@ void e_commands_parse(struct e_desktop* desktop, const char* command)
             return;
         }
 
-        int i = e_list_find_index(&output->workspaces, workspace);
+        int i = e_list_find_index(&output->workspace_group.workspaces, workspace);
 
-        e_output_display_workspace(output, e_list_at(&output->workspaces, (i + 1) % output->workspaces.count));
+        e_output_display_workspace(output, e_list_at(&output->workspace_group.workspaces, (i + 1) % output->workspace_group.workspaces.count));
         e_cursor_set_focus_hover(desktop->seat->cursor);
-        e_log_info("output workspace index: %i", (i + 1) % output->workspaces.count);
+        e_log_info("output workspace index: %i", (i + 1) % output->workspace_group.workspaces.count);
     }
     //TODO: testing only, remove
     else if (strcmp(argument, "move_to_next_workspace") == 0)
@@ -222,11 +222,11 @@ void e_commands_parse(struct e_desktop* desktop, const char* command)
             return;
         }
 
-        int i = e_list_find_index(&output->workspaces, workspace);
+        int i = e_list_find_index(&output->workspace_group.workspaces, workspace);
 
-        e_view_move_to_workspace(focused_view, e_list_at(&output->workspaces, (i + 1) % output->workspaces.count));
+        e_view_move_to_workspace(focused_view, e_list_at(&output->workspace_group.workspaces, (i + 1) % output->workspace_group.workspaces.count));
         e_cursor_set_focus_hover(desktop->seat->cursor);
-        e_log_info("view workspace index: %i", (i + 1) % output->workspaces.count);
+        e_log_info("view workspace index: %i", (i + 1) % output->workspace_group.workspaces.count);
     }
     else 
     {
