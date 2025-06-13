@@ -32,6 +32,7 @@
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
 #include <wlr/types/wlr_alpha_modifier_v1.h>
+#include <wlr/types/wlr_linux_drm_syncobj_v1.h>
 
 #if E_XWAYLAND_SUPPORT
 #include <wlr/xwayland.h>
@@ -185,6 +186,18 @@ int e_server_init(struct e_server* server, struct e_config* config)
     }
 
     SIGNAL_CONNECT(server->renderer->events.lost, server->renderer_lost, e_server_renderer_lost);
+
+    int drm_fd = wlr_renderer_get_drm_fd(server->renderer);
+
+    e_log_info("drm fd: %i, renderer timeline support: %i, backend timeline support: %i", drm_fd, server->renderer->features.timeline, server->backend->features.timeline);
+
+    if (drm_fd >= 0 && server->renderer->features.timeline && server->backend->features.timeline)
+    {
+        e_log_info("Server has support for explicit synchronization! Enabling...");
+
+        if (wlr_linux_drm_syncobj_manager_v1_create(server->display, E_LINUX_DRM_SYNCOBJ_VERSION, drm_fd) == NULL)
+            e_log_error("e_server_init: server has support for explicit synchronization, but failed to create wlr_linux_drm_syncobj_manager_v1");
+    }
 
     //allocates memory for pixel buffers 
     server->allocator = wlr_allocator_autocreate(server->backend, server->renderer);

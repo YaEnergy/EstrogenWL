@@ -36,6 +36,8 @@ struct e_cosmic_workspace_manager;
 #define E_EXT_IMAGE_CAPTURE_SOURCE_VERSION 1
 #define E_EXT_IMAGE_COPY_CAPTURE_VERSION 1
 
+#define E_LINUX_DRM_SYNCOBJ_VERSION 1
+
 #define E_COSMIC_WORKSPACE_VERSION 2
 
 // main struct handling:
