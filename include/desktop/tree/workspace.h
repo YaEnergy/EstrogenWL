@@ -44,6 +44,8 @@ struct e_workspace
     struct e_tree_container* root_tiling_container;
 
     struct e_list floating_views; //struct e_view*
+
+    struct e_cosmic_workspace* cosmic_handle;
 };
 
 // Create a new workspace for an output.

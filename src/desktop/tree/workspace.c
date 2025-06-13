@@ -17,6 +17,8 @@
 #include "util/list.h"
 #include "util/log.h"
 
+#include "protocols/cosmic-workspace-v1.h"
+
 #include "server.h"
 
 #define NEW_SCENE_TREE(tree, parent, type, data) tree = wlr_scene_tree_create(parent); e_node_desc_create(&tree->node, type, data);
@@ -54,6 +56,17 @@ struct e_workspace* e_workspace_create(struct e_output* output)
         return NULL;
     }
 
+    workspace->cosmic_handle = e_cosmic_workspace_create(output->workspace_group.cosmic_handle);
+
+    if (workspace->cosmic_handle == NULL)
+    {
+        e_tree_container_destroy(workspace->root_tiling_container);
+        free(workspace);
+        
+        e_log_error("e_workspace_create: failed to create cosmic workspace handle!");
+        return NULL;
+    }
+
     //layer trees
     NEW_SCENE_TREE(workspace->layers.floating, output->layers.floating, E_NODE_DESC_WORKSPACE, workspace);
     NEW_SCENE_TREE(workspace->layers.tiling, output->layers.tiling, E_NODE_DESC_WORKSPACE, workspace);
@@ -69,6 +82,8 @@ struct e_workspace* e_workspace_create(struct e_output* output)
 // Enable/disable workspace trees.
 void e_workspace_set_activated(struct e_workspace* workspace, bool activated)
 {
+    assert(workspace);
+
     if (workspace == NULL)
     {
         e_log_error("e_workspace_set_activated: workspace is NULL!");
@@ -77,6 +92,9 @@ void e_workspace_set_activated(struct e_workspace* workspace, bool activated)
 
     workspace->active = activated;
     e_workspace_update_tree_visibility(workspace);
+
+    e_cosmic_workspace_set_active(workspace->cosmic_handle, activated);
+    e_cosmic_workspace_set_hidden(workspace->cosmic_handle, !activated);
 }
 
 // Arranges a workspace's children to fit within the given area.
@@ -172,11 +190,14 @@ struct e_workspace* e_workspace_try_from_node_ancestors(struct wlr_scene_node* n
 // Destroy the workspace.
 void e_workspace_destroy(struct e_workspace* workspace)
 {
+    assert(workspace);
+
     if (workspace == NULL)
     {
         e_log_error("e_workspace_destroy: workspace is NULL!");
         return;
     }
+    e_cosmic_workspace_remove(workspace->cosmic_handle);
 
     e_tree_container_destroy(workspace->root_tiling_container);
     workspace->root_tiling_container = NULL;
