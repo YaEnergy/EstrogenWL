@@ -11,12 +11,31 @@
 
 #include "desktop/tree/workspace.h"
 
+struct e_server;
 struct e_desktop;
 
-// Compositor output region, usually a monitor, for a desktop. (Desktop output)
+//see: wlr-layer-shell-unstable-v1-protocol.h @ enum zwlr_layer_shell_v1_layer
+struct e_output_desktop_layers
+{
+    //desktop background
+    struct wlr_scene_tree* background;
+    //layer shell surfaces unders views
+    struct wlr_scene_tree* bottom;
+    //tiled views
+    struct wlr_scene_tree* tiling;
+    //floating views
+    struct wlr_scene_tree* floating; 
+    //layer shell surfaces above views
+    struct wlr_scene_tree* top;
+    //layer shell surfaces that display above everything
+    //or fullscreen surfaces
+    struct wlr_scene_tree* overlay;
+};
+
+// Server compositor output region, usually a monitor, here always for a desktop. (Desktop output)
 struct e_output
 {
-    struct e_desktop* desktop;
+    struct e_server* server;
     
     struct wlr_output* wlr_output;
 
@@ -26,11 +45,15 @@ struct e_output
     // Area tiled views are allowed to use.
     struct wlr_box usable_area;
 
+    struct e_list workspaces; //struct e_workspace*
+    
     // Workspace that output is currently displaying, may be NULL.
     struct e_workspace* active_workspace;
 
+    struct wlr_scene_tree* tree;
+    struct e_output_desktop_layers layers;
+
     struct wl_list layer_surfaces; //struct e_layer_surface*
-    //TODO: struct wl_list xwayland_unmanaged_surfaces; //struct e_xwayland_unmanaged*
 
     // Output has a new frame ready
     struct wl_listener frame;
@@ -43,7 +66,8 @@ struct e_output
     struct wl_list link; //e_desktop::outputs
 };
 
-struct e_output* e_output_create(struct e_desktop* desktop, struct wlr_scene_output* scene_output);
+// Returns NULL on fail.
+struct e_output* e_output_create(struct wlr_output* output);
 
 // Get topmost layer surface that requests exclusive focus.
 // Returns NULL if none.

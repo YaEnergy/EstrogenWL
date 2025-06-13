@@ -15,7 +15,7 @@
 
 #include "util/list.h"
 
-struct e_desktop;
+struct e_output;
 struct e_view;
 
 // A group of workspaces, bound to a specific set of outputs. (In our case will always be just 1)
@@ -41,7 +41,7 @@ struct e_workspace_layers
 // A virtual desktop, containing a group of views that can be displayed with by a single output.
 struct e_workspace
 {
-    struct e_desktop* desktop;
+    struct e_output* output;
 
     // Is an output displaying this workspace?
     bool active;
@@ -60,9 +60,9 @@ struct e_workspace
     struct e_list floating_views; //struct e_view*
 };
 
-// Create a new workspace for desktop.
+// Create a new workspace for an output.
 // Returns NULL on fail.
-struct e_workspace* e_workspace_create(struct e_desktop* desktop);
+struct e_workspace* e_workspace_create(struct e_output* output);
 
 // Enable/disable workspace trees.
 void e_workspace_set_activated(struct e_workspace* workspace, bool activated);

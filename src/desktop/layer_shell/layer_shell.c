@@ -14,10 +14,12 @@
 
 #include "desktop/desktop.h"
 
+#include "server.h"
+
 // New wlr_layer_surface_v1.
-static void e_layer_shell_new_surface(struct wl_listener* listener, void* data)
+static void layer_shell_new_layer_surface(struct wl_listener* listener, void* data)
 {
-    struct e_layer_shell* layer_shell = wl_container_of(listener, layer_shell, new_surface);
+    struct e_server* server = wl_container_of(listener, server, new_layer_surface);
     struct wlr_layer_surface_v1* layer_surface = data;
 
     //TODO: if output is NULL, set to the latest focused output
@@ -25,11 +27,11 @@ static void e_layer_shell_new_surface(struct wl_listener* listener, void* data)
     //output may be null
     if (layer_surface->output == NULL)
     {
-        struct e_output* output = e_desktop_get_output(layer_shell->desktop, 0);
+        struct e_output* output = e_desktop_get_output(server->desktop, 0);
 
         if (output == NULL)
         {
-            e_log_error("Desktop has no output! Destroying layer surface");
+            e_log_error("layer_shell_new_layer_surface: desktop has no output! Destroying layer surface");
             wlr_layer_surface_v1_destroy(layer_surface);
             return;
         }
@@ -37,46 +39,44 @@ static void e_layer_shell_new_surface(struct wl_listener* listener, void* data)
         layer_surface->output = output->wlr_output;
     }
     
-    if (e_layer_surface_create(layer_shell->desktop, layer_surface) == NULL)
+    if (e_layer_surface_create(server->desktop, layer_surface) == NULL)
     {
-        e_log_error("e_layer_shell_new_surface: failed to create layer surface");
+        e_log_error("layer_shell_new_layer_surface: failed to create layer surface");
         wlr_layer_surface_v1_destroy(layer_surface);
         return;
     }
 }
 
-static void e_layer_shell_destroy(struct wl_listener* listener, void* data)
-{
-    struct e_layer_shell* layer_shell = wl_container_of(listener, layer_shell, destroy);
-
-    SIGNAL_DISCONNECT(layer_shell->new_surface);
-    SIGNAL_DISCONNECT(layer_shell->destroy);
-
-    free(layer_shell);
-}
-
 // Create a layer shell.
 // Returns NULL on fail.
-struct e_layer_shell* e_layer_shell_create(struct wl_display* display, struct e_desktop* desktop)
+bool e_server_init_layer_shell(struct e_server* server)
 {
-    assert(display && desktop);
+    assert(server);
+    
+    if (server == NULL)
+        return false;
 
-    struct e_layer_shell* layer_shell = calloc(1, sizeof(*layer_shell));
+    server->layer_shell = wlr_layer_shell_v1_create(server->display, E_LAYER_SHELL_VERSION);
 
-    if (layer_shell == NULL)
+    if (server->layer_shell == NULL)
     {
-        e_log_error("e_layer_shell_create: failed to alloc e_layer_shell");
-        return NULL;
+        e_log_error("e_server_init_layer_shell: failed to create layer shell!");
+        return false;
     }
-
-    layer_shell->desktop = desktop;
-
-    layer_shell->wlr_layer_shell_v1 = wlr_layer_shell_v1_create(display, E_LAYER_SHELL_VERSION);
 
     //events
 
-    SIGNAL_CONNECT(layer_shell->wlr_layer_shell_v1->events.new_surface, layer_shell->new_surface, e_layer_shell_new_surface);
-    SIGNAL_CONNECT(layer_shell->wlr_layer_shell_v1->events.destroy, layer_shell->destroy, e_layer_shell_destroy);
+    SIGNAL_CONNECT(server->layer_shell->events.new_surface, server->new_layer_surface, layer_shell_new_layer_surface);
 
-    return layer_shell;
+    return true;
+}
+
+void e_server_fini_layer_shell(struct e_server* server)
+{
+    assert(server);
+
+    if (server == NULL)
+        return;
+
+    SIGNAL_DISCONNECT(server->new_layer_surface);
 }
