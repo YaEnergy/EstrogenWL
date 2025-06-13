@@ -71,4 +71,117 @@ static void e_ext_workspace_manager_schedule_done_event(struct e_ext_workspace_m
 
 /* workspace manager interface */
 
+// Handle all requested operations at once.
+static void e_ext_workspace_manager_commit(struct wl_client* client, struct wl_resource* resource)
+{
+    //TODO: e_cosmic_workspace_manager_commit
+}
+
+// Clients no longer wants to receive events.
+static void e_ext_workspace_manager_stop(struct wl_client* client, struct wl_resource* resource)
+{
+    //TODO: e_ext_workspace_manager_stop
+}
+
+static const struct ext_workspace_manager_v1_interface workspace_manager_interface = {
+    .commit = e_ext_workspace_manager_commit,
+    .stop = e_ext_workspace_manager_stop
+};
+
+
 /* workspace manager */
+
+static void e_ext_workspace_manager_resource_destroy(struct wl_resource* resource)
+{
+    wl_list_remove(wl_resource_get_link(resource));
+}
+
+// Client wants to bind to manager's global.
+static void e_ext_workspace_manager_bind(struct wl_client* client, void* data, uint32_t version, uint32_t id)
+{
+    struct e_ext_workspace_manager* manager = data;
+
+    struct wl_resource* resource = wl_resource_create(client, &ext_workspace_manager_v1_interface, version, id);
+
+    wl_resource_set_implementation(resource, &workspace_manager_interface, manager, e_ext_workspace_manager_resource_destroy);
+    
+    wl_list_insert(&manager->resources, wl_resource_get_link(resource));
+
+    //TODO: create resources for every group + send events
+
+    //TODO: create resources for every workspace + send events
+
+    ext_workspace_manager_v1_send_done(resource);
+}
+
+static void e_ext_workspace_manager_display_destroy(struct wl_listener* listener, void* data)
+{
+    struct e_ext_workspace_manager* manager = wl_container_of(listener, manager, listeners.display_destroy);
+
+    wl_signal_emit_mutable(&manager->events.destroy, NULL);
+
+    //destroy all groups
+    struct e_ext_workspace_group* group;
+    struct e_ext_workspace_group* tmp_group;
+    wl_list_for_each_safe(group, tmp_group, &manager->groups, link)
+    {
+        //TODO: e_ext_workspace_group_remove(group);
+    }
+
+    //destroy all workspaces
+    struct e_ext_workspace* workspace;
+    struct e_ext_workspace* tmp_workspace;
+    wl_list_for_each_safe(workspace, tmp_workspace, &manager->workspaces, manager_link)
+    {
+        //TODO: e_ext_workspace_remove(group);
+    }
+
+    e_trans_session_clear(&manager->trans_session);
+
+    SIGNAL_DISCONNECT(manager->listeners.display_destroy);
+
+    wl_global_remove(manager->global);
+    wl_global_destroy(manager->global);
+
+    free(manager);
+}
+
+// Returns NULL on fail.
+struct e_ext_workspace_manager* e_ext_workspace_manager_create(struct wl_display* display, uint32_t version, uint32_t capabilities)
+{
+    assert(version <= EXT_WORKSPACE_V1_VERSION);
+
+    if (display == NULL)
+        return NULL;
+
+    struct e_ext_workspace_manager* manager = calloc(1, sizeof(*manager));
+
+    if (manager == NULL)
+        return NULL;
+
+    manager->event_loop = wl_display_get_event_loop(display);
+    manager->done_idle_event = NULL;
+    manager->capabilities = capabilities;
+    manager->global = wl_global_create(display, &ext_workspace_manager_v1_interface, version, manager, e_ext_workspace_manager_bind);
+
+    if (manager->global == NULL)
+    {
+        free(manager);
+        return NULL;
+    }
+
+    wl_list_init(&manager->resources);
+    wl_list_init(&manager->groups);
+    wl_list_init(&manager->workspaces);
+    e_trans_session_init(&manager->trans_session);
+
+    //init events
+
+    wl_signal_init(&manager->events.destroy);
+
+    //destroy automatically on destruction of display
+    manager->listeners.display_destroy.notify = e_ext_workspace_manager_display_destroy;
+    wl_display_add_destroy_listener(display, &manager->listeners.display_destroy);
+    
+    return manager;
+}
