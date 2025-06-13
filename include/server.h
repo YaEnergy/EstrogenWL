@@ -42,6 +42,15 @@ struct e_server
 {
     struct e_config* config;
 
+    struct wl_event_loop* event_loop;
+
+    //event sources
+    struct
+    {
+        struct wl_event_source* sigint;
+        struct wl_event_source* sigterm;
+    } sources;
+
     // handles accepting clients from Unix socket, managing wl globals, ...
     struct wl_display* display;
 
@@ -107,5 +116,7 @@ int e_server_init(struct e_server* server, struct e_config* config);
 bool e_server_start(struct e_server* server);
 
 void e_server_run(struct e_server* server);
+
+void e_server_terminate(struct e_server* server);
 
 void e_server_fini(struct e_server* server);

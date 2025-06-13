@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -29,7 +28,7 @@ static bool bind_keybind(struct e_list* keybinds, xkb_keysym_t keysym, enum wlr_
 }
 
 // Called when event loop is ready.
-static void event_loop_ready(void* data)
+static void event_loop_handle_ready(void* data)
 {
     e_log_info("event loop is ready!");
 
@@ -93,7 +92,7 @@ int main()
     //so when event loop is ready
     struct wl_event_loop* event_loop = wl_display_get_event_loop(server.display);
 
-    if (event_loop == NULL || wl_event_loop_add_idle(event_loop, event_loop_ready, NULL) == NULL)
+    if (event_loop == NULL || wl_event_loop_add_idle(event_loop, event_loop_handle_ready, NULL) == NULL)
         e_log_error("main: failed to add autostart.sh event");
 
     e_server_run(&server);

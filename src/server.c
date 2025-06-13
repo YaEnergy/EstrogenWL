@@ -1,5 +1,6 @@
 #include "server.h"
 
+#include <signal.h>
 #include <stdlib.h>
 #include <assert.h>
 
@@ -45,6 +46,14 @@
 #include "input/seat.h"
 
 #include "config.h"
+
+// Handle signals that we use to terminate the server.
+static int e_server_handle_signal_terminate(int signal, void* data)
+{
+    struct e_server* server = data;
+    e_server_terminate(server);
+    return 0;
+}
 
 static void e_server_new_input(struct wl_listener* listener, void* data)
 {
@@ -112,6 +121,11 @@ static void e_server_renderer_lost(struct wl_listener* listener, void* data)
 
 int e_server_init(struct e_server* server, struct e_config* config)
 {
+    assert(server && config);
+
+    if (server == NULL || config == NULL)
+        return 1;
+
     server->config = config;
 
     //handles accepting clients from Unix socket, managing wl globals, ...
@@ -124,6 +138,13 @@ int e_server_init(struct e_server* server, struct e_config* config)
         return 1;
     }
 
+    server->event_loop = wl_display_get_event_loop(server->display);
+
+    //handle event source signals
+    server->sources.sigint = wl_event_loop_add_signal(server->event_loop, SIGINT, e_server_handle_signal_terminate, server);
+    server->sources.sigterm = wl_event_loop_add_signal(server->event_loop, SIGTERM, e_server_handle_signal_terminate, server);
+    //TODO: sighup & sigchld?
+
     //according to wayfire (who discovered this), for this to work inside of gtk apps this must be one of the first globals
     //I read this inside labwc
     //Allows a shortcut for pasting text, usually middle click
@@ -134,7 +155,7 @@ int e_server_init(struct e_server* server, struct e_config* config)
 
     //backend handles input and output hardware, autocreate automatically creates the backend we want
     e_log_info("creating backend...");
-    server->backend = wlr_backend_autocreate(wl_display_get_event_loop(server->display), NULL);
+    server->backend = wlr_backend_autocreate(server->event_loop, NULL);
 
     if (server->backend == NULL)
     {
@@ -316,14 +337,39 @@ bool e_server_start(struct e_server* server)
 
 void e_server_run(struct e_server* server)
 {
+    assert(server);
+
+    if (server == NULL)
+        return;
+
     e_log_info("running wl display...");
     wl_display_run(server->display);
 }
 
+void e_server_terminate(struct e_server* server)
+{
+    assert(server);
+
+    if (server == NULL)
+        return;
+
+    e_log_info("terminating server's wl display");
+    wl_display_terminate(server->display);
+}
+
 void e_server_fini(struct e_server* server)
 {
+    assert(server);
+
+    if (server == NULL)
+        return;
+
     SIGNAL_DISCONNECT(server->new_input);
     SIGNAL_DISCONNECT(server->renderer_lost);
+
+    //remove event source signals
+    wl_event_source_remove(server->sources.sigint);
+    wl_event_source_remove(server->sources.sigterm);
 
 #if E_XWAYLAND_SUPPORT
     e_server_fini_xwayland(server);
