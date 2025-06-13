@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include <wayland-server-core.h>
 #include <wayland-util.h>
 
 #include <wlr/types/wlr_scene.h>
@@ -16,12 +17,21 @@
 
 #include "util/list.h"
 #include "util/log.h"
+#include "util/wl_macros.h"
 
 #include "protocols/cosmic-workspace-v1.h"
 
 #include "server.h"
 
 #define NEW_SCENE_TREE(tree, parent, type, data) tree = wlr_scene_tree_create(parent); e_node_desc_create(&tree->node, type, data);
+
+static void e_workspace_cosmic_request_activate(struct wl_listener* listener, void* data)
+{
+    struct e_workspace* workspace = wl_container_of(listener, workspace, cosmic_request_activate);
+
+    if (workspace->output != NULL && !workspace->active)
+        e_output_display_workspace(workspace->output, workspace);
+}
 
 // Create a new workspace for an output.
 // Returns NULL on fail.
@@ -66,6 +76,8 @@ struct e_workspace* e_workspace_create(struct e_output* output)
         e_log_error("e_workspace_create: failed to create cosmic workspace handle!");
         return NULL;
     }
+
+    SIGNAL_CONNECT(workspace->cosmic_handle->events.request_activate, workspace->cosmic_request_activate, e_workspace_cosmic_request_activate);
 
     //layer trees
     NEW_SCENE_TREE(workspace->layers.floating, output->layers.floating, E_NODE_DESC_WORKSPACE, workspace);
@@ -197,6 +209,8 @@ void e_workspace_destroy(struct e_workspace* workspace)
         e_log_error("e_workspace_destroy: workspace is NULL!");
         return;
     }
+
+    SIGNAL_DISCONNECT(workspace->cosmic_request_activate);
     e_cosmic_workspace_remove(workspace->cosmic_handle);
 
     e_tree_container_destroy(workspace->root_tiling_container);

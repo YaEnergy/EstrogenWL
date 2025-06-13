@@ -46,6 +46,8 @@ struct e_workspace
     struct e_list floating_views; //struct e_view*
 
     struct e_cosmic_workspace* cosmic_handle;
+
+    struct wl_listener cosmic_request_activate;
 };
 
 // Create a new workspace for an output.
