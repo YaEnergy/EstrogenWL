@@ -80,7 +80,8 @@ static void e_ext_workspace_manager_commit(struct wl_client* client, struct wl_r
 // Clients no longer wants to receive events.
 static void e_ext_workspace_manager_stop(struct wl_client* client, struct wl_resource* resource)
 {
-    //TODO: e_ext_workspace_manager_stop
+    ext_workspace_manager_v1_send_finished(resource);
+    wl_resource_destroy(resource);
 }
 
 static const struct ext_workspace_manager_v1_interface workspace_manager_interface = {
