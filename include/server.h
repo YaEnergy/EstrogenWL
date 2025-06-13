@@ -34,6 +34,8 @@ struct wlr_xwayland;
 #define E_EXT_IMAGE_CAPTURE_SOURCE_VERSION 1
 #define E_EXT_IMAGE_COPY_CAPTURE_VERSION 1
 
+#define E_LINUX_DRM_SYNCOBJ_VERSION 1
+
 // main struct handling:
 //  - backend (wl_display, wlr_backend, wlr_allocator, wlr_renderer, shells, protocols ...)
 //  - frontend (e_desktop)
