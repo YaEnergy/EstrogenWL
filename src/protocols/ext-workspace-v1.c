@@ -20,7 +20,7 @@
 #include "ext-workspace-v1-protocol.h"
 
 //REF 1: https://wayland-book.com/registry/server-side.html
-//REF 2: https://wayland.app/protocols/cosmic-workspace-unstable-v1
+//REF 2: https://wayland.app/protocols/ext-workspace-v1
 //REF 3: labwc
 
 enum manager_op_type
