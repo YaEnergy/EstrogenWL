@@ -90,9 +90,7 @@ int main()
 
     //run autostart script when event loop is ready, removed automatically when dispatched
     //so when event loop is ready
-    struct wl_event_loop* event_loop = wl_display_get_event_loop(server.display);
-
-    if (event_loop == NULL || wl_event_loop_add_idle(event_loop, event_loop_handle_ready, NULL) == NULL)
+    if (server.event_loop == NULL || wl_event_loop_add_idle(server.event_loop, event_loop_handle_ready, NULL) == NULL)
         e_log_error("main: failed to add autostart.sh event");
 
     e_server_run(&server);
