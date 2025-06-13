@@ -45,6 +45,8 @@
 
 #include "input/seat.h"
 
+#include "protocols/cosmic-workspace-v1.h"
+
 #include "config.h"
 
 // Handle signals that we use to terminate the server.
@@ -287,6 +289,14 @@ int e_server_init(struct e_server* server, struct e_config* config)
     //allow clients to set a factor for the alpha values on a surface
     if (wlr_alpha_modifier_v1_create(server->display) == NULL)
         e_log_error("e_server_init: failed to create wlr alpha modifier v1");
+
+    server->cosmic_workspace_manager = e_cosmic_workspace_manager_create(server->display, E_COSMIC_WORKSPACE_VERSION, E_COSMIC_WORKSPACE_CAPABILITY_ACTIVATE);
+
+    if (server->cosmic_workspace_manager == NULL)
+    {
+        e_log_error("e_server_init: failed to create cosmic workspace manager");
+        return 1;
+    }
 
     //allows clients to reference surfaces of other clients
     struct wlr_xdg_foreign_registry* foreign_registry = wlr_xdg_foreign_registry_create(server->display);
