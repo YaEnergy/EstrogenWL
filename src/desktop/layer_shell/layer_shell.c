@@ -22,16 +22,14 @@ static void layer_shell_new_layer_surface(struct wl_listener* listener, void* da
     struct e_server* server = wl_container_of(listener, server, new_layer_surface);
     struct wlr_layer_surface_v1* layer_surface = data;
 
-    //TODO: if output is NULL, set to the latest focused output
-
     //output may be null
     if (layer_surface->output == NULL)
     {
-        struct e_output* output = e_desktop_get_output(server->desktop, 0);
+        struct e_output* output = e_desktop_hovered_output(server->desktop);
 
         if (output == NULL)
         {
-            e_log_error("layer_shell_new_layer_surface: desktop has no output! Destroying layer surface");
+            e_log_error("layer_shell_new_layer_surface: layer surface output is NULL and not hovering over an output! Destroying layer surface");
             wlr_layer_surface_v1_destroy(layer_surface);
             return;
         }
