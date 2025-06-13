@@ -30,6 +30,8 @@
 #include "util/log.h"
 #include "util/wl_macros.h"
 
+#include "protocols/cosmic-workspace-v1.h"
+
 #include "server.h"
 
 static void e_output_frame(struct wl_listener* listener, void* data)
@@ -62,23 +64,36 @@ static void e_output_request_state(struct wl_listener* listener, void* data)
         e_log_error("Failed to commit output request state");
 }
 
-static void e_output_handle_destroy(struct wl_listener* listener, void* data)
+static void output_fini_workspaces(struct e_output* output)
 {
-    struct e_output* output = wl_container_of(listener, output, destroy);
+    assert(output);
+
+    if (output == NULL)
+        return;
 
     if (output->active_workspace != NULL)
         e_output_display_workspace(output, NULL);
 
     //destroy all workspaces
-    for (int i = 0; i < output->workspaces.count; i++)
+    for (int i = 0; i < output->workspace_group.workspaces.count; i++)
     {
-        struct e_workspace* workspace = e_list_at(&output->workspaces, i);
-
+        struct e_workspace* workspace = e_list_at(&output->workspace_group.workspaces, i);
+        
         if (workspace != NULL)
             e_workspace_destroy(workspace);
     }
 
-    e_list_fini(&output->workspaces);
+    e_list_fini(&output->workspace_group.workspaces);
+
+    e_cosmic_workspace_group_output_leave(output->workspace_group.cosmic_handle, output->wlr_output);
+    e_cosmic_workspace_group_remove(output->workspace_group.cosmic_handle);
+}
+
+static void e_output_handle_destroy(struct wl_listener* listener, void* data)
+{
+    struct e_output* output = wl_container_of(listener, output, destroy);
+
+    output_fini_workspaces(output);
 
     wlr_scene_node_destroy(&output->tree->node);
     output->tree = NULL;
@@ -356,20 +371,23 @@ static bool output_init_workspaces(struct e_output* output)
     if (output == NULL || output->server == NULL || output->layout == NULL)
         return false;
 
+    output->workspace_group.cosmic_handle = e_cosmic_workspace_group_create(output->server->cosmic_workspace_manager);
+    e_cosmic_workspace_group_output_enter(output->workspace_group.cosmic_handle, output->wlr_output);
+
     //create 5 workspaces for output
-    e_list_init(&output->workspaces, 5);
+    e_list_init(&output->workspace_group.workspaces, 5);
 
     for (int i = 0; i < 5; i++)
     {
         struct e_workspace* workspace = e_workspace_create(output);
 
         if (workspace != NULL)
-            e_list_add(&output->workspaces, workspace);
+            e_list_add(&output->workspace_group.workspaces, workspace);
         else
             e_log_error("e_output_init_workspaces: failed to create workspace %i", i + 1);
     }
 
-    e_output_display_workspace(output, e_list_at(&output->workspaces, 0));
+    e_output_display_workspace(output, e_list_at(&output->workspace_group.workspaces, 0));
 
     e_output_arrange(output);
 
