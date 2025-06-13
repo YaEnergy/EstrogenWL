@@ -54,6 +54,9 @@ struct e_workspace
 // Returns NULL on fail.
 struct e_workspace* e_workspace_create(struct e_output* output);
 
+// Set name of workspace.
+void e_workspace_set_name(struct e_workspace* workspace, const char* name);
+
 // Enable/disable workspace trees.
 void e_workspace_set_activated(struct e_workspace* workspace, bool activated);
 

@@ -1,6 +1,7 @@
 #include "desktop/tree/workspace.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
 #include <wayland-server-core.h>
@@ -89,6 +90,18 @@ struct e_workspace* e_workspace_create(struct e_output* output)
     e_workspace_set_activated(workspace, false);
 
     return workspace;
+}
+
+// Set name of workspace.
+void e_workspace_set_name(struct e_workspace* workspace, const char* name)
+{
+    assert(workspace && name);
+
+    if (workspace == NULL || name == NULL)
+        return;
+
+    if (workspace->cosmic_handle->name == NULL || strcmp(workspace->cosmic_handle->name, name) != 0)
+        e_cosmic_workspace_set_name(workspace->cosmic_handle, name);
 }
 
 // Enable/disable workspace trees.

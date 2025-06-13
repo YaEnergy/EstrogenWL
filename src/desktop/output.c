@@ -1,5 +1,6 @@
 #include "desktop/output.h"
 
+#include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -380,6 +381,11 @@ static bool output_init_workspaces(struct e_output* output)
     for (int i = 0; i < 5; i++)
     {
         struct e_workspace* workspace = e_workspace_create(output);
+
+        //give number names
+        char name[16];
+        snprintf(name, sizeof(name), "%i", i + 1);
+        e_workspace_set_name(workspace, name);
 
         if (workspace != NULL)
             e_list_add(&output->workspace_group.workspaces, workspace);
