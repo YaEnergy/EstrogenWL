@@ -9,20 +9,7 @@
 
 #include "views/view.h"
 
-#define E_XDG_WM_BASE_VERSION 6
-
 struct e_desktop;
-
-struct e_xdg_shell
-{
-    struct wlr_xdg_shell* xdg_shell;
-    struct e_desktop* desktop;
-
-    //clients create new top level view
-    struct wl_listener new_toplevel_view;
-
-    struct wl_listener destroy;
-};
 
 struct e_toplevel_view
 {
@@ -54,9 +41,6 @@ struct e_toplevel_view
 
     //TODO: request resize, fullscreen, ... events
 };
-
-// Returns NULL on fail.
-struct e_xdg_shell* e_xdg_shell_create(struct wl_display* display, struct e_desktop* desktop);
 
 //creates new top level view on desktop
 struct e_toplevel_view* e_toplevel_view_create(struct e_desktop* desktop, struct wlr_xdg_toplevel* xdg_toplevel);

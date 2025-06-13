@@ -11,33 +11,11 @@
 
 #include "output.h"
 
-#include "util/list.h"
-
 struct e_config;
 struct e_seat;
 
 struct e_view;
 struct e_layer_surface;
-
-//see: wlr-layer-shell-unstable-v1-protocol.h @ enum zwlr_layer_shell_v1_layer
-struct e_desktop_layers
-{
-    //desktop background
-    struct wlr_scene_tree* background;
-    //layer shell surfaces unders views
-    struct wlr_scene_tree* bottom;
-    //tiled views
-    struct wlr_scene_tree* tiling;
-    //floating views
-    struct wlr_scene_tree* floating; 
-    //layer shell surfaces above views
-    struct wlr_scene_tree* top;
-    //layer shell surfaces that display above everything
-    //or fullscreen surfaces
-    struct wlr_scene_tree* overlay;
-    // Xwayland unmanaged surfaces.
-    struct wlr_scene_tree* unmanaged;
-};
 
 // main struct handling what is visible to the user (root tree, outputs) & input (seat).
 // basically for clients to make themselves visible and what views and layer surfaces need to communicate with.
@@ -58,10 +36,11 @@ struct e_desktop
     struct wlr_scene* scene;
     // layout of outputs in the scene
     struct wlr_scene_output_layout* scene_layout;
+    
+    // Xwayland unmanaged surfaces.
+    struct wlr_scene_tree* unmanaged;
 
     struct e_list workspaces; //struct e_workspace*
-    
-    struct e_desktop_layers layers;
 
     // nodes that are waiting to be reparented
     struct wlr_scene_tree* pending;
@@ -79,10 +58,6 @@ struct e_desktop* e_desktop_create(struct wl_display* display, struct wlr_compos
 void e_desktop_set_seat(struct e_desktop* desktop, struct e_seat* seat);
 
 /* outputs */
-
-// Adds the given output to the given desktop and handles its layout for it.
-// Returns desktop output on success, otherwise NULL on fail.
-struct e_output* e_desktop_add_output(struct e_desktop* desktop, struct wlr_output* output);
 
 // Get output at specified index.
 // Returns NULL on fail.

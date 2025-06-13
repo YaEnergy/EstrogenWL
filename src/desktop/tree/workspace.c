@@ -1,6 +1,7 @@
 #include "desktop/tree/workspace.h"
 
 #include <stdlib.h>
+#include <assert.h>
 
 #include <wayland-util.h>
 
@@ -9,21 +10,26 @@
 #include "desktop/tree/container.h"
 #include "desktop/tree/node.h"
 
-#include "desktop/desktop.h"
 #include "desktop/views/view.h"
+
+#include "desktop/output.h"
 
 #include "util/list.h"
 #include "util/log.h"
 
+#include "server.h"
+
 #define NEW_SCENE_TREE(tree, parent, type, data) tree = wlr_scene_tree_create(parent); e_node_desc_create(&tree->node, type, data);
 
-// Create a new workspace for desktop.
+// Create a new workspace for an output.
 // Returns NULL on fail.
-struct e_workspace* e_workspace_create(struct e_desktop* desktop)
+struct e_workspace* e_workspace_create(struct e_output* output)
 {
-    if (desktop == NULL)
+    assert(output);
+
+    if (output == NULL)
     {
-        e_log_error("e_workspace_create: no desktop given!");
+        e_log_error("e_workspace_create: no output given!");
         return NULL;
     }
 
@@ -35,7 +41,7 @@ struct e_workspace* e_workspace_create(struct e_desktop* desktop)
         return NULL;
     }
 
-    workspace->desktop = desktop;
+    workspace->output = output;
     workspace->fullscreen_view = NULL;
 
     workspace->root_tiling_container = e_tree_container_create(E_TILING_MODE_HORIZONTAL);
@@ -49,9 +55,9 @@ struct e_workspace* e_workspace_create(struct e_desktop* desktop)
     }
 
     //layer trees
-    NEW_SCENE_TREE(workspace->layers.floating, desktop->layers.floating, E_NODE_DESC_WORKSPACE, workspace);
-    NEW_SCENE_TREE(workspace->layers.tiling, desktop->layers.tiling, E_NODE_DESC_WORKSPACE, workspace);
-    NEW_SCENE_TREE(workspace->layers.fullscreen, desktop->layers.overlay, E_NODE_DESC_WORKSPACE, workspace);
+    NEW_SCENE_TREE(workspace->layers.floating, output->layers.floating, E_NODE_DESC_WORKSPACE, workspace);
+    NEW_SCENE_TREE(workspace->layers.tiling, output->layers.tiling, E_NODE_DESC_WORKSPACE, workspace);
+    NEW_SCENE_TREE(workspace->layers.fullscreen, output->layers.overlay, E_NODE_DESC_WORKSPACE, workspace);
 
     e_list_init(&workspace->floating_views, 10);
 

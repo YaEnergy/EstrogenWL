@@ -17,7 +17,6 @@
 #include "desktop/layer_shell.h"
 #include "desktop/output.h"
 
-#include "util/list.h"
 #include "util/log.h"
 
 // creates scene and scene layer trees
@@ -31,15 +30,7 @@ static void e_desktop_init_scene(struct e_desktop* desktop)
     desktop->scene = wlr_scene_create();
     desktop->scene_layout = wlr_scene_attach_output_layout(desktop->scene, desktop->output_layout);
 
-    //create scene trees for all layers
-
-    desktop->layers.background = wlr_scene_tree_create(&desktop->scene->tree);
-    desktop->layers.bottom = wlr_scene_tree_create(&desktop->scene->tree);
-    desktop->layers.tiling = wlr_scene_tree_create(&desktop->scene->tree);
-    desktop->layers.floating = wlr_scene_tree_create(&desktop->scene->tree);
-    desktop->layers.top = wlr_scene_tree_create(&desktop->scene->tree);
-    desktop->layers.overlay = wlr_scene_tree_create(&desktop->scene->tree);
-    desktop->layers.unmanaged = wlr_scene_tree_create(&desktop->scene->tree);
+    desktop->unmanaged = wlr_scene_tree_create(&desktop->scene->tree);
 
     desktop->pending = wlr_scene_tree_create(&desktop->scene->tree);
     wlr_scene_node_set_enabled(&desktop->pending->node, false);
@@ -66,19 +57,6 @@ struct e_desktop* e_desktop_create(struct wl_display* display, struct wlr_compos
     desktop->output_layout = wlr_output_layout_create(display);
 
     e_desktop_init_scene(desktop);
-
-    //create 3 workspaces for desktop
-    e_list_init(&desktop->workspaces, 3);
-
-    for (int i = 0; i < 3; i++)
-    {
-        struct e_workspace* workspace = e_workspace_create(desktop);
-
-        if (workspace != NULL)
-            e_list_add(&desktop->workspaces, workspace);
-        else
-            e_log_error("e_desktop_create: failed to create workspace %i", i + 1);
-    }
     
     wl_list_init(&desktop->views);
 
@@ -95,62 +73,6 @@ void e_desktop_set_seat(struct e_desktop* desktop, struct e_seat* seat)
 }
 
 /* outputs */
-
-static void e_desktop_init_output(struct e_desktop* desktop, struct e_output* output)
-{
-    assert(desktop && output && output->layout);
-
-    if (output->active_workspace == NULL)
-    {
-        // set active workspace to first inactive workspace in desktop
-        for (int i = 0; i < desktop->workspaces.count; i++)
-        {
-            struct e_workspace* workspace = e_list_at(&desktop->workspaces, i);
-
-            if (workspace != NULL && !workspace->active)
-            {
-                e_output_display_workspace(output, workspace);
-                break;
-            }
-        }
-
-        //just create new workspace for now
-        if (output->active_workspace == NULL)
-        {
-            struct e_workspace* workspace = e_workspace_create(desktop);
-
-            if (workspace != NULL)
-                e_output_display_workspace(output, workspace);
-            else
-                e_log_error("e_desktop_init_output: failed to create workspace");
-        }
-    }
-
-    e_output_arrange(output);
-}
-
-// Adds the given output to the given desktop and handles its layout for it.
-// Returns desktop output on success, otherwise NULL on fail.
-struct e_output* e_desktop_add_output(struct e_desktop* desktop, struct wlr_output* wlr_output)
-{
-    assert(desktop && wlr_output);
-
-    struct e_output* output = e_output_create(desktop, wlr_output);
-
-    wl_list_insert(&desktop->outputs, &output->link);
-
-    //output layout auto adds wl_output to the display, allows wl clients to find out information about the display
-    //TODO: allow configuring the arrangement of outputs in the layout
-    //TODO: check for possible memory allocation error?
-    struct wlr_output_layout_output* layout_output = wlr_output_layout_add_auto(desktop->output_layout, output->wlr_output);
-    struct wlr_scene_output* scene_output = wlr_scene_output_create(desktop->scene, output->wlr_output);
-    wlr_scene_output_layout_add_output(desktop->scene_layout, layout_output, scene_output);
-    output->layout = desktop->output_layout;
-
-    e_desktop_init_output(desktop, output);
-
-    return output;
-}
 
 // Get output at specified index.
 // Returns NULL on fail.
@@ -173,33 +95,6 @@ struct e_output* e_desktop_get_output(struct e_desktop* desktop, int index)
     struct e_output* output = wl_container_of(pos, output, link);
 
     return output;
-}
-
-static void disable_output(struct e_output* output)
-{
-    assert(output);
-
-    struct wlr_output_state state;
-    wlr_output_state_init(&state);
-
-    wlr_output_state_set_enabled(&state, false);
-
-    //apply new output state
-    wlr_output_commit_state(output->wlr_output, &state);
-    wlr_output_state_finish(&state);
-}
-
-static void e_desktop_remove_output(struct e_desktop* desktop, struct e_output* output)
-{
-    assert(desktop && output);
-
-    disable_output(output);
-
-    e_output_display_workspace(output, NULL);
-
-    wlr_output_layout_remove(desktop->output_layout, output->wlr_output);
-
-    wl_list_remove(&output->link);
 }
 
 /* scene */
@@ -439,26 +334,13 @@ void e_desktop_destroy(struct e_desktop* desktop)
 
     wl_list_for_each_safe(output, tmp, &desktop->outputs, link)
     {
-        e_desktop_remove_output(desktop, output);
+        e_output_destroy(output);
     }
-
-    //destroy all workspaces
-    for (int i = 0; i < desktop->workspaces.count; i++)
-    {
-        struct e_workspace* workspace = e_list_at(&desktop->workspaces, i);
-
-        if (workspace != NULL)
-            e_workspace_destroy(workspace);
-    }
-
-    e_list_fini(&desktop->workspaces);
     
     //destroy root node
     wlr_scene_node_destroy(&desktop->scene->tree.node);
 
-    wl_list_remove(&desktop->outputs);
-
-    wl_list_remove(&desktop->views);
+    wlr_output_layout_destroy(desktop->output_layout);
 
     free(desktop);
 }
