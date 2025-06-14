@@ -559,7 +559,7 @@ void e_ext_workspace_remove(struct e_ext_workspace* workspace)
     //remove transaction ops using this workspace
     struct e_trans_op* operation;
     struct e_trans_op* tmp_operation;
-    e_trans_session_for_each_safe(operation, tmp_operation, &workspace->group->manager->trans_session)
+    e_trans_session_for_each_safe(operation, tmp_operation, &workspace->manager->trans_session)
     {
         if (operation->src == workspace)
             e_trans_op_destroy(operation);
