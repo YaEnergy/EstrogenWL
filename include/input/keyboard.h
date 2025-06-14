@@ -29,3 +29,6 @@ struct e_keyboard
 
 // Returns NULL on fail.
 struct e_keyboard* e_keyboard_create(struct wlr_keyboard* wlr_keyboard, struct e_seat* seat);
+
+// Destroy keyboard.
+void e_keyboard_destroy(struct e_keyboard* keyboard);

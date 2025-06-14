@@ -21,7 +21,6 @@
 #include "desktop/tree/container.h"
 #include "desktop/tree/workspace.h"
 
-#include "input/cursor.h"
 #include "input/seat.h"
 
 #include "util/list.h"
@@ -60,6 +59,7 @@ void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_typ
     view->surface = NULL;
 
     view->tiled = false;
+    view->fullscreen = false;
 
     view->title = NULL;
     
@@ -140,18 +140,36 @@ static void e_view_set_workspace(struct e_view* view, struct e_workspace* worksp
         return;
     }
 
-    //remove from old floating list if there
     if (view->workspace != NULL)
     {
+        //remove from old floating list if there
+
         int floating_index = e_list_find_index(&view->workspace->floating_views, view);
 
         if (floating_index != -1)
             e_list_remove_index(&view->workspace->floating_views, floating_index);
+
+        //reenable workspace trees if workspace is active and view was fullscreen
+        if (view->fullscreen)
+        {
+            view->workspace->fullscreen_view = NULL;
+            e_workspace_update_tree_visibility(view->workspace);
+        }
     }
     
     if (workspace != NULL)
     {
-        if (view->tiled)
+        if (view->fullscreen)
+        {
+            if (workspace->fullscreen_view != NULL && workspace->fullscreen_view != view)
+                e_view_set_fullscreen(workspace->fullscreen_view, false);
+
+            workspace->fullscreen_view = view;
+            wlr_scene_node_reparent(&view->tree->node, workspace->layers.fullscreen);
+            e_workspace_update_tree_visibility(workspace);
+            e_workspace_arrange(workspace, workspace->full_area, workspace->tiled_area);
+        }
+        else if (view->tiled)
         {
             wlr_scene_node_reparent(&view->tree->node, workspace->layers.tiling);
         }
@@ -181,96 +199,10 @@ void e_view_move_to_workspace(struct e_view* view, struct e_workspace* workspace
 
     e_view_set_workspace(view, workspace);
     
-    if (workspace != NULL && view->tiled)
+    if (workspace != NULL && view->tiled && !view->fullscreen)
         e_view_set_parent_container(view, workspace->root_tiling_container);
-    else //floating or NULL workspace
-       e_view_set_parent_container(view, NULL);
-}
-
-static void e_view_tile(struct e_view* view)
-{
-    assert(view);
-
-    #if E_VERBOSE
-    e_log_info("view tile container");
-    #endif
-
-    //find hovered tiled view, and take its parent container
-    //else use hovered workspace's root tiling container
-
-    struct e_desktop* desktop = view->desktop;
-    struct e_seat* seat = desktop->seat;
-
-    struct e_workspace* workspace = NULL;
-    struct e_tree_container* parent_container = NULL;
-
-    //find hovered tiled view, and take its parent container if possible
-
-    struct e_view* hovered_view = e_cursor_view_at(seat->cursor);
-
-    if (hovered_view != NULL && hovered_view->tiled && hovered_view->container.parent != NULL)
-    {
-        workspace = hovered_view->workspace;
-        parent_container = hovered_view->container.parent;
-    }
-    
-    //if no tiled view found that had focus or has focus, use hovered output's active workspace and its root tiling container if possible
-    if (workspace == NULL)
-    {
-        struct e_output* hovered_output = e_cursor_output_at(seat->cursor);
-
-        if (hovered_output == NULL)
-        {
-            e_log_error("e_view_tile: can't find any workspace");
-            return;
-        }
-
-        workspace = hovered_output->active_workspace;
-        parent_container = workspace->root_tiling_container;
-    }
-
-    if (parent_container == NULL)
-    {
-        e_log_error("e_view_tile: no container found!");
-        return;
-    }
-    
-    //move to workspace as tiled
-    view->tiled = true;
-    e_view_set_workspace(view, workspace);
-    e_view_set_parent_container(view, parent_container);
-
-    if (view->implementation->notify_tiled != NULL)
-        view->implementation->notify_tiled(view, true);
-}
-
-static void e_view_float(struct e_view* view)
-{
-    assert(view);
-
-    #if E_VERBOSE
-    e_log_info("view float container");
-    #endif
-
-    //find hovered workspace
-
-    struct e_workspace* workspace = e_cursor_output_at(view->desktop->seat->cursor)->active_workspace;
-
-    if (workspace == NULL)
-    {
-        e_log_error("e_view_float: no workspace found!");
-        return;
-    }
-
-    //move to workspace as floating
-    view->tiled = false;
-    e_view_set_workspace(view, workspace);
-    e_view_set_parent_container(view, NULL);
-
-    if (view->implementation->notify_tiled != NULL)
-        view->implementation->notify_tiled(view, false);
-
-    //TODO: return to natural geometry
+    else //floating or NULL workspace or fullscreen
+        e_view_set_parent_container(view, NULL);
 }
 
 // Set pending layout position of view.
@@ -301,12 +233,24 @@ void e_view_set_tiled(struct e_view* view, bool tiled)
 
     e_log_info("setting tiling mode of view to %d...", tiled);
 
-    view->tiled = tiled;
+    if (view->tiled != tiled)
+    {
+        view->tiled = tiled;
 
-    if (tiled)
-        e_view_tile(view);
-    else
-        e_view_float(view);
+        if (view->implementation->notify_tiled != NULL)
+            view->implementation->notify_tiled(view, tiled);
+    }
+
+    struct e_workspace* workspace = view->workspace;
+
+    if (workspace != NULL && !view->fullscreen)
+    {
+        //TODO: tiled -> parent to previously focused tiled container
+        //TODO: floating -> return to natural geometry and center
+
+        e_view_set_parent_container(view, tiled ? workspace->root_tiling_container : NULL);
+        wlr_scene_node_reparent(&view->tree->node, tiled ? workspace->layers.tiling : workspace->layers.floating);
+    }
 }
 
 void e_view_set_activated(struct e_view* view, bool activated)
@@ -317,6 +261,74 @@ void e_view_set_activated(struct e_view* view, bool activated)
         view->implementation->set_activated(view, activated);
     else
         e_log_error("e_view_set_activated: not implemented!");
+}
+
+
+// Set view to fullscreen.
+void e_view_fullscreen(struct e_view* view)
+{
+    assert(view);
+
+    struct e_workspace* workspace = view->workspace;
+
+    if (workspace == NULL)
+    {
+        e_log_error("e_view_unfullscreen: workspace is NULL!");
+        return;
+    }
+
+    if (workspace->fullscreen_view == view)
+        return;
+
+    if (workspace->fullscreen_view != NULL)
+        e_view_set_fullscreen(workspace->fullscreen_view, false);
+
+    view->fullscreen = true;
+    workspace->fullscreen_view = view;
+    e_view_set_parent_container(view, NULL);
+
+    wlr_scene_node_reparent(&view->tree->node, workspace->layers.fullscreen);
+
+    e_workspace_update_tree_visibility(workspace);
+    e_workspace_arrange(workspace, workspace->full_area, workspace->tiled_area);
+}
+
+// Unfullscreen view.
+void e_view_unfullscreen(struct e_view* view)
+{
+    assert(view);
+
+    struct e_workspace* workspace = view->workspace;
+
+    if (workspace == NULL)
+    {
+        e_log_error("e_view_unfullscreen: workspace is NULL!");
+        return;
+    }
+
+    //this view must be the one that's in fullscreen mode
+    if (workspace->fullscreen_view != view)
+        return;
+
+    view->fullscreen = false;
+    workspace->fullscreen_view = NULL;
+    
+    e_view_set_tiled(view, view->tiled);
+
+    e_workspace_update_tree_visibility(workspace);
+    e_workspace_arrange(workspace, workspace->full_area, workspace->tiled_area);
+}
+
+
+// Set the fullscreen mode of the view.
+void e_view_set_fullscreen(struct e_view* view, bool fullscreen)
+{
+    assert(view);
+
+    if (view->implementation->set_fullscreen != NULL)
+        view->implementation->set_fullscreen(view, fullscreen);
+    else
+        e_log_error("e_view_set_fullscreen: set fullscreen not implemented!");
 }
 
 bool e_view_has_pending_changes(struct e_view* view)
@@ -378,11 +390,24 @@ static bool e_view_wants_floating(struct e_view* view)
 }
 
 // Display view.
-void e_view_map(struct e_view* view)
+// Set fullscreen to true and set output if you want the view to be on a specific output immediately.
+// If output is NULL, searches for current hovered output instead.
+void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output)
 {
     assert(view);
 
     e_log_info("view map");
+
+    if (output == NULL || output->active_workspace == NULL)
+    {
+        output = e_desktop_hovered_output(view->desktop);
+
+        if (output == NULL || output->active_workspace == NULL)
+        {
+            e_log_error("e_view_map: unable to map view, no output with a workspace");
+            return;
+        }
+    }
 
     wl_list_insert(&view->desktop->views, &view->link);
 
@@ -394,19 +419,23 @@ void e_view_map(struct e_view* view)
         return;
     }
 
+    wlr_scene_node_set_position(&view->tree->node, view->current.x, view->current.y);
+
     view->mapped = true;
 
+    e_view_set_workspace(view, output->active_workspace);
+
+    if (fullscreen)
+        e_view_fullscreen(view);
+
     bool wants_floating = e_view_wants_floating(view);
-
     e_view_set_tiled(view, !wants_floating);
-
-    wlr_scene_node_set_position(&view->tree->node, view->current.x, view->current.y);
 
     wlr_scene_node_set_enabled(&view->tree->node, true);
 
     //set focus to this view
     if (view->surface != NULL)
-        e_seat_set_focus_view(view->desktop->seat, view);
+        e_desktop_focus_view(view->desktop, view);
 }
 
 // Stop displaying view.
@@ -460,6 +489,24 @@ struct e_view* e_view_from_surface(struct e_desktop* desktop, struct wlr_surface
 
     //none found
     return NULL; 
+}
+
+// Raise view to the top of its parent tree.
+void e_view_raise_to_top(struct e_view* view)
+{
+    if (view == NULL)
+    {
+        e_log_error("e_view_raise_to_top: view is NULL!");
+        return;
+    }
+
+    if (view->tree == NULL)
+    {
+        e_log_error("e_view_raise_to_top: view has no tree!");
+        return;
+    }
+
+    wlr_scene_node_raise_to_top(&view->tree->node);
 }
 
 // Returns NULL on fail.

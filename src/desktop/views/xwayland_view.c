@@ -110,7 +110,7 @@ static void e_xwayland_view_map(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, map);
 
-    e_view_map(&xwayland_view->base);
+    e_view_map(&xwayland_view->base, xwayland_view->xwayland_surface->fullscreen, NULL);
 
     // According to labwc, map and unmap can change the surface used
     SIGNAL_CONNECT(xwayland_view->xwayland_surface->surface->events.commit, xwayland_view->commit, e_xwayland_view_commit);
@@ -148,9 +148,31 @@ static void e_view_xwayland_set_activated(struct e_view* view, bool activated)
     struct e_xwayland_view* xwayland_view = view->data;
 
     wlr_xwayland_surface_activate(xwayland_view->xwayland_surface, activated);
+}
 
-    if (activated)
-        wlr_scene_node_raise_to_top(&view->tree->node);
+static void e_view_xwayland_set_fullscreen(struct e_view* view, bool fullscreen)
+{
+    assert(view && view->data);
+
+    struct e_xwayland_view* xwayland_view = view->data;
+
+    wlr_xwayland_surface_set_fullscreen(xwayland_view->xwayland_surface, fullscreen);
+
+    if (fullscreen)
+        e_view_fullscreen(view);
+    else
+        e_view_unfullscreen(view);
+}
+
+static void e_xwayland_view_request_fullscreen(struct wl_listener* listener, void* data)
+{
+    struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, request_fullscreen);
+
+    #if E_VERBOSE
+    e_log_info("xwayland view request fullscreen");
+    #endif
+
+    e_view_set_fullscreen(&xwayland_view->base, !xwayland_view->base.fullscreen);
 }
 
 static void e_xwayland_view_request_maximize(struct wl_listener* listener, void* data)
@@ -246,6 +268,8 @@ static void e_xwayland_view_destroy(struct wl_listener* listener, void* data)
 
     SIGNAL_DISCONNECT(xwayland_view->set_title);
     SIGNAL_DISCONNECT(xwayland_view->map_request);
+
+    SIGNAL_DISCONNECT(xwayland_view->request_fullscreen);
     SIGNAL_DISCONNECT(xwayland_view->request_maximize);
     SIGNAL_DISCONNECT(xwayland_view->request_configure);
     SIGNAL_DISCONNECT(xwayland_view->request_move);
@@ -338,6 +362,8 @@ static const struct e_view_impl view_xwayland_implementation = {
     .notify_tiled = e_view_xwayland_notify_tiled,
     
     .set_activated = e_view_xwayland_set_activated,
+    .set_fullscreen = e_view_xwayland_set_fullscreen,
+
     .configure = e_view_xwayland_configure,
     .create_content_tree = e_view_xwayland_create_content_tree,
     .wants_floating = e_view_xwayland_wants_floating,
@@ -346,7 +372,7 @@ static const struct e_view_impl view_xwayland_implementation = {
 
 // Creates new xwayland view on desktop.
 // Returns NULL on fail.
-struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct e_xwayland* xwayland, struct wlr_xwayland_surface* xwayland_surface)
+struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct wlr_xwayland_surface* xwayland_surface)
 {
     assert(desktop && xwayland_surface);
     
@@ -358,7 +384,6 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct
         return NULL;
     }
 
-    xwayland_view->xwayland = xwayland;
     xwayland_view->xwayland_surface = xwayland_surface;
 
     e_view_init(&xwayland_view->base, desktop, E_VIEW_XWAYLAND, xwayland_view, &view_xwayland_implementation);
@@ -369,6 +394,8 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct
 
     SIGNAL_CONNECT(xwayland_surface->events.set_title, xwayland_view->set_title, e_xwayland_view_set_title);
     SIGNAL_CONNECT(xwayland_surface->events.map_request, xwayland_view->map_request, e_xwayland_view_map_request);
+    
+    SIGNAL_CONNECT(xwayland_surface->events.request_fullscreen, xwayland_view->request_fullscreen, e_xwayland_view_request_fullscreen);
     SIGNAL_CONNECT(xwayland_surface->events.request_maximize, xwayland_view->request_maximize, e_xwayland_view_request_maximize);
     SIGNAL_CONNECT(xwayland_surface->events.request_configure, xwayland_view->request_configure, e_xwayland_view_request_configure);
     SIGNAL_CONNECT(xwayland_surface->events.request_move, xwayland_view->request_move, e_xwayland_view_request_move);

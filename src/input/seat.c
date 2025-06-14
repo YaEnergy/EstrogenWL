@@ -16,10 +16,9 @@
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_primary_selection.h>
+#include <wlr/types/wlr_cursor_shape_v1.h>
 
 #include "wlr-layer-shell-unstable-v1-protocol.h"
-
-#include "desktop/views/view.h"
 
 #include "input/keyboard.h"
 #include "input/cursor.h"
@@ -28,6 +27,20 @@
 #include "util/wl_macros.h"
 
 //2024-12-18 22:29:22 | starting to be able to do this more on my own now, I feel like I'm learning a lot :3
+
+static void e_seat_request_set_cursor_shape(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, request_set_cursor_shape);
+    struct wlr_cursor_shape_manager_v1_request_set_shape_event* event = data;
+    
+    //no support for other device types
+    if (event->device_type != WLR_CURSOR_SHAPE_MANAGER_V1_DEVICE_TYPE_POINTER)
+        return;
+
+    //any client can request, only allow focused client to actually set the surface of the cursor
+    if (event->seat_client == seat->wlr_seat->pointer_state.focused_client)
+        wlr_cursor_set_xcursor(seat->cursor->wlr_cursor, seat->cursor->xcursor_manager, wlr_cursor_shape_v1_name(event->shape));
+}
 
 static void e_seat_request_set_cursor(struct wl_listener* listener, void* data)
 {
@@ -73,18 +86,130 @@ static void e_seat_focus_surface_unmap(struct wl_listener* listener, void* data)
     e_cursor_set_focus_hover(seat->cursor);
 }
 
-static void e_seat_destroy(struct wl_listener* listener, void* data)
+/* drag & drop */
+
+// Motion during drag & drop action.
+static void e_seat_drag_motion(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, current_dnd.motion);
+
+    if (seat->current_dnd.icon != NULL)
+        wlr_scene_node_set_position(&seat->current_dnd.icon->node, seat->cursor->wlr_cursor->x, seat->cursor->wlr_cursor->y);
+}
+
+// Drag & drop action ended.
+static void e_seat_drag_destroy(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, current_dnd.destroy);
+
+    SIGNAL_DISCONNECT(seat->current_dnd.motion);
+    SIGNAL_DISCONNECT(seat->current_dnd.destroy);
+}
+
+// Request to start a new drag & drop action.
+static void e_seat_request_start_drag(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, request_start_drag);
+    struct wlr_seat_request_start_drag_event* event = data;
+
+    #if E_VERBOSE
+    e_log_info("seat request start drag");
+    #endif
+
+    if (wlr_seat_validate_pointer_grab_serial(seat->wlr_seat, event->origin, event->serial))
+    {
+        wlr_seat_start_pointer_drag(seat->wlr_seat, event->drag, event->serial);
+    }
+    else 
+    {
+        wlr_data_source_destroy(event->drag->source);
+        e_log_error("e_seat_request_start_drag: invalid pointer grab serial!");
+    }
+}
+
+// Started a new drag & drop action.
+static void e_seat_start_drag(struct wl_listener* listener, void* data)
+{
+    struct e_seat* seat = wl_container_of(listener, seat, start_drag);
+    struct wlr_drag* drag = data;
+
+    #if E_VERBOSE
+    e_log_info("seat start drag");
+    #endif
+    
+    if (drag->icon != NULL)
+    {
+        seat->current_dnd.icon = wlr_scene_drag_icon_create(seat->drag_icon_tree, drag->icon);
+        wlr_scene_node_set_position(&seat->current_dnd.icon->node, seat->cursor->wlr_cursor->x, seat->cursor->wlr_cursor->y);
+    }
+
+    SIGNAL_CONNECT(drag->events.motion, seat->current_dnd.motion, e_seat_drag_motion);
+    SIGNAL_CONNECT(drag->events.destroy, seat->current_dnd.destroy, e_seat_drag_destroy);
+}
+
+// Finalize seat drag & drop actions.
+static void e_seat_fini_dnd(struct e_seat* seat)
+{
+    if (seat == NULL)
+    {
+        e_log_error("e_seat_init_dnd: seat is NULL!");
+        return;
+    }
+
+    if (seat->drag_icon_tree != NULL)
+    {
+        wlr_scene_node_destroy(&seat->drag_icon_tree->node);
+        seat->drag_icon_tree = NULL;
+        seat->current_dnd.icon = NULL; //recursive
+    }
+
+    SIGNAL_DISCONNECT(seat->request_start_drag);
+    SIGNAL_DISCONNECT(seat->start_drag);
+}
+
+// Init seat drag & drop actions.
+static void e_seat_init_dnd(struct e_seat* seat)
+{
+    if (seat == NULL)
+    {
+        e_log_error("e_seat_init_dnd: seat is NULL!");
+        return;
+    }
+
+    seat->current_dnd.icon = NULL;
+    seat->drag_icon_tree = wlr_scene_tree_create(&seat->desktop->scene->tree);
+
+    SIGNAL_CONNECT(seat->wlr_seat->events.request_start_drag, seat->request_start_drag, e_seat_request_start_drag);
+    SIGNAL_CONNECT(seat->wlr_seat->events.start_drag, seat->start_drag, e_seat_start_drag);
+}
+
+/* end drag & drop */
+
+static void e_seat_handle_destroy(struct wl_listener* listener, void* data)
 {
     struct e_seat* seat = wl_container_of(listener, seat, destroy);
 
+    //destroy keyboards
+    struct e_keyboard* keyboard;
+    struct e_keyboard* tmp;
+    wl_list_for_each_safe(keyboard, tmp, &seat->keyboards, link)
+    {
+        e_keyboard_destroy(keyboard);
+    }
+
     e_cursor_destroy(seat->cursor);
+
+    e_seat_fini_dnd(seat);
 
     wl_list_remove(&seat->keyboards);
 
     SIGNAL_DISCONNECT(seat->request_set_cursor);
     SIGNAL_DISCONNECT(seat->request_set_selection);
     SIGNAL_DISCONNECT(seat->request_set_primary_selection);
+
     SIGNAL_DISCONNECT(seat->destroy);
+    
+    SIGNAL_DISCONNECT(seat->request_set_cursor_shape);
 
     free(seat);
 }
@@ -101,15 +226,18 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
         return NULL;
     }
 
-    seat->desktop = desktop;
-
     struct wlr_seat* wlr_seat = wlr_seat_create(display, name);
 
+    seat->desktop = desktop;
     seat->wlr_seat = wlr_seat;
     seat->focus_surface = NULL;
     seat->previous_focus_surface = NULL;
 
     seat->cursor = e_cursor_create(seat, output_layout);
+
+    e_seat_init_dnd(seat);
+
+    seat->cursor_shape_manager = wlr_cursor_shape_manager_v1_create(display, 1);
 
     wl_list_init(&seat->keyboards);
 
@@ -118,7 +246,10 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
     SIGNAL_CONNECT(wlr_seat->events.request_set_cursor, seat->request_set_cursor, e_seat_request_set_cursor);
     SIGNAL_CONNECT(wlr_seat->events.request_set_selection, seat->request_set_selection, e_seat_request_set_selection);
     SIGNAL_CONNECT(wlr_seat->events.request_set_primary_selection, seat->request_set_primary_selection, e_seat_request_set_primary_selection);
-    SIGNAL_CONNECT(wlr_seat->events.destroy, seat->destroy, e_seat_destroy);
+    
+    SIGNAL_CONNECT(wlr_seat->events.destroy, seat->destroy, e_seat_handle_destroy);
+
+    SIGNAL_CONNECT(seat->cursor_shape_manager->events.request_set_shape, seat->request_set_cursor_shape, e_seat_request_set_cursor_shape);
 
     return seat;
 }
@@ -184,14 +315,20 @@ void e_seat_add_input_device(struct e_seat* seat, struct wlr_input_device* input
 
 // focus
 
-// Set seat focus on a surface.
-static void e_seat_set_focus_surface(struct e_seat* seat, struct wlr_surface* surface)
+// Set seat focus on a surface if possible, doing nothing extra. (AKA raw focus)
+// Set override exclusive to true if you want to ignore focused layer surfaces with exclusive interactivity.
+// Returns whether surface was successfully focused.
+bool e_seat_focus_surface(struct e_seat* seat, struct wlr_surface* surface, bool override_exclusive)
 {
     assert(seat && surface);
 
     //already focused on surface
     if (seat->focus_surface == surface)
-        return;
+        return false;
+
+    //if we're focused on a layer surface with exclusive interactivity and we can't override it, don't focus
+    if (!override_exclusive && e_seat_has_exclusive_layer_focus(seat))
+        return false;
 
     if (seat->focus_surface != NULL)
         e_seat_clear_focus(seat);
@@ -208,33 +345,13 @@ static void e_seat_set_focus_surface(struct e_seat* seat, struct wlr_surface* su
 
     //clear focus on surface unmap
     SIGNAL_CONNECT(surface->events.unmap, seat->focus_surface_unmap, e_seat_focus_surface_unmap);
-}
 
-// Set seat focus on a view if possible.
-void e_seat_set_focus_view(struct e_seat* seat, struct e_view* view)
-{
-    assert(seat && view);
-
-    //Don't override focus of layer surfaces that request exclusive focus
-    if (e_seat_has_exclusive_layer_focus(seat))
-        return;
-
-    #if E_VERBOSE
-    e_log_info("seat focus on view");
-    #endif
-
-    if (view->surface == NULL)
-    {
-        e_log_error("e_seat_set_focus_view: view has no surface!");
-        return;
-    }
-
-    e_seat_set_focus_surface(seat, view->surface);
-    e_view_set_activated(view, true);
+    return true;
 }
 
 // Set seat focus on a layer surface if possible.
-void e_seat_set_focus_layer_surface(struct e_seat* seat, struct wlr_layer_surface_v1* layer_surface)
+// Returns whether layer surface was successfully focused.
+bool e_seat_focus_layer_surface(struct e_seat* seat, struct wlr_layer_surface_v1* layer_surface)
 {
     assert(seat && layer_surface);
 
@@ -245,47 +362,14 @@ void e_seat_set_focus_layer_surface(struct e_seat* seat, struct wlr_layer_surfac
         struct wlr_layer_surface_v1* focus_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(seat->focus_surface);
 
         if (focus_layer_surface->current.layer >= layer_surface->current.layer)
-            return;
+            return false;
     }
 
     #if E_VERBOSE
     e_log_info("seat focus on layer surface");
     #endif
 
-    e_seat_set_focus_surface(seat, layer_surface->surface);
-}
-
-// Gets the type of surface (window or layer surface) and sets seat focus.
-// This will do nothing if surface isn't of a type that should be focused on by the seat.
-void e_seat_set_focus_surface_type(struct e_seat* seat, struct wlr_surface* surface)
-{
-    assert(seat && surface);
-
-    struct e_desktop* desktop = seat->desktop;
-
-    //focus on views & windows
-
-    struct wlr_surface* root_surface = wlr_surface_get_root_surface(surface);
-    struct e_view* view = e_view_from_surface(desktop, root_surface);
-
-    if (view != NULL && !e_seat_has_focus(seat, view->surface))
-    {
-        e_seat_set_focus_view(seat, view);
-        return;
-    }
-
-    //focus on layer surfaces that request on demand interactivity
-
-    struct wlr_layer_surface_v1* hover_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(surface);
-
-    //is layer surface that allows focus?
-    if (hover_layer_surface != NULL && hover_layer_surface->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE)
-    {
-        if (!e_seat_has_focus(seat, hover_layer_surface->surface))
-            e_seat_set_focus_layer_surface(seat, hover_layer_surface);    
-
-        return;  
-    }
+    return e_seat_focus_surface(seat, layer_surface->surface, true);
 }
 
 // Returns true if seat has focus on this surface.
@@ -297,30 +381,6 @@ bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface)
     struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
 
     return (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface == surface);
-}
-
-// Returns view currently in focus.
-// Returns NULL if no view has focus.
-struct e_view* e_seat_focused_view(struct e_seat* seat)
-{
-    assert(seat);
-
-    if (seat->focus_surface == NULL)
-        return NULL;
-
-    return e_view_from_surface(seat->desktop, seat->focus_surface);
-}
-
-// Returns view previously in focus.
-// Returns NULL if no view had focus.
-struct e_view* e_seat_prev_focused_view(struct e_seat* seat)
-{
-    assert(seat);
-
-    if (seat->previous_focus_surface == NULL)
-        return NULL;
-
-    return e_view_from_surface(seat->desktop, seat->previous_focus_surface);
 }
 
 bool e_seat_has_exclusive_layer_focus(struct e_seat* seat)
@@ -340,13 +400,6 @@ void e_seat_clear_focus(struct e_seat* seat)
     if (seat->focus_surface == NULL)
         return;
 
-    //deactivate focused view if focused surface is one
-
-    struct e_view* focused_view = e_seat_focused_view(seat);
-
-    if (focused_view != NULL)
-        e_view_set_activated(focused_view, false);
-
     //clear keyboard focus
 
     struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
@@ -359,4 +412,10 @@ void e_seat_clear_focus(struct e_seat* seat)
     
     seat->previous_focus_surface = seat->focus_surface;
     seat->focus_surface = NULL;
+}
+
+// Destroy seat.
+void e_seat_destroy(struct e_seat* seat)
+{
+    wlr_seat_destroy(seat->wlr_seat);
 }

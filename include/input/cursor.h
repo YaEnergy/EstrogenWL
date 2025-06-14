@@ -69,12 +69,4 @@ void e_cursor_start_view_move(struct e_cursor* cursor, struct e_view* view);
 // If nothing is under cursor, doesn't change seat focus.
 void e_cursor_set_focus_hover(struct e_cursor* cursor);
 
-// Find view at cursor's position.
-// Returns NULL on fail.
-struct e_view* e_cursor_view_at(struct e_cursor* cursor);
-
-// Find output at cursor's position.
-// Returns NULL on fail.
-struct e_output* e_cursor_output_at(struct e_cursor* cursor);
-
 void e_cursor_destroy(struct e_cursor* cursor);

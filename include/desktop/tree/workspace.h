@@ -12,7 +12,8 @@
 
 #include "util/list.h"
 
-struct e_desktop;
+struct e_output;
+struct e_view;
 
 struct e_workspace_layers
 {
@@ -24,7 +25,7 @@ struct e_workspace_layers
 // A virtual desktop, containing a group of views that can be displayed with by a single output.
 struct e_workspace
 {
-    struct e_desktop* desktop;
+    struct e_output* output;
 
     // Is an output displaying this workspace?
     bool active;
@@ -35,7 +36,7 @@ struct e_workspace
     struct wlr_box tiled_area;
     
     // View currently in fullscreen mode.
-    //TODO: struct e_view* fullscreen_view;
+    struct e_view* fullscreen_view;
 
     //container for tiled containers
     struct e_tree_container* root_tiling_container;
@@ -43,15 +44,18 @@ struct e_workspace
     struct e_list floating_views; //struct e_view*
 };
 
-// Create a new workspace for desktop.
+// Create a new workspace for an output.
 // Returns NULL on fail.
-struct e_workspace* e_workspace_create(struct e_desktop* desktop);
+struct e_workspace* e_workspace_create(struct e_output* output);
 
 // Enable/disable workspace trees.
 void e_workspace_set_activated(struct e_workspace* workspace, bool activated);
 
 // Arranges a workspace's children to fit within the given area.
 void e_workspace_arrange(struct e_workspace* workspace, struct wlr_box full_area, struct wlr_box tiled_area);
+
+// Update visibility of workspace trees.
+void e_workspace_update_tree_visibility(struct e_workspace* workspace);
 
 // Get workspace from node ancestors.
 // Returns NULL on fail.

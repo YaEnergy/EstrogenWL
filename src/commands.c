@@ -31,12 +31,7 @@
 
 static void e_commands_kill_focused_view(struct e_desktop* desktop)
 {
-    struct e_seat* seat = desktop->seat;
-
-    if (seat->focus_surface == NULL)
-        return;
-
-    struct e_view* view = e_seat_focused_view(seat);
+    struct e_view* view = e_desktop_focused_view(desktop);
 
     if (view != NULL)
     {
@@ -52,12 +47,7 @@ static void e_commands_kill_focused_view(struct e_desktop* desktop)
 
 static void e_commands_toggle_tiling_focused_view(struct e_desktop* desktop)
 {
-    struct e_seat* seat = desktop->seat;
-
-    if (seat->focus_surface == NULL)
-        return;
-
-    struct e_view* view = e_seat_focused_view(desktop->seat);
+    struct e_view* view = e_desktop_focused_view(desktop);
 
     if (view != NULL)
     {
@@ -75,12 +65,7 @@ static void e_commands_switch_tiling_mode(struct e_desktop* desktop)
 {
     assert(desktop);
 
-    struct e_seat* seat = desktop->seat;
-
-    if (seat->focus_surface == NULL)
-        return;
-
-    struct e_view* view = e_seat_focused_view(desktop->seat);
+    struct e_view* view = e_desktop_focused_view(desktop);
 
     if (view == NULL || view->container.parent == NULL)
         return;
@@ -97,30 +82,24 @@ static void e_commands_switch_tiling_mode(struct e_desktop* desktop)
 
 static void e_commands_toggle_fullscreen_focused_view(struct e_desktop* desktop)
 {
-    struct e_seat* seat = desktop->seat;
+    struct e_view* view = e_desktop_focused_view(desktop);
 
-    if (seat->focus_surface == NULL)
-        return;
-
-    //TODO: add support for all winodw types by using the base e_view instead of wlr_xdg_toplevel
-    struct wlr_xdg_toplevel* wlr_xdg_toplevel = wlr_xdg_toplevel_try_from_wlr_surface(seat->focus_surface);
-
-    if (wlr_xdg_toplevel != NULL)
+    if (view != NULL)
     {
-        wlr_xdg_toplevel_set_fullscreen(wlr_xdg_toplevel, !wlr_xdg_toplevel->current.fullscreen);
-        e_log_info("requested to toggle fullscreen wlr_xdg_toplevel, title: %s", wlr_xdg_toplevel->title);
+        e_view_set_fullscreen(view, !view->fullscreen);
+        e_log_info("toggle fullscreen mode of view, fullscreen: %i, title: %s", view->fullscreen, view->title);
     }
     else 
     {
-        e_log_info("failed to toggle fullscreen of focussed view");
-    }   
+        e_log_error("e_commands_toggle_fullscreen_focused_view: failed to toggle fullscreen mode of view!");
+    }
 }
 
 static void e_commands_maximize_focused_view(struct e_desktop* desktop)
 {
     assert(desktop);
 
-    //struct e_view* view = e_seat_focused_view(desktop->seat);
+    //struct e_view* view = e_desktop_focused_view(desktop->seat);
 
     //if (view != NULL)
         //e_window_maximize(view);
@@ -209,7 +188,7 @@ void e_commands_parse(struct e_desktop* desktop, const char* command)
     //TODO: next_workspace is for testing only, remove
     else if (strcmp(argument, "next_workspace") == 0)
     {
-        struct e_output* output = e_cursor_output_at(desktop->seat->cursor);
+        struct e_output* output = e_desktop_hovered_output(desktop);
 
         struct e_workspace* workspace = output->active_workspace;
 
@@ -219,21 +198,21 @@ void e_commands_parse(struct e_desktop* desktop, const char* command)
             return;
         }
 
-        int i = e_list_find_index(&desktop->workspaces, workspace);
+        int i = e_list_find_index(&output->workspaces, workspace);
 
-        e_output_display_workspace(output, e_list_at(&desktop->workspaces, (i + 1) % desktop->workspaces.count));
+        e_output_display_workspace(output, e_list_at(&output->workspaces, (i + 1) % output->workspaces.count));
         e_cursor_set_focus_hover(desktop->seat->cursor);
-        e_log_info("output workspace index: %i", (i + 1) % desktop->workspaces.count);
+        e_log_info("output workspace index: %i", (i + 1) % output->workspaces.count);
     }
     //TODO: testing only, remove
     else if (strcmp(argument, "move_to_next_workspace") == 0)
     {
-        struct e_view* focused_view = e_seat_focused_view(desktop->seat);
+        struct e_view* focused_view = e_desktop_focused_view(desktop);
 
         if (focused_view == NULL)
             return;
 
-        struct e_output* output = e_cursor_output_at(desktop->seat->cursor);
+        struct e_output* output = e_desktop_hovered_output(desktop);
 
         struct e_workspace* workspace = output->active_workspace;
 
@@ -243,11 +222,11 @@ void e_commands_parse(struct e_desktop* desktop, const char* command)
             return;
         }
 
-        int i = e_list_find_index(&desktop->workspaces, workspace);
+        int i = e_list_find_index(&output->workspaces, workspace);
 
-        e_view_move_to_workspace(focused_view, e_list_at(&desktop->workspaces, (i + 1) % desktop->workspaces.count));
+        e_view_move_to_workspace(focused_view, e_list_at(&output->workspaces, (i + 1) % output->workspaces.count));
         e_cursor_set_focus_hover(desktop->seat->cursor);
-        e_log_info("view workspace index: %i", (i + 1) % desktop->workspaces.count);
+        e_log_info("view workspace index: %i", (i + 1) % output->workspaces.count);
     }
     else 
     {
