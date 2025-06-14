@@ -14,6 +14,7 @@
 #include <wlr/types/wlr_output_layout.h>
 
 #include "config.h"
+#include "protocols/ext-workspace-v1.h"
 
 struct e_desktop;
 struct e_seat;
@@ -39,6 +40,7 @@ struct e_cosmic_workspace_manager;
 #define E_LINUX_DRM_SYNCOBJ_VERSION 1
 
 #define E_COSMIC_WORKSPACE_VERSION 2
+#define E_EXT_WORKSPACE_VERSION 1
 
 // main struct handling:
 //  - backend (wl_display, wlr_backend, wlr_allocator, wlr_renderer, shells, protocols ...)
@@ -93,6 +95,7 @@ struct e_server
 #endif
 
     struct e_cosmic_workspace_manager* cosmic_workspace_manager;
+    struct e_ext_workspace_manager* ext_workspace_manager;
 
     // what the user interacts with
     struct e_desktop* desktop;

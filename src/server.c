@@ -311,6 +311,14 @@ int e_server_init(struct e_server* server, struct e_config* config)
         return 1;
     }
 
+    server->ext_workspace_manager = e_ext_workspace_manager_create(server->display, E_EXT_WORKSPACE_VERSION, E_EXT_WORKSPACE_CAPABILITY_ACTIVATE);
+
+    if (server->ext_workspace_manager == NULL)
+    {
+        e_log_error("e_server_init: failed to create ext workspace manager");
+        return 1;
+    }
+
     //allows clients to reference surfaces of other clients
     struct wlr_xdg_foreign_registry* foreign_registry = wlr_xdg_foreign_registry_create(server->display);
     wlr_xdg_foreign_v1_create(server->display, foreign_registry);
