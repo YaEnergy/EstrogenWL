@@ -95,7 +95,7 @@ struct e_workspace* e_workspace_create(struct e_output* output)
         e_cosmic_workspace_remove(workspace->cosmic_handle);
         free(workspace);
         
-        e_log_error("e_workspace_create: failed to create cosmic workspace handle!");
+        e_log_error("e_workspace_create: failed to create ext workspace handle!");
         return NULL;
     }
 
