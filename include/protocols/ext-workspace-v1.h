@@ -136,7 +136,7 @@ struct e_ext_workspace* e_ext_workspace_create(struct e_ext_workspace_manager* m
 
 // Assign workspace to group, a workspace can only ever be assigned to one group at a time.
 // Group is allowed to be NULL.
-//TODO: void e_ext_workspace_assign_to_group(struct e_ext_workspace* workspace, struct e_ext_workspace_group* group);
+void e_ext_workspace_assign_to_group(struct e_ext_workspace* workspace, struct e_ext_workspace_group* group);
 
 // Set the name of workspace.
 // Name is copied.

@@ -209,6 +209,7 @@ struct e_ext_workspace* e_ext_workspace_create(struct e_ext_workspace_manager* m
 
     workspace->name = NULL;
     workspace->id = (id != NULL) ? e_strdup(id) : NULL;
+    workspace->group = NULL;
 
     wl_array_init(&workspace->coords);
 
@@ -243,6 +244,68 @@ struct e_ext_workspace* e_ext_workspace_create(struct e_ext_workspace_manager* m
     e_ext_workspace_manager_schedule_done_event(manager);
 
     return workspace;
+}
+
+static void group_send_workspace_enter(struct e_ext_workspace_group* group, struct e_ext_workspace* workspace)
+{
+    assert(group && workspace);
+
+    if (group == NULL || workspace == NULL)
+        return;
+
+    struct wl_resource* group_resource;
+    wl_list_for_each(group_resource, &group->resources, link)
+    {
+        struct wl_resource* workspace_resource;
+        wl_list_for_each(workspace_resource, &workspace->resources, link)
+        {
+            ext_workspace_group_handle_v1_send_workspace_enter(group_resource, workspace_resource);
+        }
+    }
+}
+
+static void group_send_workspace_leave(struct e_ext_workspace_group* group, struct e_ext_workspace* workspace)
+{
+    assert(group && workspace);
+
+    if (group == NULL || workspace == NULL)
+        return;
+
+    struct wl_resource* group_resource;
+    wl_list_for_each(group_resource, &group->resources, link)
+    {
+        struct wl_resource* workspace_resource;
+        wl_list_for_each(workspace_resource, &workspace->resources, link)
+        {
+            ext_workspace_group_handle_v1_send_workspace_leave(group_resource, workspace_resource);
+        }
+    }
+}
+
+// Assign workspace to group, a workspace can only ever be assigned to one group at a time.
+// Group is allowed to be NULL.
+void e_ext_workspace_assign_to_group(struct e_ext_workspace* workspace, struct e_ext_workspace_group* group)
+{
+    assert(workspace);
+
+    if (workspace == NULL)
+        return;
+
+    //if already in group, leave
+    if (workspace->group != NULL)
+    {
+        workspace->group = NULL;
+        wl_list_remove(&workspace->group_link);
+        group_send_workspace_leave(group, workspace);
+    }
+
+    //enter requested group, if any
+    if (group != NULL)
+    {
+        workspace->group = group;
+        wl_list_insert(&group->workspaces, &workspace->group_link);
+        group_send_workspace_enter(group, workspace);
+    }
 }
 
 // Name is copied.
