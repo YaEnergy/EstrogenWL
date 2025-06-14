@@ -172,6 +172,9 @@ static void workspace_resource_send_init(struct e_ext_workspace* workspace, stru
 
     workspace_resource_send_capabilities(workspace, resource);
 
+    if (workspace->coords.size != 0)
+        ext_workspace_handle_v1_send_coordinates(resource, &workspace->coords);
+
     if (workspace->name != NULL)
         ext_workspace_handle_v1_send_name(resource, workspace->name);
 
@@ -274,6 +277,28 @@ void e_ext_workspace_set_name(struct e_ext_workspace* workspace, const char* nam
     }
 
     e_ext_workspace_manager_schedule_done_event(workspace->manager);
+}
+
+// Set coordinates of the workspace.
+void e_ext_workspace_set_coords(struct e_ext_workspace* workspace, struct wl_array* coords)
+{
+    assert(workspace && coords);
+
+    if (workspace == NULL || coords == NULL)
+        return;
+
+    wl_array_release(&workspace->coords);
+
+    wl_array_init(&workspace->coords);
+    wl_array_copy(&workspace->coords, coords);
+
+    struct wl_resource* resource;
+    wl_list_for_each(resource, &workspace->resources, link)
+    {
+        ext_workspace_handle_v1_send_coordinates(resource, &workspace->coords);
+    }
+
+    e_ext_workspace_manager_schedule_done_event(workspace->group->manager);
 }
 
 /* workspace group interface */
