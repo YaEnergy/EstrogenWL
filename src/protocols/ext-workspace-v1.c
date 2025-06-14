@@ -169,8 +169,6 @@ static void workspace_resource_send_init(struct e_ext_workspace* workspace, stru
 
     if (workspace->name != NULL)
         ext_workspace_handle_v1_send_name(resource, workspace->name);
-
-    //TODO: coordinates
 }
 
 static void e_ext_workspace_resource_destroy(struct wl_resource* resource)
