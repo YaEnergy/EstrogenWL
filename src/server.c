@@ -33,6 +33,8 @@
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
 #include <wlr/types/wlr_alpha_modifier_v1.h>
 #include <wlr/types/wlr_linux_drm_syncobj_v1.h>
+#include <wlr/types/wlr_foreign_toplevel_management_v1.h>
+#include <wlr/types/wlr_ext_foreign_toplevel_list_v1.h>
 
 #if E_XWAYLAND_SUPPORT
 #include <wlr/xwayland.h>
@@ -300,6 +302,16 @@ int e_server_init(struct e_server* server, struct e_config* config)
     //allow clients to set a factor for the alpha values on a surface
     if (wlr_alpha_modifier_v1_create(server->display) == NULL)
         e_log_error("e_server_init: failed to create wlr alpha modifier v1");
+
+    server->foreign_toplevel_list = wlr_ext_foreign_toplevel_list_v1_create(server->display, E_EXT_FOREIGN_TOPLEVEL_LIST_VERSION);
+
+    if (server->foreign_toplevel_list == NULL)
+        e_log_error("e_server_init: failed to create foreign toplevel list");
+
+    server->foreign_toplevel_manager = wlr_foreign_toplevel_manager_v1_create(server->display);
+
+    if (server->foreign_toplevel_manager == NULL)
+        e_log_error("e_server_init: failed to create foreign toplevel manager");
 
     //allows clients to reference surfaces of other clients
     struct wlr_xdg_foreign_registry* foreign_registry = wlr_xdg_foreign_registry_create(server->display);

@@ -23,6 +23,8 @@ struct wlr_layer_shell_v1;
 #if E_XWAYLAND_SUPPORT
 struct wlr_xwayland;
 #endif
+struct wlr_ext_foreign_toplevel_list_v1;
+struct wlr_foreign_toplevel_manager_v1;
 
 #define E_COMPOSITOR_VERSION 6
 
@@ -33,6 +35,7 @@ struct wlr_xwayland;
 #define E_EXT_DATA_CONTROL_V1_VERSION 1
 #define E_EXT_IMAGE_CAPTURE_SOURCE_VERSION 1
 #define E_EXT_IMAGE_COPY_CAPTURE_VERSION 1
+#define E_EXT_FOREIGN_TOPLEVEL_LIST_VERSION 1
 
 #define E_LINUX_DRM_SYNCOBJ_VERSION 1
 
@@ -87,6 +90,9 @@ struct e_server
     struct wl_listener xwayland_ready;
     struct wl_listener new_xwayland_surface;
 #endif
+
+    struct wlr_ext_foreign_toplevel_list_v1* foreign_toplevel_list;
+    struct wlr_foreign_toplevel_manager_v1* foreign_toplevel_manager;
 
     // what the user interacts with
     struct e_desktop* desktop;
