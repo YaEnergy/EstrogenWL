@@ -946,8 +946,6 @@ static void e_ext_workspace_manager_bind(struct wl_client* client, void* data, u
     
     wl_list_insert(&manager->resources, wl_resource_get_link(resource));
 
-    //TODO: group workspaces (group workspace enter events)?
-
     //create resources for every group + send events
     struct e_ext_workspace_group* group;
     wl_list_for_each(group, &manager->groups, link)
@@ -973,6 +971,17 @@ static void e_ext_workspace_manager_bind(struct wl_client* client, void* data, u
         ext_workspace_manager_v1_send_workspace(resource, workspace_resource);
         workspace_resource_send_init(workspace, workspace_resource);
         workspace_send_state(workspace, workspace_resource);
+
+        //if inside group, send enter events (for this client only)
+        if (workspace->group == NULL)
+            continue;
+
+        struct wl_resource* group_resource;
+        wl_list_for_each(group_resource, &workspace->group->resources, link)
+        {
+            if (wl_resource_get_client(group_resource) == client)
+                ext_workspace_group_handle_v1_send_workspace_enter(group_resource, workspace_resource);
+        }
     }
 
     ext_workspace_manager_v1_send_done(resource);
