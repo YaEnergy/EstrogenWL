@@ -234,7 +234,19 @@ static void e_ext_workspace_manager_bind(struct wl_client* client, void* data, u
     
     wl_list_insert(&manager->resources, wl_resource_get_link(resource));
 
-    //TODO: create resources for every group + send events
+    struct e_ext_workspace_group* group;
+    wl_list_for_each(group, &manager->groups, link)
+    {
+        struct wl_resource* group_resource = e_ext_workspace_group_create_resource(group, resource);
+
+        if (group_resource == NULL)
+            continue;
+
+        ext_workspace_manager_v1_send_workspace_group(resource, group_resource);
+        group_resource_send_capabilities(group, group_resource);
+
+        //TODO: group workspaces?
+    }
 
     //TODO: create resources for every workspace + send events
 
