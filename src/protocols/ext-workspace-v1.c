@@ -168,6 +168,23 @@ static struct group_output* group_output_from_wlr_output(struct e_ext_workspace_
 
 /* workspace interface */
 
+struct workspace_assign_event
+{
+    // Group that workspace wants to be assigned to.
+    struct e_ext_workspace_group* group;
+
+    struct wl_listener destroy;
+};
+
+void workspace_assign_event_destroy(struct wl_listener* listener, void* data)
+{
+    struct workspace_assign_event* event = wl_container_of(listener, event, destroy);
+
+    SIGNAL_DISCONNECT(event->destroy);
+
+    free(event);
+}
+
 static void e_ext_workspace_request_activate(struct wl_client* client, struct wl_resource* resource)
 {
     struct e_ext_workspace* workspace = wl_resource_get_user_data(resource);
@@ -182,7 +199,28 @@ static void e_ext_workspace_request_deactivate(struct wl_client* client, struct 
 
 static void e_ext_workspace_request_assign(struct wl_client* client, struct wl_resource* resource, struct wl_resource* group_resource)
 {
-    //TODO: e_ext_workspace_request_assign
+    struct e_ext_workspace* workspace = wl_resource_get_user_data(resource);
+    struct workspace_assign_event* event = calloc(1, sizeof(*event));
+
+    if (event == NULL)
+    {
+        wl_client_post_no_memory(client);
+        return;
+    }
+
+    struct e_ext_workspace_group* group = wl_resource_get_user_data(group_resource);
+    event->group = group;
+
+    struct e_trans_op* operation = e_trans_session_add_op(&workspace->manager->trans_session, workspace, MANAGER_WORKSPACE_ASSIGN, event);
+
+    if (operation == NULL)
+    {
+        free(event);
+        wl_client_post_no_memory(client);
+        return;
+    }
+
+    SIGNAL_CONNECT(operation->destroy, event->destroy, workspace_assign_event_destroy);
 }
 
 static void e_ext_workspace_request_remove(struct wl_client* client, struct wl_resource* resource)
