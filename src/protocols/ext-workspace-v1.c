@@ -172,7 +172,10 @@ static void workspace_resource_send_init(struct e_ext_workspace* workspace, stru
 
     workspace_resource_send_capabilities(workspace, resource);
 
-    //TODO: name, coordinates
+    if (workspace->name != NULL)
+        ext_workspace_handle_v1_send_name(resource, workspace->name);
+
+    //TODO: coordinates
 }
 
 static void e_ext_workspace_resource_destroy(struct wl_resource* resource)
@@ -244,6 +247,33 @@ struct e_ext_workspace* e_ext_workspace_create(struct e_ext_workspace_manager* m
     e_ext_workspace_manager_schedule_done_event(manager);
 
     return workspace;
+}
+
+// Name is copied.
+void e_ext_workspace_set_name(struct e_ext_workspace* workspace, const char* name)
+{
+    assert(workspace);
+
+    if (workspace == NULL)
+        return;
+
+    char* copy = e_strdup(name);
+
+    if (copy == NULL)
+        return;
+
+    if (workspace->name != NULL)
+        free(workspace->name);
+
+    workspace->name = copy;
+
+    struct wl_resource* resource;
+    wl_list_for_each(resource, &workspace->resources, link)
+    {
+        ext_workspace_handle_v1_send_name(resource, copy);
+    }
+
+    e_ext_workspace_manager_schedule_done_event(workspace->manager);
 }
 
 /* workspace group interface */
