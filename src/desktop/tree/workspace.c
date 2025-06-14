@@ -35,6 +35,14 @@ static void e_workspace_cosmic_request_activate(struct wl_listener* listener, vo
         e_output_display_workspace(workspace->output, workspace);
 }
 
+static void e_workspace_ext_request_activate(struct wl_listener* listener, void* data)
+{
+    struct e_workspace* workspace = wl_container_of(listener, workspace, ext_request_activate);
+
+    if (workspace->output != NULL && !workspace->active)
+        e_output_display_workspace(workspace->output, workspace);
+}
+
 // Create a new workspace for an output.
 // Returns NULL on fail.
 struct e_workspace* e_workspace_create(struct e_output* output)
@@ -94,7 +102,8 @@ struct e_workspace* e_workspace_create(struct e_output* output)
     e_ext_workspace_assign_to_group(workspace->ext_handle, output->workspace_group.ext_handle);
 
     SIGNAL_CONNECT(workspace->cosmic_handle->events.request_activate, workspace->cosmic_request_activate, e_workspace_cosmic_request_activate);
-
+    SIGNAL_CONNECT(workspace->ext_handle->events.request_activate, workspace->ext_request_activate, e_workspace_ext_request_activate);
+    
     //layer trees
     NEW_SCENE_TREE(workspace->layers.floating, output->layers.floating, E_NODE_DESC_WORKSPACE, workspace);
     NEW_SCENE_TREE(workspace->layers.tiling, output->layers.tiling, E_NODE_DESC_WORKSPACE, workspace);
@@ -247,6 +256,7 @@ void e_workspace_destroy(struct e_workspace* workspace)
     SIGNAL_DISCONNECT(workspace->cosmic_request_activate);
     e_cosmic_workspace_remove(workspace->cosmic_handle);
 
+    SIGNAL_DISCONNECT(workspace->ext_request_activate);
     e_ext_workspace_remove(workspace->ext_handle);
 
     e_tree_container_destroy(workspace->root_tiling_container);

@@ -51,6 +51,8 @@ struct e_workspace
     struct wl_listener cosmic_request_activate;
 
     struct e_ext_workspace* ext_handle;
+
+    struct wl_listener ext_request_activate;
 };
 
 // Create a new workspace for an output.
