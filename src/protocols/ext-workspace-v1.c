@@ -446,9 +446,9 @@ void e_ext_workspace_assign_to_group(struct e_ext_workspace* workspace, struct e
     //if already in group, leave
     if (workspace->group != NULL)
     {
+        group_send_workspace_leave(workspace->group, workspace);
         workspace->group = NULL;
         wl_list_remove(&workspace->group_link);
-        group_send_workspace_leave(group, workspace);
     }
 
     //enter requested group, if any
