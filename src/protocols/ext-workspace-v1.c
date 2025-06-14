@@ -598,7 +598,7 @@ struct group_create_workspace_event
     struct wl_listener destroy;
 };
 
-void group_create_workspace_event_destroy(struct wl_listener* listener, void* data)
+static void group_create_workspace_event_destroy(struct wl_listener* listener, void* data)
 {
     struct group_create_workspace_event* event = wl_container_of(listener, event, destroy);
 
