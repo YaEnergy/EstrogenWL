@@ -63,7 +63,188 @@ static void e_ext_workspace_manager_schedule_done_event(struct e_ext_workspace_m
 
 /* workspace interface */
 
+static void e_ext_workspace_request_activate(struct wl_client* client, struct wl_resource* resource)
+{
+    //TODO: e_ext_workspace_request_activate
+}
+
+static void e_ext_workspace_request_deactivate(struct wl_client* client, struct wl_resource* resource)
+{
+    //TODO: e_ext_workspace_request_deactivate
+}
+
+static void e_ext_workspace_request_assign(struct wl_client* client, struct wl_resource* resource, struct wl_resource* group_resource)
+{
+    //TODO: e_ext_workspace_request_assign
+}
+
+static void e_ext_workspace_request_remove(struct wl_client* client, struct wl_resource* resource)
+{
+    //TODO: e_ext_workspace_request_remove
+}
+
+// Client does not want workspace object anymore.
+static void e_ext_workspace_destroy(struct wl_client* client, struct wl_resource* resource)
+{
+    wl_resource_destroy(resource);
+}
+
+static const struct ext_workspace_handle_v1_interface workspace_interface = {
+    .activate = e_ext_workspace_request_activate,
+    .deactivate = e_ext_workspace_request_deactivate,
+    .assign = e_ext_workspace_request_assign,
+    .remove = e_ext_workspace_request_remove,
+    .destroy = e_ext_workspace_destroy
+};
+
 /* workspace */
+
+// Sends state of workspace to all its resources if resource is NULL.
+// If resource is not NULL, only sends state to that resource.
+static void workspace_send_state(struct e_ext_workspace* workspace, struct wl_resource* resource)
+{
+    assert(workspace);
+
+    if (workspace == NULL)
+        return;
+
+    uint32_t state = 0;
+
+    if (workspace->state & E_EXT_WORKSPACE_STATE_ACTIVE)
+        state |= EXT_WORKSPACE_HANDLE_V1_STATE_ACTIVE;
+
+    if (workspace->state & E_EXT_WORKSPACE_STATE_URGENT)
+        state |= EXT_WORKSPACE_HANDLE_V1_STATE_URGENT;
+
+    if (workspace->state & E_EXT_WORKSPACE_STATE_HIDDEN)
+        state |= EXT_WORKSPACE_HANDLE_V1_STATE_HIDDEN;
+
+    if (resource != NULL)
+    {
+        ext_workspace_handle_v1_send_state(resource, state);
+    }
+    else
+    {
+        struct wl_resource* workspace_resource;
+        wl_list_for_each(workspace_resource, &workspace->resources, link)
+        {
+            ext_workspace_handle_v1_send_state(workspace_resource, state);
+        }
+    }
+}
+
+static void workspace_resource_send_capabilities(struct e_ext_workspace* workspace, struct wl_resource* resource)
+{
+    assert(workspace && resource);
+
+    if (workspace == NULL || resource == NULL)
+        return;
+
+    uint32_t manager_capabilities = workspace->manager->capabilities;
+    uint32_t workspace_capabilities = 0;
+
+    if (manager_capabilities & E_EXT_WORKSPACE_CAPABILITY_ACTIVATE)
+        workspace_capabilities |= EXT_WORKSPACE_HANDLE_V1_WORKSPACE_CAPABILITIES_ACTIVATE;
+
+    if (manager_capabilities & E_EXT_WORKSPACE_CAPABILITY_DEACTIVATE)
+        workspace_capabilities |= EXT_WORKSPACE_HANDLE_V1_WORKSPACE_CAPABILITIES_DEACTIVATE;
+
+    if (manager_capabilities & E_EXT_WORKSPACE_CAPABILITY_ASSIGN)
+        workspace_capabilities |= EXT_WORKSPACE_HANDLE_V1_WORKSPACE_CAPABILITIES_ASSIGN;
+
+    if (manager_capabilities & E_EXT_WORKSPACE_CAPABILITY_REMOVE)
+        workspace_capabilities |= EXT_WORKSPACE_HANDLE_V1_WORKSPACE_CAPABILITIES_REMOVE;
+
+    ext_workspace_handle_v1_send_capabilities(resource, workspace_capabilities);
+}
+
+// Sends workspace's name, capabilities and coordinates to resource.
+// State is sent separately.
+static void workspace_resource_send_init(struct e_ext_workspace* workspace, struct wl_resource* resource)
+{
+    assert(workspace && resource);
+
+    if (workspace == NULL || resource == NULL)
+        return;
+
+    if (workspace->id != NULL)
+        ext_workspace_handle_v1_send_id(resource, workspace->id);
+
+    workspace_resource_send_capabilities(workspace, resource);
+
+    //TODO: name, coordinates
+}
+
+static void e_ext_workspace_resource_destroy(struct wl_resource* resource)
+{
+    wl_list_remove(wl_resource_get_link(resource));
+}
+
+// Returns NULL on fail.
+static struct wl_resource* e_ext_workspace_create_resource(struct e_ext_workspace* workspace, struct wl_resource* manager_resource)
+{
+    struct wl_client* client = wl_resource_get_client(manager_resource);
+
+    struct wl_resource* workspace_resource = wl_resource_create(client, &ext_workspace_handle_v1_interface, wl_resource_get_version(manager_resource), 0);
+
+    if (workspace_resource == NULL)
+    {
+        wl_client_post_no_memory(client);
+        return NULL;
+    }
+
+    wl_resource_set_implementation(workspace_resource, &workspace_interface, workspace, e_ext_workspace_resource_destroy);
+
+    wl_list_insert(&workspace->resources, wl_resource_get_link(workspace_resource));
+    
+    return workspace_resource;
+}
+
+// Returns NULL on fail.
+struct e_ext_workspace* e_ext_workspace_create(struct e_ext_workspace_manager* manager, const char* id)
+{
+    struct e_ext_workspace* workspace = calloc(1, sizeof(*workspace));
+
+    if (workspace == NULL)
+        return NULL;
+
+    workspace->name = NULL;
+    workspace->id = (id != NULL) ? e_strdup(id) : NULL;
+
+    wl_array_init(&workspace->coords);
+
+    wl_list_init(&workspace->resources);
+
+    wl_signal_init(&workspace->events.request_activate);
+    wl_signal_init(&workspace->events.request_deactivate);
+    wl_signal_init(&workspace->events.request_assign);
+    wl_signal_init(&workspace->events.request_remove);
+    wl_signal_init(&workspace->events.destroy);
+
+    wl_list_append(manager->workspaces, &workspace->manager_link);
+
+    //create workspace resource for each client that has binded to manager
+
+    struct wl_resource* manager_resource = NULL;
+    struct wl_resource* tmp;
+
+    wl_list_for_each_safe(manager_resource, tmp, &manager->resources, link)
+    {
+        struct wl_resource* workspace_resource = e_ext_workspace_create_resource(workspace, manager_resource);
+
+        if (workspace_resource != NULL)
+        {
+            ext_workspace_manager_v1_send_workspace(manager_resource, workspace_resource);
+            workspace_resource_send_init(workspace, workspace_resource);
+        }
+    }
+
+    workspace_send_state(workspace, NULL);
+
+    e_ext_workspace_manager_schedule_done_event(manager);
+
+    return workspace;
+}
 
 /* workspace group interface */
 
@@ -93,9 +274,10 @@ static void group_resource_send_capabilities(struct e_ext_workspace_group* group
     if (group == NULL || resource == NULL)
         return;
 
+    uint32_t manager_capabilities = group->manager->capabilities;
     uint32_t group_capabilities = 0;
 
-    if (group->manager->capabilities & E_EXT_WORKSPACE_GROUP_CAPABILITY_CREATE_WORKSPACE)
+    if (manager_capabilities & E_EXT_WORKSPACE_GROUP_CAPABILITY_CREATE_WORKSPACE)
         group_capabilities |= EXT_WORKSPACE_GROUP_HANDLE_V1_GROUP_CAPABILITIES_CREATE_WORKSPACE;
 
     ext_workspace_group_handle_v1_send_capabilities(resource, group_capabilities);
