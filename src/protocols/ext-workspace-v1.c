@@ -294,6 +294,40 @@ void e_ext_workspace_set_coords(struct e_ext_workspace* workspace, struct wl_arr
     e_ext_workspace_manager_schedule_done_event(workspace->group->manager);
 }
 
+// Set whether or not workspace is in a specific state.
+static void workspace_set_state(struct e_ext_workspace* workspace, enum e_ext_workspace_state state, bool enabled)
+{
+    assert(workspace);
+
+    if (workspace == NULL)
+        return;
+
+    if (enabled)
+        workspace->pending_state |= state;
+    else
+        workspace->pending_state &= ~state;
+
+    e_ext_workspace_manager_schedule_done_event(workspace->group->manager);
+}
+
+// Set whether or not workspace is active.
+void e_ext_workspace_set_active(struct e_ext_workspace* workspace, bool active)
+{
+    workspace_set_state(workspace, E_EXT_WORKSPACE_STATE_ACTIVE, active);
+}
+
+// Set whether or not workspace wants attention.
+void e_ext_workspace_set_urgent(struct e_ext_workspace* workspace, bool urgent)
+{
+    workspace_set_state(workspace, E_EXT_WORKSPACE_STATE_URGENT, urgent);
+}
+
+// Set whether or not workspace is hidden.
+void e_ext_workspace_set_hidden(struct e_ext_workspace* workspace, bool hidden)
+{
+    workspace_set_state(workspace, E_EXT_WORKSPACE_STATE_HIDDEN, hidden);
+}
+
 /* workspace group interface */
 
 static void e_ext_workspace_group_create_workspace(struct wl_client* client, struct wl_resource* resource, const char* workspace_name)
@@ -402,7 +436,16 @@ static void manager_idle_send_done_event(void* data)
 {
     struct e_ext_workspace_manager* manager = data;
 
-    //TODO: send pending workspace state
+    //send pending workspace state
+    struct e_ext_workspace* workspace;
+    wl_list_for_each(workspace, &manager->workspaces, manager_link)
+    {
+        if (workspace->pending_state != workspace->state)
+        {
+            workspace->state = workspace->pending_state;
+            workspace_send_state(workspace, NULL);
+        }
+    }
 
     struct wl_resource* resource;
     wl_list_for_each(resource, &manager->resources, link)
