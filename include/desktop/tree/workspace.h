@@ -12,6 +12,7 @@
 #include "desktop/tree/container.h"
 
 #include "protocols/cosmic-workspace-v1.h"
+#include "protocols/ext-workspace-v1.h"
 #include "util/list.h"
 
 struct e_output;
@@ -48,6 +49,8 @@ struct e_workspace
     struct e_cosmic_workspace* cosmic_handle;
 
     struct wl_listener cosmic_request_activate;
+
+    struct e_ext_workspace* ext_handle;
 };
 
 // Create a new workspace for an output.

@@ -21,6 +21,7 @@
 #include "util/wl_macros.h"
 
 #include "protocols/cosmic-workspace-v1.h"
+#include "protocols/ext-workspace-v1.h"
 
 #include "server.h"
 
@@ -78,6 +79,20 @@ struct e_workspace* e_workspace_create(struct e_output* output)
         return NULL;
     }
 
+    workspace->ext_handle = e_ext_workspace_create(output->server->ext_workspace_manager, NULL);
+
+    if (workspace->ext_handle == NULL)
+    {
+        e_tree_container_destroy(workspace->root_tiling_container);
+        e_cosmic_workspace_remove(workspace->cosmic_handle);
+        free(workspace);
+        
+        e_log_error("e_workspace_create: failed to create cosmic workspace handle!");
+        return NULL;
+    }
+
+    e_ext_workspace_assign_to_group(workspace->ext_handle, output->workspace_group.ext_handle);
+
     SIGNAL_CONNECT(workspace->cosmic_handle->events.request_activate, workspace->cosmic_request_activate, e_workspace_cosmic_request_activate);
 
     //layer trees
@@ -102,6 +117,9 @@ void e_workspace_set_name(struct e_workspace* workspace, const char* name)
 
     if (workspace->cosmic_handle->name == NULL || strcmp(workspace->cosmic_handle->name, name) != 0)
         e_cosmic_workspace_set_name(workspace->cosmic_handle, name);
+
+    if (workspace->ext_handle->name == NULL || strcmp(workspace->ext_handle->name, name) != 0)
+        e_ext_workspace_set_name(workspace->ext_handle, name);
 }
 
 // Enable/disable workspace trees.
@@ -120,6 +138,9 @@ void e_workspace_set_activated(struct e_workspace* workspace, bool activated)
 
     e_cosmic_workspace_set_active(workspace->cosmic_handle, activated);
     e_cosmic_workspace_set_hidden(workspace->cosmic_handle, !activated);
+
+    e_ext_workspace_set_active(workspace->ext_handle, activated);
+    e_ext_workspace_set_hidden(workspace->ext_handle, !activated);
 }
 
 // Arranges a workspace's children to fit within the given area.
@@ -225,6 +246,8 @@ void e_workspace_destroy(struct e_workspace* workspace)
 
     SIGNAL_DISCONNECT(workspace->cosmic_request_activate);
     e_cosmic_workspace_remove(workspace->cosmic_handle);
+
+    e_ext_workspace_remove(workspace->ext_handle);
 
     e_tree_container_destroy(workspace->root_tiling_container);
     workspace->root_tiling_container = NULL;
