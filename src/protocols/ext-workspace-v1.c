@@ -49,14 +49,6 @@ static char* e_strdup(const char* string)
     return copy;
 }
 
-static void wl_array_append_uint32_t(struct wl_array* array, uint32_t num)
-{
-    uint32_t* start = wl_array_add(array, sizeof(uint32_t));
-
-    if (start != NULL)
-        *start = num;
-}
-
 /* workspace manager schedule */
 
 static void e_ext_workspace_manager_schedule_done_event(struct e_ext_workspace_manager* manager);
