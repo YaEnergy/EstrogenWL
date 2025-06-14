@@ -158,7 +158,7 @@ static void workspace_resource_send_capabilities(struct e_ext_workspace* workspa
     ext_workspace_handle_v1_send_capabilities(resource, workspace_capabilities);
 }
 
-// Sends workspace's name, capabilities and coordinates to resource.
+// Sends workspace's id, name, capabilities and coordinates to resource.
 // State is sent separately.
 static void workspace_resource_send_init(struct e_ext_workspace* workspace, struct wl_resource* resource)
 {
