@@ -57,12 +57,14 @@ static void e_ext_workspace_manager_schedule_done_event(struct e_ext_workspace_m
 
 static void e_ext_workspace_request_activate(struct wl_client* client, struct wl_resource* resource)
 {
-    //TODO: e_ext_workspace_request_activate
+    struct e_ext_workspace* workspace = wl_resource_get_user_data(resource);
+    e_trans_session_add_op(&workspace->manager->trans_session, workspace, MANAGER_WORKSPACE_ACTIVATE, NULL);
 }
 
 static void e_ext_workspace_request_deactivate(struct wl_client* client, struct wl_resource* resource)
 {
-    //TODO: e_ext_workspace_request_deactivate
+    struct e_ext_workspace* workspace = wl_resource_get_user_data(resource);
+    e_trans_session_add_op(&workspace->manager->trans_session, workspace, MANAGER_WORKSPACE_DEACTIVATE, NULL);
 }
 
 static void e_ext_workspace_request_assign(struct wl_client* client, struct wl_resource* resource, struct wl_resource* group_resource)
@@ -72,7 +74,8 @@ static void e_ext_workspace_request_assign(struct wl_client* client, struct wl_r
 
 static void e_ext_workspace_request_remove(struct wl_client* client, struct wl_resource* resource)
 {
-    //TODO: e_ext_workspace_request_remove
+    struct e_ext_workspace* workspace = wl_resource_get_user_data(resource);
+    e_trans_session_add_op(&workspace->manager->trans_session, workspace, MANAGER_WORKSPACE_REMOVE, NULL);
 }
 
 // Client does not want workspace object anymore.
