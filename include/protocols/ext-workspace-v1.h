@@ -121,24 +121,22 @@ struct e_ext_workspace_manager* e_ext_workspace_manager_create(struct wl_display
 struct e_ext_workspace_group* e_ext_workspace_group_create(struct e_ext_workspace_manager* manager);
 
 // Assign output to workspace group.
-void e_ext_workspace_group_output_enter(struct e_ext_workspace_group* group, struct wlr_output* output);
+//TODO: void e_ext_workspace_group_output_enter(struct e_ext_workspace_group* group, struct wlr_output* output);
 
 // Remove output from workspace group.
-void e_ext_workspace_group_output_leave(struct e_ext_workspace_group* group, struct wlr_output* output);
-
-// Assign workspace to workspace group.
-void e_ext_workspace_group_workspace_enter(struct e_ext_workspace_group* group, struct e_ext_workspace* workspace);
-
-// Remove workspace from workspace group.
-void e_ext_workspace_group_workspace_leave(struct e_ext_workspace_group* group, struct e_ext_workspace* workspace);
+//TODO: void e_ext_workspace_group_output_leave(struct e_ext_workspace_group* group, struct wlr_output* output);
 
 // Destroy workspace group and its workspaces.
-void e_ext_workspace_group_remove(struct e_ext_workspace_group* group);
+//TODO: void e_ext_workspace_group_remove(struct e_ext_workspace_group* group);
 
 // Creates a new workspace using workspace manager.
 // ID is allowed to be NULL.
 // Returns NULL on fail.
 struct e_ext_workspace* e_ext_workspace_create(struct e_ext_workspace_manager* manager, const char* id);
+
+// Assign workspace to group, a workspace can only ever be assigned to one group at a time.
+// Group is allowed to be NULL.
+//TODO: void e_ext_workspace_assign_to_group(struct e_ext_workspace* workspace, struct e_ext_workspace_group* group);
 
 // Set the name of workspace.
 // Name is copied.
