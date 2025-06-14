@@ -83,7 +83,8 @@ static void group_output_destroy(struct group_output* group_output)
         struct wl_resource* output_resource;
         wl_list_for_each(output_resource, &group_output->output->resources, link)
         {
-            ext_workspace_group_handle_v1_send_output_leave(group_resource, output_resource);
+            if (wl_resource_get_client(group_resource) == wl_resource_get_client(output_resource))
+                ext_workspace_group_handle_v1_send_output_leave(group_resource, output_resource);
         }    
     }
 
@@ -769,7 +770,8 @@ void e_ext_workspace_group_output_enter(struct e_ext_workspace_group* group, str
         struct wl_resource* output_resource;
         wl_list_for_each(output_resource, &output->resources, link)
         {
-            ext_workspace_group_handle_v1_send_output_enter(group_resource, output_resource);
+            if (wl_resource_get_client(group_resource) == wl_resource_get_client(output_resource))
+                ext_workspace_group_handle_v1_send_output_enter(group_resource, output_resource);
         }    
     }
 

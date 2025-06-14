@@ -92,7 +92,8 @@ static void group_output_destroy(struct group_output* group_output)
         struct wl_resource* output_resource;
         wl_list_for_each(output_resource, &group_output->output->resources, link)
         {
-            zcosmic_workspace_group_handle_v1_send_output_leave(group_resource, output_resource);
+            if (wl_resource_get_client(group_resource) == wl_resource_get_client(output_resource))
+                zcosmic_workspace_group_handle_v1_send_output_leave(group_resource, output_resource);
         }    
     }
 
@@ -804,7 +805,8 @@ void e_cosmic_workspace_group_output_enter(struct e_cosmic_workspace_group* grou
         struct wl_resource* output_resource;
         wl_list_for_each(output_resource, &output->resources, link)
         {
-            zcosmic_workspace_group_handle_v1_send_output_enter(group_resource, output_resource);
+            if (wl_resource_get_client(group_resource) == wl_resource_get_client(output_resource))
+                zcosmic_workspace_group_handle_v1_send_output_enter(group_resource, output_resource);
         }    
     }
 
@@ -981,6 +983,22 @@ static void e_cosmic_workspace_manager_resource_destroy(struct wl_resource* reso
     wl_list_remove(wl_resource_get_link(resource));
 }
 
+static void group_send_output_state(struct e_cosmic_workspace_group* group, struct wl_resource* group_resource)
+{
+    assert(group && group_resource);
+
+    struct group_output* group_output;
+    wl_list_for_each(group_output, &group->outputs, link)
+    {
+        struct wl_resource* output_resource;
+        wl_list_for_each(output_resource, &group_output->output->resources, link)
+        {
+            if (wl_resource_get_client(output_resource) == wl_resource_get_client(group_resource))
+                zcosmic_workspace_group_handle_v1_send_output_enter(group_resource, output_resource);
+        }
+    }
+}
+
 // Client wants to bind to manager's global.
 static void e_cosmic_workspace_manager_bind(struct wl_client* client, void* data, uint32_t version, uint32_t id)
 {
@@ -1003,6 +1021,7 @@ static void e_cosmic_workspace_manager_bind(struct wl_client* client, void* data
 
         zcosmic_workspace_manager_v1_send_workspace_group(resource, group_resource);
         zcosmic_workspace_group_handle_v1_send_capabilities(group_resource, &group->capabilities);
+        group_send_output_state(group, group_resource);
 
         struct e_cosmic_workspace* workspace;
         wl_list_for_each(workspace, &group->workspaces, link)
