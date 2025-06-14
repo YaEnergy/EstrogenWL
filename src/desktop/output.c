@@ -32,6 +32,7 @@
 #include "util/wl_macros.h"
 
 #include "protocols/cosmic-workspace-v1.h"
+#include "protocols/ext-workspace-v1.h"
 
 #include "server.h"
 

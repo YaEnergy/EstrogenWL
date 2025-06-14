@@ -10,12 +10,12 @@
 #include <wlr/util/box.h>
 
 #include "desktop/tree/workspace.h"
-#include "protocols/ext-workspace-v1.h"
 
 struct e_server;
 struct e_desktop;
 
 struct e_cosmic_workspace_group;
+struct e_ext_workspace_group;
 
 //see: wlr-layer-shell-unstable-v1-protocol.h @ enum zwlr_layer_shell_v1_layer
 struct e_output_desktop_layers
