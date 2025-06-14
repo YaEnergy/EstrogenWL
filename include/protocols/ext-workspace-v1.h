@@ -58,8 +58,6 @@ struct e_ext_workspace_group
     struct wl_list outputs; //struct group_output*, internal struct
     struct wl_list workspaces; //struct e_ext_workspace*
 
-    struct wl_array capabilities;
-
     // Resource for each client that has binded to manager.
     struct wl_list resources; //struct wl_resource*
 

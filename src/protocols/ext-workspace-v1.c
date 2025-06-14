@@ -67,7 +67,104 @@ static void e_ext_workspace_manager_schedule_done_event(struct e_ext_workspace_m
 
 /* workspace group interface */
 
+static void e_ext_workspace_group_create_workspace(struct wl_client* client, struct wl_resource* resource, const char* workspace_name)
+{
+    //TODO: e_ext_workspace_group_create_workspace
+}
+
+// Client does not want group object anymore.
+static void e_ext_workspace_group_destroy(struct wl_client* client, struct wl_resource* resource)
+{
+    wl_resource_destroy(resource);
+}
+
+static const struct ext_workspace_group_handle_v1_interface workspace_group_interface = {
+    .create_workspace = e_ext_workspace_group_create_workspace,
+    .destroy = e_ext_workspace_group_destroy
+};
+
 /* workspace group */
+
+// Sends group's capabilities to resource.
+static void group_resource_send_capabilities(struct e_ext_workspace_group* group, struct wl_resource* resource)
+{
+    assert(group && resource);
+
+    if (group == NULL || resource == NULL)
+        return;
+
+    uint32_t group_capabilities = 0;
+
+    if (group->manager->capabilities & E_EXT_WORKSPACE_GROUP_CAPABILITY_CREATE_WORKSPACE)
+        group_capabilities |= EXT_WORKSPACE_GROUP_HANDLE_V1_GROUP_CAPABILITIES_CREATE_WORKSPACE;
+
+    ext_workspace_group_handle_v1_send_capabilities(resource, group_capabilities);
+}
+
+static void e_ext_workspace_group_resource_destroy(struct wl_resource* resource)
+{
+    wl_list_remove(wl_resource_get_link(resource));
+}
+
+// Returns NULL on fail.
+static struct wl_resource* e_ext_workspace_group_create_resource(struct e_ext_workspace_group* group, struct wl_resource* manager_resource)
+{
+    struct wl_client* client = wl_resource_get_client(manager_resource);
+
+    struct wl_resource* group_resource = wl_resource_create(client, &ext_workspace_group_handle_v1_interface, wl_resource_get_version(manager_resource), 0);
+
+    if (group_resource == NULL)
+    {
+        wl_client_post_no_memory(client);
+        return NULL;
+    }
+
+    wl_resource_set_implementation(group_resource, &workspace_group_interface, group, e_ext_workspace_group_resource_destroy);
+
+    wl_list_insert(&group->resources, wl_resource_get_link(group_resource));
+
+    return group_resource;
+}
+
+// Returns NULL on fail.
+struct e_ext_workspace_group* e_ext_workspace_group_create(struct e_ext_workspace_manager* manager)
+{
+    struct e_ext_workspace_group* group = calloc(1, sizeof(*group));
+
+    if (group == NULL)
+        return NULL;
+
+    group->manager = manager;
+
+    wl_list_init(&group->outputs);
+    wl_list_init(&group->workspaces);
+    wl_list_init(&group->resources);
+
+    wl_signal_init(&group->events.request_create_workspace);
+    wl_signal_init(&group->events.destroy);
+
+    wl_list_append(manager->groups, &group->link);
+
+    //create group resource for each client that binded to manager
+
+    struct wl_resource* manager_resource = NULL;
+    struct wl_resource* tmp;
+
+    wl_list_for_each_safe(manager_resource, tmp, &manager->resources, link)
+    {
+        struct wl_resource* group_resource = e_ext_workspace_group_create_resource(group, manager_resource);
+
+        if (group_resource == NULL)
+            continue;
+
+        ext_workspace_manager_v1_send_workspace_group(manager_resource, group_resource);
+        group_resource_send_capabilities(group, group_resource);
+    }
+
+    e_ext_workspace_manager_schedule_done_event(group->manager);
+
+    return group;
+}
 
 /* workspace manager done schedule */
 
