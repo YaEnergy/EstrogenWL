@@ -591,9 +591,56 @@ void e_ext_workspace_remove(struct e_ext_workspace* workspace)
 
 /* workspace group interface */
 
+struct group_create_workspace_event
+{
+    char* name;
+
+    struct wl_listener destroy;
+};
+
+void group_create_workspace_event_destroy(struct wl_listener* listener, void* data)
+{
+    struct group_create_workspace_event* event = wl_container_of(listener, event, destroy);
+
+    SIGNAL_DISCONNECT(event->destroy);
+
+    free(event->name);
+
+    free(event);
+}
+
 static void e_ext_workspace_group_create_workspace(struct wl_client* client, struct wl_resource* resource, const char* workspace_name)
 {
-    //TODO: e_ext_workspace_group_create_workspace
+    struct e_ext_workspace_group* group = wl_resource_get_user_data(resource);
+
+    struct group_create_workspace_event* event = calloc(1, sizeof(*event));
+
+    if (event == NULL)
+    {
+        wl_client_post_no_memory(client);
+        return;
+    }
+
+    event->name = e_strdup(workspace_name);
+
+    if (event->name == NULL)
+    {
+        free(event);
+        wl_client_post_no_memory(client);
+        return;
+    }
+
+    struct e_trans_op* operation = e_trans_session_add_op(&group->manager->trans_session, group, MANAGER_GROUP_CREATE_WORKSPACE, event);
+
+    if (operation == NULL)
+    {
+        free(event->name);
+        free(event);
+        wl_client_post_no_memory(client);
+        return;
+    }
+
+    SIGNAL_CONNECT(operation->destroy, event->destroy, group_create_workspace_event_destroy);
 }
 
 // Client does not want group object anymore.
