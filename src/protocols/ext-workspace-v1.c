@@ -710,7 +710,7 @@ void e_ext_workspace_group_remove(struct e_ext_workspace_group* group)
     if (group == NULL)
         return;
 
-    wl_signal_emit_mutable(&group->events.destroy, NULL); //TODO: will also destroy all group outputs
+    wl_signal_emit_mutable(&group->events.destroy, NULL); //also destroys all group outputs
 
     //unassign all of group's workspaces
     struct e_ext_workspace* workspace;
