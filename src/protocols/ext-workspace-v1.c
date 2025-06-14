@@ -33,6 +33,20 @@ enum manager_op_type
     MANAGER_WORKSPACE_REMOVE,
 };
 
+// Output assigned to a group.
+struct group_output
+{
+    struct e_ext_workspace_group* group;
+    struct wlr_output* output;
+
+    struct wl_listener group_destroy;
+
+    struct wl_listener output_bind;
+    struct wl_listener output_destroy;
+
+    struct wl_list link; //group::outputs
+};
+
 // Duplicates given null-terminated string.
 // Returned string must be freed, returns NULL on fail.
 static char* e_strdup(const char* string)
@@ -52,6 +66,105 @@ static char* e_strdup(const char* string)
 /* workspace manager schedule */
 
 static void e_ext_workspace_manager_schedule_done_event(struct e_ext_workspace_manager* manager);
+
+/* group output */
+
+static void group_output_destroy(struct group_output* group_output)
+{
+    assert(group_output);
+
+    if (group_output == NULL)
+        return;
+
+    //send output enter using every group resource to every output resource
+    struct wl_resource* group_resource;
+    wl_list_for_each(group_resource, &group_output->group->resources, link)
+    {
+        struct wl_resource* output_resource;
+        wl_list_for_each(output_resource, &group_output->output->resources, link)
+        {
+            ext_workspace_group_handle_v1_send_output_leave(group_resource, output_resource);
+        }    
+    }
+
+    SIGNAL_DISCONNECT(group_output->group_destroy);
+
+    SIGNAL_DISCONNECT(group_output->output_bind);
+    SIGNAL_DISCONNECT(group_output->output_destroy);
+
+    wl_list_remove(&group_output->link);
+
+    free(group_output);
+}
+
+static void group_output_group_destroy(struct wl_listener* listener, void* data)
+{
+    struct group_output* group_output = wl_container_of(listener, group_output, group_destroy);
+
+    group_output_destroy(group_output);
+}
+
+// New client bound to output that is assigned to a group, we must send the output enter event for its new resource.
+static void group_output_output_bind(struct wl_listener* listener, void* data)
+{
+    struct group_output* group_output = wl_container_of(listener, group_output, output_bind);
+
+    struct wlr_output_event_bind* event = data;
+
+    //client that bound to output
+    struct wl_client* client = wl_resource_get_client(event->resource);
+
+    bool event_sent = false;
+
+    //TODO: Can there be multiple resources for the same client? I don't think there can be, but just in case it can happen, I won't break the loop.
+
+    //send output enter event to group resources for this client.
+    struct wl_resource* group_resource;
+    wl_list_for_each(group_resource, &group_output->group->resources, link)
+    {
+        if (wl_resource_get_client(group_resource) == client)
+        {
+            ext_workspace_group_handle_v1_send_output_enter(group_resource, event->resource);
+            event_sent = true;
+        }
+    }
+
+    if (!event_sent)
+        return;
+
+    //if we sent an event, send done event to manager resource for this client
+    struct wl_resource* manager_resource;
+    wl_list_for_each(manager_resource, &group_output->group->manager->resources, link)
+    {
+        if (wl_resource_get_client(manager_resource) == client)
+            ext_workspace_manager_v1_send_done(manager_resource);
+    }
+}
+
+static void group_output_output_destroy(struct wl_listener* listener, void* data)
+{
+    struct group_output* group_output = wl_container_of(listener, group_output, output_destroy);
+
+    group_output_destroy(group_output);
+}
+
+// Returns NULL if none.
+static struct group_output* group_output_from_wlr_output(struct e_ext_workspace_group* group, struct wlr_output* output)
+{
+    assert(group && output);
+
+    if (group == NULL || output == NULL)
+        return NULL;
+
+    struct group_output* group_output;
+    wl_list_for_each(group_output, &group->outputs, link)
+    {
+        if (group_output->output == output)
+            return group_output;
+    }
+
+    return NULL;
+}
 
 /* workspace interface */
 
@@ -538,6 +651,55 @@ struct e_ext_workspace_group* e_ext_workspace_group_create(struct e_ext_workspac
     e_ext_workspace_manager_schedule_done_event(group->manager);
 
     return group;
+}
+
+// Assign output to workspace group.
+void e_ext_workspace_group_output_enter(struct e_ext_workspace_group* group, struct wlr_output* output)
+{
+    assert(group && output);
+
+    if (group == NULL || output == NULL)
+        return;
+
+    struct group_output* group_output = calloc(1, sizeof(*group_output));
+
+    if (group_output == NULL)
+        return;
+
+    group_output->group = group;
+    group_output->output = output;
+
+    SIGNAL_CONNECT(group->events.destroy, group_output->group_destroy, group_output_group_destroy);
+    
+    SIGNAL_CONNECT(output->events.bind, group_output->output_bind, group_output_output_bind);
+    SIGNAL_CONNECT(output->events.destroy, group_output->output_destroy, group_output_output_destroy);
+
+    wl_list_insert(&group->outputs, &group_output->link);
+
+    //send output enter using every group resource to every output resource
+    struct wl_resource* group_resource;
+    wl_list_for_each(group_resource, &group->resources, link)
+    {
+        struct wl_resource* output_resource;
+        wl_list_for_each(output_resource, &output->resources, link)
+        {
+            ext_workspace_group_handle_v1_send_output_enter(group_resource, output_resource);
+        }    
+    }
+
+    e_ext_workspace_manager_schedule_done_event(group->manager);
+}
+
+// Remove output from workspace group.
+void e_ext_workspace_group_output_leave(struct e_ext_workspace_group* group, struct wlr_output* output)
+{
+    assert(group && output);
+
+    if (group == NULL || output == NULL)
+        return;
+
+    struct group_output* group_output = group_output_from_wlr_output(group, output);
+    group_output_destroy(group_output);
 }
 
 // Destroy workspace group and unassign its workspaces.

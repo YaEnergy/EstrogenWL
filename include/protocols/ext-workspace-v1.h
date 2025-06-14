@@ -121,10 +121,10 @@ struct e_ext_workspace_manager* e_ext_workspace_manager_create(struct wl_display
 struct e_ext_workspace_group* e_ext_workspace_group_create(struct e_ext_workspace_manager* manager);
 
 // Assign output to workspace group.
-//TODO: void e_ext_workspace_group_output_enter(struct e_ext_workspace_group* group, struct wlr_output* output);
+void e_ext_workspace_group_output_enter(struct e_ext_workspace_group* group, struct wlr_output* output);
 
 // Remove output from workspace group.
-//TODO: void e_ext_workspace_group_output_leave(struct e_ext_workspace_group* group, struct wlr_output* output);
+void e_ext_workspace_group_output_leave(struct e_ext_workspace_group* group, struct wlr_output* output);
 
 // Destroy workspace group and unassign its workspaces.
 void e_ext_workspace_group_remove(struct e_ext_workspace_group* group);
