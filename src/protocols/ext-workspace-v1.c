@@ -459,6 +459,8 @@ void e_ext_workspace_assign_to_group(struct e_ext_workspace* workspace, struct e
         wl_list_insert(&group->workspaces, &workspace->group_link);
         group_send_workspace_enter(group, workspace);
     }
+
+    e_ext_workspace_manager_schedule_done_event(workspace->manager);
 }
 
 // Name is copied.
