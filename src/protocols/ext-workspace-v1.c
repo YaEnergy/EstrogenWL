@@ -540,6 +540,50 @@ struct e_ext_workspace_group* e_ext_workspace_group_create(struct e_ext_workspac
     return group;
 }
 
+// Destroy workspace group and unassign its workspaces.
+void e_ext_workspace_group_remove(struct e_ext_workspace_group* group)
+{
+    assert(group);
+
+    if (group == NULL)
+        return;
+
+    wl_signal_emit_mutable(&group->events.destroy, NULL); //TODO: will also destroy all group outputs
+
+    //unassign all of group's workspaces
+    struct e_ext_workspace* workspace;
+    struct e_ext_workspace* tmp_workspace;
+    wl_list_for_each_safe(workspace, tmp_workspace, &group->workspaces, group_link)
+    {
+        e_ext_workspace_assign_to_group(workspace, NULL);
+    }
+
+    //remove transaction ops using this group
+    struct e_trans_op* operation;
+    struct e_trans_op* tmp_operation;
+    e_trans_session_for_each_safe(operation, tmp_operation, &group->manager->trans_session)
+    {
+        if (operation->src == group)
+            e_trans_op_destroy(operation);
+    }
+
+    struct wl_resource* resource;
+    struct wl_resource* tmp_resource;
+    wl_list_for_each_safe(resource, tmp_resource, &group->resources, link)
+    {
+        ext_workspace_group_handle_v1_send_removed(resource);
+        
+        wl_list_remove(wl_resource_get_link(resource)); //remove from resources
+
+        wl_resource_set_user_data(resource, NULL);
+        wl_list_init(wl_resource_get_link(resource)); //resource will destroy itself later, and remove itself again
+    }
+
+    wl_list_remove(&group->link);
+
+    free(group);
+}
+
 /* workspace manager done schedule */
 
 static void manager_idle_send_done_event(void* data)
@@ -660,7 +704,7 @@ static void e_ext_workspace_manager_display_destroy(struct wl_listener* listener
     struct e_ext_workspace_group* tmp_group;
     wl_list_for_each_safe(group, tmp_group, &manager->groups, link)
     {
-        //TODO: e_ext_workspace_group_remove(group);
+        e_ext_workspace_group_remove(group);
     }
 
     //destroy all workspaces

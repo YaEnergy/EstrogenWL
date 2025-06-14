@@ -126,8 +126,8 @@ struct e_ext_workspace_group* e_ext_workspace_group_create(struct e_ext_workspac
 // Remove output from workspace group.
 //TODO: void e_ext_workspace_group_output_leave(struct e_ext_workspace_group* group, struct wlr_output* output);
 
-// Destroy workspace group and its workspaces.
-//TODO: void e_ext_workspace_group_remove(struct e_ext_workspace_group* group);
+// Destroy workspace group and unassign its workspaces.
+void e_ext_workspace_group_remove(struct e_ext_workspace_group* group);
 
 // Creates a new workspace using workspace manager.
 // ID is allowed to be NULL.
