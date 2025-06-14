@@ -391,6 +391,53 @@ void e_ext_workspace_set_hidden(struct e_ext_workspace* workspace, bool hidden)
     workspace_set_state(workspace, E_EXT_WORKSPACE_STATE_HIDDEN, hidden);
 }
 
+// Destroys workspace.
+void e_ext_workspace_remove(struct e_ext_workspace* workspace)
+{
+    assert(workspace);
+
+    if (workspace == NULL)
+        return;
+
+    wl_signal_emit_mutable(&workspace->events.destroy, NULL);
+
+    if (workspace->group != NULL)
+        e_ext_workspace_assign_to_group(workspace, NULL);
+
+    //remove transaction ops using this workspace
+    struct e_trans_op* operation;
+    struct e_trans_op* tmp_operation;
+    e_trans_session_for_each_safe(operation, tmp_operation, &workspace->group->manager->trans_session)
+    {
+        if (operation->src == workspace)
+            e_trans_op_destroy(operation);
+    }
+
+    struct wl_resource* resource;
+    struct wl_resource* tmp_resource;
+    wl_list_for_each_safe(resource, tmp_resource, &workspace->resources, link)
+    {
+        ext_workspace_handle_v1_send_removed(resource);
+
+        wl_list_remove(wl_resource_get_link(resource)); //remove from resources
+
+        wl_resource_set_user_data(resource, NULL);
+        wl_list_init(wl_resource_get_link(resource)); //resource will destroy itself later, and remove itself again
+    }
+
+    wl_list_remove(&workspace->manager_link);
+
+    wl_array_release(&workspace->coords);
+
+    if (workspace->name != NULL)
+        free(workspace->name);
+
+    if (workspace->id != NULL)
+        free(workspace->id);
+
+    free(workspace);
+}
+
 /* workspace group interface */
 
 static void e_ext_workspace_group_create_workspace(struct wl_client* client, struct wl_resource* resource, const char* workspace_name)
@@ -608,7 +655,7 @@ static void e_ext_workspace_manager_display_destroy(struct wl_listener* listener
     struct e_ext_workspace* tmp_workspace;
     wl_list_for_each_safe(workspace, tmp_workspace, &manager->workspaces, manager_link)
     {
-        //TODO: e_ext_workspace_remove(group);
+        e_ext_workspace_remove(workspace);
     }
 
     e_trans_session_clear(&manager->trans_session);
