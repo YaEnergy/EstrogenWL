@@ -69,6 +69,35 @@ static void e_ext_workspace_manager_schedule_done_event(struct e_ext_workspace_m
 
 /* workspace group */
 
+/* workspace manager done schedule */
+
+static void manager_idle_send_done_event(void* data)
+{
+    struct e_ext_workspace_manager* manager = data;
+
+    //TODO: send pending workspace state
+
+    struct wl_resource* resource;
+    wl_list_for_each(resource, &manager->resources, link)
+    {
+        ext_workspace_manager_v1_send_done(resource);
+    }
+
+    manager->done_idle_event = NULL;
+}
+
+static void e_ext_workspace_manager_schedule_done_event(struct e_ext_workspace_manager* manager)
+{
+    if (manager == NULL || manager->event_loop == NULL)
+        return;
+
+    //already scheduled
+    if (manager->done_idle_event != NULL)
+        return;
+
+    manager->done_idle_event = wl_event_loop_add_idle(manager->event_loop, manager_idle_send_done_event, manager);
+}
+
 /* workspace manager interface */
 
 // Handle all requested operations at once.
