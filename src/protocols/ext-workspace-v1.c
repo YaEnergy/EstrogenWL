@@ -874,7 +874,45 @@ static void e_ext_workspace_manager_schedule_done_event(struct e_ext_workspace_m
 // Handle all requested operations at once.
 static void e_ext_workspace_manager_commit(struct wl_client* client, struct wl_resource* resource)
 {
-    //TODO: e_cosmic_workspace_manager_commit
+    struct e_ext_workspace_manager* manager = wl_resource_get_user_data(resource);
+
+    struct e_ext_workspace_group* group;
+    struct e_ext_workspace* workspace;
+
+    struct e_trans_op* operation;
+    struct e_trans_op* tmp;
+    e_trans_session_for_each_safe(operation, tmp, &manager->trans_session)
+    {
+        switch(operation->type)
+        {
+            case MANAGER_GROUP_CREATE_WORKSPACE:
+                group = operation->src;
+                struct group_create_workspace_event* create_workspace_event = operation->data;
+                wl_signal_emit_mutable(&group->events.request_create_workspace, create_workspace_event->name);
+                break;
+            case MANAGER_WORKSPACE_ACTIVATE:
+                workspace = operation->src;
+                wl_signal_emit_mutable(&workspace->events.request_activate, NULL);
+                break;
+            case MANAGER_WORKSPACE_DEACTIVATE:
+                workspace = operation->src;
+                wl_signal_emit_mutable(&workspace->events.request_deactivate, NULL);
+                break;
+            case MANAGER_WORKSPACE_ASSIGN:
+                workspace = operation->src;
+                struct workspace_assign_event* workspace_assign_event = operation->data;
+                wl_signal_emit_mutable(&workspace->events.request_assign, workspace_assign_event->group);
+                break;
+            case MANAGER_WORKSPACE_REMOVE:
+                workspace = operation->src;
+                wl_signal_emit_mutable(&workspace->events.request_remove, NULL);
+                break;
+        }
+
+        e_trans_op_destroy(operation);
+    }
+
+    e_ext_workspace_manager_schedule_done_event(manager);
 }
 
 // Clients no longer wants to receive events.
