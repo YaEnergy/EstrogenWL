@@ -88,6 +88,9 @@ static void output_fini_workspaces(struct e_output* output)
 
     e_cosmic_workspace_group_output_leave(output->workspace_group.cosmic_handle, output->wlr_output);
     e_cosmic_workspace_group_remove(output->workspace_group.cosmic_handle);
+
+    e_ext_workspace_group_output_leave(output->workspace_group.ext_handle, output->wlr_output);
+    e_ext_workspace_group_remove(output->workspace_group.ext_handle);
 }
 
 static void e_output_handle_destroy(struct wl_listener* listener, void* data)
@@ -374,6 +377,9 @@ static bool output_init_workspaces(struct e_output* output)
 
     output->workspace_group.cosmic_handle = e_cosmic_workspace_group_create(output->server->cosmic_workspace_manager);
     e_cosmic_workspace_group_output_enter(output->workspace_group.cosmic_handle, output->wlr_output);
+
+    output->workspace_group.ext_handle = e_ext_workspace_group_create(output->server->ext_workspace_manager);
+    e_ext_workspace_group_output_enter(output->workspace_group.ext_handle, output->wlr_output);
 
     //create 5 workspaces for output
     e_list_init(&output->workspace_group.workspaces, 5);

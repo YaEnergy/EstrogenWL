@@ -47,6 +47,7 @@
 #include "input/seat.h"
 
 #include "protocols/cosmic-workspace-v1.h"
+#include "protocols/ext-workspace-v1.h"
 
 #include "config.h"
 

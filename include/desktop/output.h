@@ -10,6 +10,7 @@
 #include <wlr/util/box.h>
 
 #include "desktop/tree/workspace.h"
+#include "protocols/ext-workspace-v1.h"
 
 struct e_server;
 struct e_desktop;
@@ -50,6 +51,7 @@ struct e_output
     struct
     {
         struct e_cosmic_workspace_group* cosmic_handle;
+        struct e_ext_workspace_group* ext_handle;
 
         struct e_list workspaces; //struct e_workspace*
     } workspace_group;
