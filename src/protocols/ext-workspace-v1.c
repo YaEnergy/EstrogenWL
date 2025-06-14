@@ -358,6 +358,7 @@ struct e_ext_workspace* e_ext_workspace_create(struct e_ext_workspace_manager* m
     if (workspace == NULL)
         return NULL;
 
+    workspace->manager = manager;
     workspace->name = NULL;
     workspace->id = (id != NULL) ? e_strdup(id) : NULL;
     workspace->group = NULL;
