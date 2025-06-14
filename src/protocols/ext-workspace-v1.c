@@ -792,6 +792,22 @@ void e_ext_workspace_group_output_leave(struct e_ext_workspace_group* group, str
     group_output_destroy(group_output);
 }
 
+static void group_send_init_output_state(struct e_ext_workspace_group* group, struct wl_resource* group_resource)
+{
+    assert(group && group_resource);
+
+    struct group_output* group_output;
+    wl_list_for_each(group_output, &group->outputs, link)
+    {
+        struct wl_resource* output_resource;
+        wl_list_for_each(output_resource, &group_output->output->resources, link)
+        {
+            if (wl_resource_get_client(output_resource) == wl_resource_get_client(group_resource))
+                ext_workspace_group_handle_v1_send_output_enter(group_resource, output_resource);
+        }
+    }
+}
+
 // Destroy workspace group and unassign its workspaces.
 void e_ext_workspace_group_remove(struct e_ext_workspace_group* group)
 {
@@ -962,6 +978,7 @@ static void e_ext_workspace_manager_bind(struct wl_client* client, void* data, u
 
         ext_workspace_manager_v1_send_workspace_group(resource, group_resource);
         group_resource_send_capabilities(group, group_resource);
+        group_send_init_output_state(group, group_resource);
     }
 
     //create resources for every workspace + send events
