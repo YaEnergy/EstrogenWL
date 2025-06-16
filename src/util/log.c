@@ -19,17 +19,17 @@
 
 FILE* log_file = NULL;
 
-static char* get_time_string(void)
+static char* time_string(void)
 {
     time_t t;
     time(&t);
 
-    char* timeString = ctime(&t);
+    char* t_string = ctime(&t);
     
     //replace new line character with null-terminator
-    timeString[strlen(timeString) - 1] = '\0';
+    t_string[strlen(t_string) - 1] = '\0';
 
-    return timeString;
+    return t_string;
 }
 
 //returned char* must be freed on finish
@@ -136,11 +136,11 @@ void e_log_info(const char *format, ...)
     //print format with args into buffer, truncated if necessary
     vsnprintf(message, sizeof(char) * LOG_MSG_MAX_LENGTH, format, args);
 
-    printf("[INFO (%s)] %s\n", get_time_string(), message);
+    printf("[INFO (%s)] %s\n", time_string(), message);
 
     if (log_file != NULL)
     {
-        fprintf(log_file, "[INFO (%s)] %s\n", get_time_string(), message);
+        fprintf(log_file, "[INFO (%s)] %s\n", time_string(), message);
         fflush(log_file);
     }
 
@@ -157,11 +157,11 @@ void e_log_error(const char *format, ...)
     //print format with args into buffer, truncated if necessary
     vsnprintf(message, sizeof(char) * LOG_MSG_MAX_LENGTH, format, args);
 
-    fprintf(stderr, "[ERROR (%s)] %s, errno: %s\n", get_time_string(), message, strerror(errno));
+    fprintf(stderr, "[ERROR (%s)] %s, errno: %s\n", time_string(), message, strerror(errno));
 
     if (log_file != NULL)
     {
-        fprintf(log_file, "[ERROR (%s)] %s, errno: %s\n", get_time_string(), message, strerror(errno));
+        fprintf(log_file, "[ERROR (%s)] %s, errno: %s\n", time_string(), message, strerror(errno));
         fflush(log_file);
     }
 
