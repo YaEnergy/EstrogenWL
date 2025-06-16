@@ -17,6 +17,13 @@
 
 #define LOG_MSG_MAX_LENGTH 1024
 
+static const char* importance_names[] = {
+    [WLR_SILENT] = "",
+    [WLR_ERROR] = "ERROR",
+    [WLR_INFO] = "INFO",
+    [WLR_DEBUG] = "DEBUG"
+};
+
 FILE* log_file = NULL;
 
 static char* time_string(void)
@@ -62,14 +69,31 @@ static char* get_path_in_home(const char* path)
     return fullPath;
 }
 
-//TODO: add error codes for when logFile is NULL
+static void e_log_vlog(enum wlr_log_importance importance, const char *fmt, va_list args)
+{
+    if (importance >= WLR_LOG_IMPORTANCE_LAST)
+        return;
+
+    char msg[LOG_MSG_MAX_LENGTH]; //message buffer
+
+    //print format with args into buffer, truncated if necessary
+    vsnprintf(msg, sizeof(char) * LOG_MSG_MAX_LENGTH, fmt, args);
+
+    printf("[%s (%s)] %s\n", importance_names[importance], time_string(), msg);
+
+    if (log_file != NULL)
+    {
+        fprintf(log_file, "[INFO (%s)] %s\n", time_string(), msg);
+        fflush(log_file);
+    }
+}
 
 void e_log_init(void)
 {
     #if E_VERBOSE
-    wlr_log_init(WLR_DEBUG, NULL);
+    wlr_log_init(WLR_DEBUG, e_log_vlog);
     #else
-    wlr_log_init(WLR_ERROR, NULL);
+    wlr_log_init(WLR_ERROR, e_log_vlog);
     #endif
 
     if (log_file != NULL)
