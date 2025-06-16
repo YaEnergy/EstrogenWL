@@ -1,6 +1,8 @@
 #include "server.h"
 
+#include <signal.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include <wayland-server-core.h>
 #include <wayland-util.h>
@@ -18,8 +20,6 @@
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_seat.h>
-#include <wlr/types/wlr_screencopy_v1.h>
-#include <wlr/types/wlr_export_dmabuf_v1.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_viewporter.h>
 #include <wlr/types/wlr_presentation_time.h>
@@ -31,23 +31,33 @@
 #include <wlr/types/wlr_xdg_foreign_v2.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
-#include <wlr/types/wlr_ext_image_capture_source_v1.h>
-#include <wlr/types/wlr_ext_image_copy_capture_v1.h>
+#include <wlr/types/wlr_alpha_modifier_v1.h>
+#include <wlr/types/wlr_linux_drm_syncobj_v1.h>
+
+#if E_XWAYLAND_SUPPORT
+#include <wlr/xwayland.h>
+#endif
 
 #include "desktop/desktop.h"
 #include "desktop/output.h"
-#include "desktop/layer_shell.h"
-#include "desktop/xdg_shell.h"
-#if E_XWAYLAND_SUPPORT
-#include "desktop/xwayland.h"
-#endif
 
 #include "util/log.h"
 #include "util/wl_macros.h"
 
 #include "input/seat.h"
 
+#include "protocols/cosmic-workspace-v1.h"
+#include "protocols/ext-workspace-v1.h"
+
 #include "config.h"
+
+// Handle signals that we use to terminate the server.
+static int e_server_handle_signal_terminate(int signal, void* data)
+{
+    struct e_server* server = data;
+    e_server_terminate(server);
+    return 0;
+}
 
 static void e_server_new_input(struct wl_listener* listener, void* data)
 {
@@ -56,56 +66,6 @@ static void e_server_new_input(struct wl_listener* listener, void* data)
 
     if (server->desktop->seat != NULL)
         e_seat_add_input_device(server->desktop->seat, input);
-}
-
-static void e_server_new_output(struct wl_listener* listener, void* data)
-{
-    struct e_server* server = wl_container_of(listener, server, new_output);
-    struct wlr_output* wlr_output = data;
-
-    //configure output by backend to use allocator and renderer
-    //before committing output
-    if (!wlr_output_init_render(wlr_output, server->allocator, server->renderer))
-    {
-        e_log_error("e_server_new_output: failed to init output's rendering subsystem");
-        return;
-    }
-
-    //enable state if neccessary
-    struct wlr_output_state state;
-    wlr_output_state_init(&state);
-    wlr_output_state_set_enabled(&state, true);
-
-    //set mode if backend is DRM+KMS, otherwise can't use the output
-    //automatically pick preferred mode for now
-    struct wlr_output_mode* mode = wlr_output_preferred_mode(wlr_output);
-    if (!wl_list_empty(&wlr_output->modes))
-        wlr_output_state_set_mode(&state, mode);
-
-    //apply new output state
-    wlr_output_commit_state(wlr_output, &state);
-    wlr_output_state_finish(&state);
-
-    //allocate & configure output
-    if (e_desktop_add_output(server->desktop, wlr_output) == NULL)
-    {
-        e_log_error("e_server_new_output: failed to add output to desktop!");
-        return;
-    }
-
-#if E_XWAYLAND_SUPPORT
-    if (server->xwayland != NULL)
-        e_xwayland_update_workarea(server->xwayland);
-#endif
-}
-
-static void e_server_backend_destroy(struct wl_listener* listener, void* data)
-{
-    struct e_server* server = wl_container_of(listener, server, backend_destroy);
-
-    SIGNAL_DISCONNECT(server->new_input);
-    SIGNAL_DISCONNECT(server->new_output);
-    SIGNAL_DISCONNECT(server->backend_destroy);
 }
 
 // GPU lost, destroy and recreate renderer
@@ -165,6 +125,11 @@ static void e_server_renderer_lost(struct wl_listener* listener, void* data)
 
 int e_server_init(struct e_server* server, struct e_config* config)
 {
+    assert(server && config);
+
+    if (server == NULL || config == NULL)
+        return 1;
+
     server->config = config;
 
     //handles accepting clients from Unix socket, managing wl globals, ...
@@ -177,6 +142,13 @@ int e_server_init(struct e_server* server, struct e_config* config)
         return 1;
     }
 
+    server->event_loop = wl_display_get_event_loop(server->display);
+
+    //handle event source signals
+    server->sources.sigint = wl_event_loop_add_signal(server->event_loop, SIGINT, e_server_handle_signal_terminate, server);
+    server->sources.sigterm = wl_event_loop_add_signal(server->event_loop, SIGTERM, e_server_handle_signal_terminate, server);
+    //TODO: sighup & sigchld?
+
     //according to wayfire (who discovered this), for this to work inside of gtk apps this must be one of the first globals
     //I read this inside labwc
     //Allows a shortcut for pasting text, usually middle click
@@ -187,7 +159,7 @@ int e_server_init(struct e_server* server, struct e_config* config)
 
     //backend handles input and output hardware, autocreate automatically creates the backend we want
     e_log_info("creating backend...");
-    server->backend = wlr_backend_autocreate(wl_display_get_event_loop(server->display), NULL);
+    server->backend = wlr_backend_autocreate(server->event_loop, NULL);
 
     if (server->backend == NULL)
     {
@@ -197,8 +169,6 @@ int e_server_init(struct e_server* server, struct e_config* config)
 
     //backend events
     SIGNAL_CONNECT(server->backend->events.new_input, server->new_input, e_server_new_input);
-    SIGNAL_CONNECT(server->backend->events.new_output, server->new_output, e_server_new_output);
-    SIGNAL_CONNECT(server->backend->events.destroy, server->backend_destroy, e_server_backend_destroy);
 
     //renderer handles rendering
     e_log_info("creating renderer...");
@@ -217,6 +187,18 @@ int e_server_init(struct e_server* server, struct e_config* config)
     }
 
     SIGNAL_CONNECT(server->renderer->events.lost, server->renderer_lost, e_server_renderer_lost);
+
+    int drm_fd = wlr_renderer_get_drm_fd(server->renderer);
+
+    e_log_info("drm fd: %i, renderer timeline support: %i, backend timeline support: %i", drm_fd, server->renderer->features.timeline, server->backend->features.timeline);
+
+    if (drm_fd >= 0 && server->renderer->features.timeline && server->backend->features.timeline)
+    {
+        e_log_info("Server has support for explicit synchronization! Enabling...");
+
+        if (wlr_linux_drm_syncobj_manager_v1_create(server->display, E_LINUX_DRM_SYNCOBJ_VERSION, drm_fd) == NULL)
+            e_log_error("e_server_init: server has support for explicit synchronization, but failed to create wlr_linux_drm_syncobj_manager_v1");
+    }
 
     //allocates memory for pixel buffers 
     server->allocator = wlr_allocator_autocreate(server->backend, server->renderer);
@@ -238,19 +220,6 @@ int e_server_init(struct e_server* server, struct e_config* config)
     
     //TODO: log more errors here
 
-    //allows clients to ask to copy part of the screen content to a client buffer, seems to be fully implemented by wlroots already
-    wlr_screencopy_manager_v1_create(server->display);
-    //low overhead screen content capturing
-    wlr_export_dmabuf_manager_v1_create(server->display);
-    
-    //more screen capturing
-    if (wlr_ext_output_image_capture_source_manager_v1_create(server->display, E_EXT_IMAGE_CAPTURE_SOURCE_VERSION) == NULL)
-        e_log_error("e_server_init: failed to create wlr ext output image capture source manager v1");
-
-    //output toplevel capturing
-    if (wlr_ext_image_copy_capture_manager_v1_create(server->display, E_EXT_IMAGE_COPY_CAPTURE_VERSION) == NULL)
-        e_log_error("e_server_init: failed to creat wlr ext image copy capture manager v1");
-
     //allows clients to control selection and take the role of a clipboard manager
     wlr_data_control_manager_v1_create(server->display);
     wlr_ext_data_control_manager_v1_create(server->display, E_EXT_DATA_CONTROL_V1_VERSION);
@@ -263,14 +232,44 @@ int e_server_init(struct e_server* server, struct e_config* config)
         return 1;
     }
 
+    //input device management
+    server->seat = e_seat_create(server->display, server->desktop, server->desktop->output_layout, "seat0");
+
+    if (server->seat == NULL)
+    {
+        e_log_error("e_server_init: failed to create seat0");
+        return 1;
+    }
+
+    e_desktop_set_seat(server->desktop, server->seat);
+
+    if (!e_server_init_outputs(server))
+    {
+        e_log_error("e_server_init: failed to init outputs");
+        return 1;
+    }
+
     //xdg shell v6, protocol for application views
-    server->xdg_shell = e_xdg_shell_create(server->display, server->desktop);
+    if (!e_server_init_xdg_shell(server))
+    {
+        e_log_error("e_server_init: failed to init xdg shell");
+        return 1;
+    }
+
     //protocol for layer surfaces
-    server->layer_shell = e_layer_shell_create(server->display, server->desktop);
+    if (!e_server_init_layer_shell(server))
+    {
+        e_log_error("e_server_init: failed to init layer shell");
+        return 1;
+    }
 
     #if E_XWAYLAND_SUPPORT
     //create & start xwayland server, xwayland shell protocol
-    server->xwayland = e_xwayland_create(server->desktop, server->display, server->compositor, server->desktop->seat->wlr_seat, config->xwayland_lazy); 
+    if (!e_server_init_xwayland(server, server->seat, server->config->xwayland_lazy))
+    {
+        e_log_error("e_server_init: failed to init xwayland");
+        return 1;
+    }
     #endif
 
     //protocol to describe output regions
@@ -301,6 +300,26 @@ int e_server_init(struct e_server* server, struct e_config* config)
     if (wlr_single_pixel_buffer_manager_v1_create(server->display) == NULL)
         e_log_error("e_server_init: failed to create wlr single pixel buffer manager v1");
 
+    //allow clients to set a factor for the alpha values on a surface
+    if (wlr_alpha_modifier_v1_create(server->display) == NULL)
+        e_log_error("e_server_init: failed to create wlr alpha modifier v1");
+
+    server->cosmic_workspace_manager = e_cosmic_workspace_manager_create(server->display, E_COSMIC_WORKSPACE_VERSION, E_COSMIC_WORKSPACE_CAPABILITY_ACTIVATE);
+
+    if (server->cosmic_workspace_manager == NULL)
+    {
+        e_log_error("e_server_init: failed to create cosmic workspace manager");
+        return 1;
+    }
+
+    server->ext_workspace_manager = e_ext_workspace_manager_create(server->display, E_EXT_WORKSPACE_VERSION, E_EXT_WORKSPACE_CAPABILITY_ACTIVATE);
+
+    if (server->ext_workspace_manager == NULL)
+    {
+        e_log_error("e_server_init: failed to create ext workspace manager");
+        return 1;
+    }
+
     //allows clients to reference surfaces of other clients
     struct wlr_xdg_foreign_registry* foreign_registry = wlr_xdg_foreign_registry_create(server->display);
     wlr_xdg_foreign_v1_create(server->display, foreign_registry);
@@ -328,8 +347,8 @@ bool e_server_start(struct e_server* server)
     //set DISPLAY env var for xwayland server
     if (server->xwayland != NULL)
     {
-        e_log_info("xwayland DISPLAY=%s", server->xwayland->wlr_xwayland->display_name);
-        setenv("DISPLAY", server->xwayland->wlr_xwayland->display_name, true);
+        e_log_info("xwayland DISPLAY=%s", server->xwayland->display_name);
+        setenv("DISPLAY", server->xwayland->display_name, true);
     }
 #endif
 
@@ -350,19 +369,53 @@ bool e_server_start(struct e_server* server)
 
 void e_server_run(struct e_server* server)
 {
+    assert(server);
+
+    if (server == NULL)
+        return;
+
     e_log_info("running wl display...");
     wl_display_run(server->display);
 }
 
+void e_server_terminate(struct e_server* server)
+{
+    assert(server);
+
+    if (server == NULL)
+        return;
+
+    e_log_info("terminating server's wl display");
+    wl_display_terminate(server->display);
+}
+
 void e_server_fini(struct e_server* server)
 {
+    assert(server);
+
+    if (server == NULL)
+        return;
+
+    SIGNAL_DISCONNECT(server->new_input);
     SIGNAL_DISCONNECT(server->renderer_lost);
 
+    //remove event source signals
+    wl_event_source_remove(server->sources.sigint);
+    wl_event_source_remove(server->sources.sigterm);
+
 #if E_XWAYLAND_SUPPORT
-    e_xwayland_destroy(server->xwayland);
+    e_server_fini_xwayland(server);
 #endif
 
     wl_display_destroy_clients(server->display);
+
+    e_seat_destroy(server->seat);
+    e_desktop_set_seat(server->desktop, NULL);
+    
+    e_server_fini_xdg_shell(server);
+    e_server_fini_layer_shell(server);
+
+    e_server_fini_outputs(server);
 
     e_desktop_destroy(server->desktop);
 

@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -29,7 +28,7 @@ static bool bind_keybind(struct e_list* keybinds, xkb_keysym_t keysym, enum wlr_
 }
 
 // Called when event loop is ready.
-static void event_loop_ready(void* data)
+static void event_loop_handle_ready(void* data)
 {
     e_log_info("event loop is ready!");
 
@@ -70,7 +69,7 @@ int main()
     //Important function: xkb_keysym_from_name (const char *name, enum xkb_keysym_flags flags)
     
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F1, WLR_MODIFIER_LOGO, "exec rofi -modi drun,run -show drun");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F2, WLR_MODIFIER_LOGO, "exec alacritty");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F2, WLR_MODIFIER_LOGO, "exec $TERM");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F3, WLR_MODIFIER_LOGO, "exit");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F4, WLR_MODIFIER_LOGO, "kill");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F5, WLR_MODIFIER_LOGO, "toggle_fullscreen");
@@ -91,9 +90,7 @@ int main()
 
     //run autostart script when event loop is ready, removed automatically when dispatched
     //so when event loop is ready
-    struct wl_event_loop* event_loop = wl_display_get_event_loop(server.display);
-
-    if (event_loop == NULL || wl_event_loop_add_idle(event_loop, event_loop_ready, NULL) == NULL)
+    if (server.event_loop == NULL || wl_event_loop_add_idle(server.event_loop, event_loop_handle_ready, NULL) == NULL)
         e_log_error("main: failed to add autostart.sh event");
 
     e_server_run(&server);

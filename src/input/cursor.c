@@ -48,7 +48,7 @@ static void start_grab_resize_focused_view(struct e_cursor* cursor)
 {
     assert(cursor);
 
-    struct e_view* focused_view = e_seat_focused_view(cursor->seat);
+    struct e_view* focused_view = e_desktop_focused_view(cursor->seat->desktop);
 
     if (focused_view == NULL)
         return;
@@ -78,7 +78,7 @@ static void start_grab_move_focused_view(struct e_cursor* cursor)
 {
     assert(cursor);
 
-    struct e_view* focused_view = e_seat_focused_view(cursor->seat);
+    struct e_view* focused_view = e_desktop_focused_view(cursor->seat->desktop);
 
     if (focused_view != NULL)
         e_cursor_start_view_move(cursor, focused_view);
@@ -717,7 +717,7 @@ void e_cursor_set_focus_hover(struct e_cursor* cursor)
         wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface->surface, sx, sy); //is only sent once
 
         //sloppy focus
-        e_seat_set_focus_surface_type(seat, hover_surface->surface);
+        e_desktop_focus_surface(desktop, hover_surface->surface);
     }
     else 
     {
@@ -727,33 +727,6 @@ void e_cursor_set_focus_hover(struct e_cursor* cursor)
     //display default cursor when not hovering any VIEWS (not just any surface)
     if (view == NULL)
         wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
-}
-
-// Find view at cursor's position.
-// Returns NULL on fail.
-struct e_view* e_cursor_view_at(struct e_cursor* cursor)
-{
-    if (cursor == NULL)
-        return NULL;
-
-    return e_view_at(&cursor->seat->desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
-}
-
-// Find output at cursor's position.
-// Returns NULL on fail.
-struct e_output* e_cursor_output_at(struct e_cursor* cursor)
-{
-    if (cursor == NULL)
-        return NULL;
-
-    struct wlr_output* wlr_output = wlr_output_layout_output_at(cursor->seat->desktop->output_layout, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
-    
-    if (wlr_output == NULL)
-        return NULL;
-    
-    struct e_output* output = wlr_output->data;
-
-    return output;
 }
 
 void e_cursor_destroy(struct e_cursor* cursor)

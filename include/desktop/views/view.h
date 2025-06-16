@@ -182,6 +182,9 @@ void e_view_set_suspended(struct e_view* view, bool suspended);
 
 bool e_view_has_pending_changes(struct e_view* view);
 
+// Raise view to the top of its parent tree.
+void e_view_raise_to_top(struct e_view* view);
+
 // Finds the view which has this surface as its main surface.
 // Returns NULL on fail.
 struct e_view* e_view_from_surface(struct e_desktop* desktop, struct wlr_surface* surface);

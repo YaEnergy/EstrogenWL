@@ -1,7 +1,10 @@
 #include "desktop/tree/workspace.h"
 
 #include <stdlib.h>
+#include <string.h>
+#include <assert.h>
 
+#include <wayland-server-core.h>
 #include <wayland-util.h>
 
 #include <wlr/types/wlr_scene.h>
@@ -9,21 +12,46 @@
 #include "desktop/tree/container.h"
 #include "desktop/tree/node.h"
 
-#include "desktop/desktop.h"
 #include "desktop/views/view.h"
+
+#include "desktop/output.h"
 
 #include "util/list.h"
 #include "util/log.h"
+#include "util/wl_macros.h"
+
+#include "protocols/cosmic-workspace-v1.h"
+#include "protocols/ext-workspace-v1.h"
+
+#include "server.h"
 
 #define NEW_SCENE_TREE(tree, parent, type, data) tree = wlr_scene_tree_create(parent); e_node_desc_create(&tree->node, type, data);
 
-// Create a new workspace for desktop.
-// Returns NULL on fail.
-struct e_workspace* e_workspace_create(struct e_desktop* desktop)
+static void e_workspace_cosmic_request_activate(struct wl_listener* listener, void* data)
 {
-    if (desktop == NULL)
+    struct e_workspace* workspace = wl_container_of(listener, workspace, cosmic_request_activate);
+
+    if (workspace->output != NULL && !workspace->active)
+        e_output_display_workspace(workspace->output, workspace);
+}
+
+static void e_workspace_ext_request_activate(struct wl_listener* listener, void* data)
+{
+    struct e_workspace* workspace = wl_container_of(listener, workspace, ext_request_activate);
+
+    if (workspace->output != NULL && !workspace->active)
+        e_output_display_workspace(workspace->output, workspace);
+}
+
+// Create a new workspace for an output.
+// Returns NULL on fail.
+struct e_workspace* e_workspace_create(struct e_output* output)
+{
+    assert(output);
+
+    if (output == NULL)
     {
-        e_log_error("e_workspace_create: no desktop given!");
+        e_log_error("e_workspace_create: no output given!");
         return NULL;
     }
 
@@ -35,7 +63,7 @@ struct e_workspace* e_workspace_create(struct e_desktop* desktop)
         return NULL;
     }
 
-    workspace->desktop = desktop;
+    workspace->output = output;
     workspace->fullscreen_view = NULL;
 
     workspace->root_tiling_container = e_tree_container_create(E_TILING_MODE_HORIZONTAL);
@@ -48,10 +76,40 @@ struct e_workspace* e_workspace_create(struct e_desktop* desktop)
         return NULL;
     }
 
+    workspace->cosmic_handle = e_cosmic_workspace_create(output->workspace_group.cosmic_handle);
+
+    if (workspace->cosmic_handle == NULL)
+    {
+        e_tree_container_destroy(workspace->root_tiling_container);
+        free(workspace);
+        
+        e_log_error("e_workspace_create: failed to create cosmic workspace handle!");
+        return NULL;
+    }
+
+    e_cosmic_workspace_set_tiling_state(workspace->cosmic_handle, E_COSMIC_WORKSPACE_TILING_STATE_TILING_ENABLED);
+
+    workspace->ext_handle = e_ext_workspace_create(output->server->ext_workspace_manager, NULL);
+
+    if (workspace->ext_handle == NULL)
+    {
+        e_tree_container_destroy(workspace->root_tiling_container);
+        e_cosmic_workspace_remove(workspace->cosmic_handle);
+        free(workspace);
+        
+        e_log_error("e_workspace_create: failed to create ext workspace handle!");
+        return NULL;
+    }
+
+    e_ext_workspace_assign_to_group(workspace->ext_handle, output->workspace_group.ext_handle);
+
+    SIGNAL_CONNECT(workspace->cosmic_handle->events.request_activate, workspace->cosmic_request_activate, e_workspace_cosmic_request_activate);
+    SIGNAL_CONNECT(workspace->ext_handle->events.request_activate, workspace->ext_request_activate, e_workspace_ext_request_activate);
+    
     //layer trees
-    NEW_SCENE_TREE(workspace->layers.floating, desktop->layers.floating, E_NODE_DESC_WORKSPACE, workspace);
-    NEW_SCENE_TREE(workspace->layers.tiling, desktop->layers.tiling, E_NODE_DESC_WORKSPACE, workspace);
-    NEW_SCENE_TREE(workspace->layers.fullscreen, desktop->layers.overlay, E_NODE_DESC_WORKSPACE, workspace);
+    NEW_SCENE_TREE(workspace->layers.floating, output->layers.floating, E_NODE_DESC_WORKSPACE, workspace);
+    NEW_SCENE_TREE(workspace->layers.tiling, output->layers.tiling, E_NODE_DESC_WORKSPACE, workspace);
+    NEW_SCENE_TREE(workspace->layers.fullscreen, output->layers.overlay, E_NODE_DESC_WORKSPACE, workspace);
 
     e_list_init(&workspace->floating_views, 10);
 
@@ -60,9 +118,26 @@ struct e_workspace* e_workspace_create(struct e_desktop* desktop)
     return workspace;
 }
 
+// Set name of workspace.
+void e_workspace_set_name(struct e_workspace* workspace, const char* name)
+{
+    assert(workspace && name);
+
+    if (workspace == NULL || name == NULL)
+        return;
+
+    if (workspace->cosmic_handle->name == NULL || strcmp(workspace->cosmic_handle->name, name) != 0)
+        e_cosmic_workspace_set_name(workspace->cosmic_handle, name);
+
+    if (workspace->ext_handle->name == NULL || strcmp(workspace->ext_handle->name, name) != 0)
+        e_ext_workspace_set_name(workspace->ext_handle, name);
+}
+
 // Enable/disable workspace trees.
 void e_workspace_set_activated(struct e_workspace* workspace, bool activated)
 {
+    assert(workspace);
+
     if (workspace == NULL)
     {
         e_log_error("e_workspace_set_activated: workspace is NULL!");
@@ -71,6 +146,12 @@ void e_workspace_set_activated(struct e_workspace* workspace, bool activated)
 
     workspace->active = activated;
     e_workspace_update_tree_visibility(workspace);
+
+    e_cosmic_workspace_set_active(workspace->cosmic_handle, activated);
+    e_cosmic_workspace_set_hidden(workspace->cosmic_handle, !activated);
+
+    e_ext_workspace_set_active(workspace->ext_handle, activated);
+    e_ext_workspace_set_hidden(workspace->ext_handle, !activated);
 }
 
 // Arranges a workspace's children to fit within the given area.
@@ -166,11 +247,19 @@ struct e_workspace* e_workspace_try_from_node_ancestors(struct wlr_scene_node* n
 // Destroy the workspace.
 void e_workspace_destroy(struct e_workspace* workspace)
 {
+    assert(workspace);
+
     if (workspace == NULL)
     {
         e_log_error("e_workspace_destroy: workspace is NULL!");
         return;
     }
+
+    SIGNAL_DISCONNECT(workspace->cosmic_request_activate);
+    e_cosmic_workspace_remove(workspace->cosmic_handle);
+
+    SIGNAL_DISCONNECT(workspace->ext_request_activate);
+    e_ext_workspace_remove(workspace->ext_handle);
 
     e_tree_container_destroy(workspace->root_tiling_container);
     workspace->root_tiling_container = NULL;

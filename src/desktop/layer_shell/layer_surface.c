@@ -34,20 +34,24 @@ static void e_layer_surface_new_popup(struct wl_listener* listener, void* data)
     e_xdg_popup_create(xdg_popup, layer_surface->scene_layer_surface_v1->tree);
 }
 
-static struct wlr_scene_tree* e_desktop_get_layer_tree(struct e_desktop* desktop, enum zwlr_layer_shell_v1_layer layer)
+// Returns NULL on fail.
+static struct wlr_scene_tree* e_output_get_layer_tree(struct e_output* output, enum zwlr_layer_shell_v1_layer layer)
 {
-    assert(desktop);
+    assert(output);
+
+    if (output == NULL)
+        return NULL;
 
     switch(layer)
     {
         case ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND:
-            return desktop->layers.background;
+            return output->layers.background;
         case ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM:
-            return desktop->layers.bottom;
+            return output->layers.bottom;
         case ZWLR_LAYER_SHELL_V1_LAYER_TOP:
-            return desktop->layers.top;
+            return output->layers.top;
         case ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY:
-            return desktop->layers.overlay;
+            return output->layers.overlay;
         default:
             e_log_error("e_desktop_get_layer_tree: no layer tree for layer (%i)", layer);
             return NULL;
@@ -77,7 +81,7 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
     //committed layer
     if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_LAYER)
     {
-        struct wlr_scene_tree* layer_tree = e_desktop_get_layer_tree(layer_surface->desktop, wlr_layer_surface_v1->current.layer);
+        struct wlr_scene_tree* layer_tree = e_output_get_layer_tree(layer_surface->output, wlr_layer_surface_v1->current.layer);
 
         if (layer_tree != NULL)
             wlr_scene_node_reparent(&layer_surface->scene_layer_surface_v1->tree->node, layer_tree);
@@ -93,10 +97,10 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
 
         //give exclusive focus if requested and allowed and doesn't have focus
         if (wlr_layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE && !e_seat_has_focus(seat, wlr_layer_surface_v1->surface))
-            e_seat_set_focus_layer_surface(seat, wlr_layer_surface_v1);
+            e_desktop_focus_layer_surface(layer_surface->desktop, layer_surface);
         //clear focus if layer surface no longer wants focus and has focus
         else if (wlr_layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE && e_seat_has_focus(seat, wlr_layer_surface_v1->surface))
-            e_seat_clear_focus(seat);
+            e_desktop_clear_focus(layer_surface->desktop);
 
         e_log_info("layer surface committed keyboard interactivity");
     }
@@ -146,7 +150,7 @@ static void e_layer_surface_map(struct wl_listener* listener, void* data)
 
     //give focus if requests exclusive focus
     if (layer_surface->scene_layer_surface_v1->layer_surface->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE)
-        e_seat_set_focus_layer_surface(layer_surface->desktop->seat, layer_surface->scene_layer_surface_v1->layer_surface);
+        e_desktop_focus_layer_surface(layer_surface->desktop, layer_surface);
 }
 
 // Surface no longer wants to be displayed.
@@ -157,6 +161,10 @@ static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
     wlr_scene_node_set_enabled(&unmapped_layer_surface->scene_layer_surface_v1->tree->node, false);
 
     wl_list_remove(&unmapped_layer_surface->link);
+
+    if (unmapped_layer_surface->output == NULL)
+        return;
+    
     e_output_arrange(unmapped_layer_surface->output);
 
     //get next topmost layer surface that requests exclusive focus, and focus on it
@@ -164,12 +172,12 @@ static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
     struct e_layer_surface* next_layer_surface = e_output_get_exclusive_topmost_layer_surface(unmapped_layer_surface->output);
 
     if (next_layer_surface != NULL)
-        e_seat_set_focus_layer_surface(next_layer_surface->desktop->seat, next_layer_surface->scene_layer_surface_v1->layer_surface);
+        e_desktop_focus_layer_surface(next_layer_surface->desktop, next_layer_surface);
 }
 
-static void e_layer_surface_destroy(struct wl_listener* listener, void* data)
+static void e_layer_surface_handle_node_destroy(struct wl_listener* listener, void* data)
 {
-    struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, destroy);
+    struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, node_destroy);
 
     SIGNAL_DISCONNECT(layer_surface->new_popup);
 
@@ -177,9 +185,19 @@ static void e_layer_surface_destroy(struct wl_listener* listener, void* data)
     SIGNAL_DISCONNECT(layer_surface->map);
     SIGNAL_DISCONNECT(layer_surface->unmap);
 
-    SIGNAL_DISCONNECT(layer_surface->destroy);
+    SIGNAL_DISCONNECT(layer_surface->node_destroy);
+    SIGNAL_DISCONNECT(layer_surface->output_destroy);
 
     free(layer_surface);
+}
+
+static void e_layer_surface_handle_output_destroy(struct wl_listener* listener, void* data)
+{
+    struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, output_destroy);
+
+    layer_surface->scene_layer_surface_v1->layer_surface->output = NULL;
+    layer_surface->output = NULL;
+    wlr_layer_surface_v1_destroy(layer_surface->scene_layer_surface_v1->layer_surface);
 }
 
 // Create a layer surface for the given desktop.
@@ -195,7 +213,9 @@ struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct
         return NULL;
     }
 
-    struct wlr_scene_tree* layer_tree = e_desktop_get_layer_tree(desktop, wlr_layer_surface_v1->current.layer);
+    struct e_output* output = wlr_layer_surface_v1->output->data;
+
+    struct wlr_scene_tree* layer_tree = e_output_get_layer_tree(output, wlr_layer_surface_v1->current.layer);
 
     if (layer_tree == NULL)
     {
@@ -220,7 +240,7 @@ struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct
     }
 
     layer_surface->desktop = desktop;
-    layer_surface->output = wlr_layer_surface_v1->output->data;
+    layer_surface->output = output;
 
     layer_surface->scene_layer_surface_v1 = scene_layer_surface;
     e_node_desc_create(&scene_layer_surface->tree->node, E_NODE_DESC_LAYER_SURFACE, layer_surface);
@@ -239,7 +259,8 @@ struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct
     SIGNAL_CONNECT(wlr_layer_surface_v1->surface->events.map, layer_surface->map, e_layer_surface_map);
     SIGNAL_CONNECT(wlr_layer_surface_v1->surface->events.unmap, layer_surface->unmap, e_layer_surface_unmap);
 
-    SIGNAL_CONNECT(scene_layer_surface->tree->node.events.destroy, layer_surface->destroy, e_layer_surface_destroy);
+    SIGNAL_CONNECT(scene_layer_surface->tree->node.events.destroy, layer_surface->node_destroy, e_layer_surface_handle_node_destroy);
+    SIGNAL_CONNECT(wlr_layer_surface_v1->output->events.destroy, layer_surface->output_destroy, e_layer_surface_handle_output_destroy);
 
     return layer_surface;
 }
