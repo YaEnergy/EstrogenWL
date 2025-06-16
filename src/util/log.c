@@ -126,15 +126,8 @@ void e_log_info(const char *format, ...)
 
     char message[LOG_MSG_MAX_LENGTH]; //message buffer
 
-    //print format with args into buffer
-    int length = vsnprintf(message, sizeof(char) * LOG_MSG_MAX_LENGTH, format, args);
-
-    if ((unsigned long)length >= sizeof(message))
-    {
-        e_log_error("Log message too long");
-        va_end(args);
-        return;
-    }
+    //print format with args into buffer, truncated if necessary
+    vsnprintf(message, sizeof(char) * LOG_MSG_MAX_LENGTH, format, args);
 
     printf("[INFO (%s)] %s\n", get_time_string(), message);
 
@@ -154,15 +147,8 @@ void e_log_error(const char *format, ...)
 
     char message[LOG_MSG_MAX_LENGTH]; //message buffer
 
-    //print format with args into buffer 
-    int length = vsnprintf(message, sizeof(char) * LOG_MSG_MAX_LENGTH, format, args);
-
-    if ((unsigned long)length >= sizeof(message))
-    {
-        e_log_error("Error message too long"); //this is so funny
-        va_end(args);
-        return;
-    }
+    //print format with args into buffer, truncated if necessary
+    vsnprintf(message, sizeof(char) * LOG_MSG_MAX_LENGTH, format, args);
 
     fprintf(stderr, "[ERROR (%s)] %s, errno: %s\n", get_time_string(), message, strerror(errno));
 
