@@ -11,12 +11,13 @@
 
 #include "desktop/tree/container.h"
 
-#include "protocols/cosmic-workspace-v1.h"
-#include "protocols/ext-workspace-v1.h"
 #include "util/list.h"
 
 struct e_output;
 struct e_view;
+
+struct e_ext_workspace;
+struct e_cosmic_workspace;
 
 struct e_workspace_layers
 {

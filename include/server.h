@@ -14,7 +14,6 @@
 #include <wlr/types/wlr_output_layout.h>
 
 #include "config.h"
-#include "protocols/ext-workspace-v1.h"
 
 struct e_desktop;
 struct e_seat;
@@ -26,6 +25,7 @@ struct wlr_xwayland;
 #endif
 
 struct e_cosmic_workspace_manager;
+struct e_ext_workspace_manager;
 
 #define E_COMPOSITOR_VERSION 6
 
