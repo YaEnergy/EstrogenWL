@@ -68,7 +68,7 @@ static char* get_path_in_home(const char* path)
     return fullPath;
 }
 
-static void e_log_vlog(enum wlr_log_importance importance, const char *fmt, va_list args)
+static void e_log_vlog(enum wlr_log_importance importance, const char* fmt, va_list args)
 {
     if (importance >= WLR_LOG_IMPORTANCE_LAST)
         return;
@@ -82,7 +82,7 @@ static void e_log_vlog(enum wlr_log_importance importance, const char *fmt, va_l
 
     if (log_file != NULL)
     {
-        fprintf(log_file, "[INFO (%s)] %s\n", time_string(), msg);
+        fprintf(log_file, "[%s (%s)] %s\n", importance_names[importance], time_string(), msg);
         fflush(log_file);
     }
 }
