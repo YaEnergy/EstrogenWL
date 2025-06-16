@@ -87,6 +87,8 @@ struct e_workspace* e_workspace_create(struct e_output* output)
         return NULL;
     }
 
+    e_cosmic_workspace_set_tiling_state(workspace->cosmic_handle, E_COSMIC_WORKSPACE_TILING_STATE_TILING_ENABLED);
+
     workspace->ext_handle = e_ext_workspace_create(output->server->ext_workspace_manager, NULL);
 
     if (workspace->ext_handle == NULL)
