@@ -69,7 +69,7 @@ int main()
     //Important function: xkb_keysym_from_name (const char *name, enum xkb_keysym_flags flags)
     
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F1, WLR_MODIFIER_LOGO, "exec rofi -modi drun,run -show drun");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F2, WLR_MODIFIER_LOGO, "exec alacritty");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F2, WLR_MODIFIER_LOGO, "exec $TERM");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F3, WLR_MODIFIER_LOGO, "exit");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F4, WLR_MODIFIER_LOGO, "kill");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F5, WLR_MODIFIER_LOGO, "toggle_fullscreen");
