@@ -7,6 +7,8 @@
 #include <time.h>
 #include <stdarg.h>
 
+#include <wlr/util/log.h>
+
 #include "util/filesystem.h"
 
 #define LOG_DIR_PATH ".local/share/estrogenwl"
@@ -62,22 +64,28 @@ static char* get_path_in_home(const char* path)
 
 //TODO: add error codes for when logFile is NULL
 
-int e_log_init(void)
+void e_log_init(void)
 {
+    #if E_VERBOSE
+    wlr_log_init(WLR_DEBUG, NULL);
+    #else
+    wlr_log_init(WLR_ERROR, NULL);
+    #endif
+
     if (logFile != NULL)
-        return 1;
+        return;
     
     char* logDirPath = get_path_in_home(LOG_DIR_PATH);
 
     if (logDirPath == NULL)
-        return 1;
+        return;
     
     if (!e_directory_exists(logDirPath))
     {
         if (e_directory_create(logDirPath) != 0)
         {
             free(logDirPath);
-            return 1;
+            return;
         }
     } 
 
@@ -87,7 +95,7 @@ int e_log_init(void)
     char* logFilePath = get_path_in_home(LOG_FILE_PATH);
 
     if (logFilePath == NULL)
-        return 1;
+        return;
 
     //rename previous log file if exists
     if (e_file_exists(logFilePath))
@@ -95,7 +103,7 @@ int e_log_init(void)
         char* prevLogFilePath = get_path_in_home(LOG_PREV_FILE_PATH);
 
         if (prevLogFilePath == NULL)
-            return 1;
+            return;
 
         int renameResult = rename(logFilePath, prevLogFilePath);
 
@@ -112,11 +120,10 @@ int e_log_init(void)
     if (logFile == NULL)
     {
         perror("failed to open log file\n");
-        return 1;
+        return;
     }
 
     e_log_info("ESTROGENWL LOG START");
-    return 0;
 }
 
 void e_log_info(const char *format, ...)
