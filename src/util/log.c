@@ -17,7 +17,7 @@
 
 #define LOG_MSG_MAX_LENGTH 1024
 
-FILE* logFile = NULL;
+FILE* log_file = NULL;
 
 static char* get_time_string(void)
 {
@@ -72,7 +72,7 @@ void e_log_init(void)
     wlr_log_init(WLR_ERROR, NULL);
     #endif
 
-    if (logFile != NULL)
+    if (log_file != NULL)
         return;
     
     char* logDirPath = get_path_in_home(LOG_DIR_PATH);
@@ -113,11 +113,11 @@ void e_log_init(void)
         free(prevLogFilePath);
     }
     
-    logFile = fopen(logFilePath, "w");
+    log_file = fopen(logFilePath, "w");
 
     free(logFilePath);
 
-    if (logFile == NULL)
+    if (log_file == NULL)
     {
         perror("failed to open log file\n");
         return;
@@ -138,10 +138,10 @@ void e_log_info(const char *format, ...)
 
     printf("[INFO (%s)] %s\n", get_time_string(), message);
 
-    if (logFile != NULL)
+    if (log_file != NULL)
     {
-        fprintf(logFile, "[INFO (%s)] %s\n", get_time_string(), message);
-        fflush(logFile);
+        fprintf(log_file, "[INFO (%s)] %s\n", get_time_string(), message);
+        fflush(log_file);
     }
 
     va_end(args);
@@ -159,10 +159,10 @@ void e_log_error(const char *format, ...)
 
     fprintf(stderr, "[ERROR (%s)] %s, errno: %s\n", get_time_string(), message, strerror(errno));
 
-    if (logFile != NULL)
+    if (log_file != NULL)
     {
-        fprintf(logFile, "[ERROR (%s)] %s, errno: %s\n", get_time_string(), message, strerror(errno));
-        fflush(logFile);
+        fprintf(log_file, "[ERROR (%s)] %s, errno: %s\n", get_time_string(), message, strerror(errno));
+        fflush(log_file);
     }
 
     va_end(args);
@@ -172,9 +172,9 @@ void e_log_fini(void)
 {
     e_log_info("Closing log...");
 
-    if (logFile == NULL)
+    if (log_file == NULL)
         return;
 
-    fflush(logFile);
-    fclose(logFile);
+    fflush(log_file);
+    fclose(log_file);
 }
