@@ -150,44 +150,22 @@ void e_log_init(void)
     e_log_info("ESTROGENWL LOG START");
 }
 
-void e_log_info(const char *format, ...)
+void e_log_info(const char* fmt, ...)
 {
     va_list args;
-    va_start(args, format);
+    va_start(args, fmt);
 
-    char message[LOG_MSG_MAX_LENGTH]; //message buffer
-
-    //print format with args into buffer, truncated if necessary
-    vsnprintf(message, sizeof(char) * LOG_MSG_MAX_LENGTH, format, args);
-
-    printf("[INFO (%s)] %s\n", time_string(), message);
-
-    if (log_file != NULL)
-    {
-        fprintf(log_file, "[INFO (%s)] %s\n", time_string(), message);
-        fflush(log_file);
-    }
+    e_log_vlog(WLR_INFO, fmt, args);
 
     va_end(args);
 }
 
-void e_log_error(const char *format, ...)
+void e_log_error(const char* fmt, ...)
 {
     va_list args;
-    va_start(args, format);
+    va_start(args, fmt);
 
-    char message[LOG_MSG_MAX_LENGTH]; //message buffer
-
-    //print format with args into buffer, truncated if necessary
-    vsnprintf(message, sizeof(char) * LOG_MSG_MAX_LENGTH, format, args);
-
-    fprintf(stderr, "[ERROR (%s)] %s, errno: %s\n", time_string(), message, strerror(errno));
-
-    if (log_file != NULL)
-    {
-        fprintf(log_file, "[ERROR (%s)] %s, errno: %s\n", time_string(), message, strerror(errno));
-        fflush(log_file);
-    }
+    e_log_vlog(WLR_ERROR, fmt, args);
 
     va_end(args);
 }
