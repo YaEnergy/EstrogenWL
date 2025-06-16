@@ -24,6 +24,9 @@ struct wlr_layer_shell_v1;
 struct wlr_xwayland;
 #endif
 
+struct e_cosmic_workspace_manager;
+struct e_ext_workspace_manager;
+
 #define E_COMPOSITOR_VERSION 6
 
 #define E_XDG_WM_BASE_VERSION 6
@@ -35,6 +38,9 @@ struct wlr_xwayland;
 #define E_EXT_IMAGE_COPY_CAPTURE_VERSION 1
 
 #define E_LINUX_DRM_SYNCOBJ_VERSION 1
+
+#define E_COSMIC_WORKSPACE_VERSION 2
+#define E_EXT_WORKSPACE_VERSION 1
 
 // main struct handling:
 //  - backend (wl_display, wlr_backend, wlr_allocator, wlr_renderer, shells, protocols ...)
@@ -87,6 +93,9 @@ struct e_server
     struct wl_listener xwayland_ready;
     struct wl_listener new_xwayland_surface;
 #endif
+
+    struct e_cosmic_workspace_manager* cosmic_workspace_manager;
+    struct e_ext_workspace_manager* ext_workspace_manager;
 
     // what the user interacts with
     struct e_desktop* desktop;

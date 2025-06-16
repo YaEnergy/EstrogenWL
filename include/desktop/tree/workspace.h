@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 
+#include <wayland-server-core.h>
 #include <wayland-util.h>
 
 #include <wlr/util/box.h>
@@ -14,6 +15,9 @@
 
 struct e_output;
 struct e_view;
+
+struct e_ext_workspace;
+struct e_cosmic_workspace;
 
 struct e_workspace_layers
 {
@@ -42,11 +46,22 @@ struct e_workspace
     struct e_tree_container* root_tiling_container;
 
     struct e_list floating_views; //struct e_view*
+
+    struct e_cosmic_workspace* cosmic_handle;
+
+    struct wl_listener cosmic_request_activate;
+
+    struct e_ext_workspace* ext_handle;
+
+    struct wl_listener ext_request_activate;
 };
 
 // Create a new workspace for an output.
 // Returns NULL on fail.
 struct e_workspace* e_workspace_create(struct e_output* output);
+
+// Set name of workspace.
+void e_workspace_set_name(struct e_workspace* workspace, const char* name);
 
 // Enable/disable workspace trees.
 void e_workspace_set_activated(struct e_workspace* workspace, bool activated);
