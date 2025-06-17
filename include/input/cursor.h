@@ -47,11 +47,9 @@ struct e_cursor
     struct wl_listener grab_view_unmap;
     double grab_start_x;
     double grab_start_y;
+    float grab_start_tile_percentage;
     struct wlr_box grab_start_vbox;
     enum wlr_edges grab_edges;
-
-    //TODO: replace with starting percentage
-    float prev_tile_percentage_idk;
 };
 
 // Returns NULL on fail.

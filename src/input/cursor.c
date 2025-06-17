@@ -222,18 +222,19 @@ static bool edge_is_along_tiling_axis(enum wlr_edges edge, enum e_tiling_mode ti
         return false; 
 }
 
-// Grow container's percentage along end or start by as much as it can until percentage.
-static bool grow_axis_tiled_container_percentage(struct e_container* container, bool end, float percentage)
+// Grow/shrink container's percentage to the given percentage along end or start by as much as it can.
+// Returns if they're able to be resizd.
+static bool resize_tiled_container(struct e_container* container, bool end, float percentage)
 {
     if (container == NULL)
     {
-        e_log_error("grow_axis_tiled_container_percentage: container is NULL");
+        e_log_error("resize_tiled_container: container is NULL");
         return false;
     }
 
     if (container->parent == NULL || container->parent->tiling_mode == E_TILING_MODE_NONE)
     {
-        e_log_error("grow_axis_tiled_container_percentage: container is not tiled!");
+        e_log_error("resize_tiled_container: container is not tiled!");
         return false;
     }
 
@@ -246,25 +247,29 @@ static bool grow_axis_tiled_container_percentage(struct e_container* container, 
 
     if (affected_container == NULL)
     {
-        e_log_error("grow_axis_tiled_container_percentage: no other container is affected by resize, can't grow");
+        e_log_error("resize_tiled_container: no other container is affected by resize, can't resize");
         return false;
     }
+
+    float total_percentage = container->percentage + affected_container->percentage;
 
     //TODO: should limit by view constraints
     //TODO: 5% is kind of arbitrary
     //TODO: respect min size hint if possible
 
-    //limit growth by percentage of affected container, keep 5%
-    if (percentage >= affected_container->percentage - 0.05f)
-        percentage = affected_container->percentage - 0.05f;
+    //can't resize without breaking limits
+    if (total_percentage < 0.1f)
+        return false;
 
-    //limit shrinkage by percentage of main container, keep 5%
-    //FIXME: might cause affected container to not keep 5%
-    if (container->percentage + percentage < 0.05f)
-        percentage = -container->percentage + 0.05f;
+    //limit size of affected container, keep min 5%
+    if (total_percentage - percentage < 0.05f)
+        percentage = total_percentage - 0.05f;
+    //limit size of main container, keep min 5%
+    else if (percentage < 0.05f)
+        percentage = 0.05f;
 
-    container->percentage += percentage;
-    affected_container->percentage  -= percentage;
+    container->percentage = percentage;
+    affected_container->percentage  = total_percentage - percentage;
     
     return true;
 }
@@ -333,8 +338,7 @@ static void e_cursor_resize_tiled(struct e_cursor* cursor)
 
     e_log_info("delta percentage: %g", delta_percentage);
 
-    grow_axis_tiled_container_percentage(container_resize, end, delta_percentage - cursor->prev_tile_percentage_idk);
-    cursor->prev_tile_percentage_idk = delta_percentage;
+    resize_tiled_container(container_resize, end, cursor->grab_start_tile_percentage + delta_percentage);
     
     e_log_info("new percentage %g", container_resize->percentage);
 
@@ -602,6 +606,8 @@ static void e_cursor_start_grab_view_mode(struct e_cursor* cursor, struct e_view
 
     cursor->grab_start_x = cursor->wlr_cursor->x;
     cursor->grab_start_y = cursor->wlr_cursor->y;
+
+    cursor->grab_start_tile_percentage = view->container.percentage;
 
     SIGNAL_CONNECT(view->surface->events.unmap, cursor->grab_view_unmap, e_cursor_grab_view_unmap);
 
