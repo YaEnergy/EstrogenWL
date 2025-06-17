@@ -37,7 +37,7 @@ static char* time_string(void)
 
 static void e_vlog(enum wlr_log_importance importance, const char* fmt, va_list args)
 {
-    if (importance >= WLR_LOG_IMPORTANCE_LAST)
+    if (importance >= WLR_LOG_IMPORTANCE_LAST || importance > wlr_log_get_verbosity())
         return;
 
     char msg[LOG_MSG_MAX_LENGTH]; //message buffer
