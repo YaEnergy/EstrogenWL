@@ -298,7 +298,6 @@ static void e_cursor_resize_tiled(struct e_cursor* cursor)
 
     //TODO: implement e_cursor_resize_tiled
     //TODO: clean up & refactor
-    //TODO: use starting container percentage
 
     //if grabbed edge is along the direction of the grabbed view's parent container, update grabbed view's container percentage (not parent)
     //else update grabbed view's PARENT container's percentage
