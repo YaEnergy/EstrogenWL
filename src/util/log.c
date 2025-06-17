@@ -15,6 +15,13 @@
 
 #define LOG_MSG_MAX_LENGTH 1024
 
+static const char* importance_colors[] = {
+    [WLR_SILENT] = "",
+    [WLR_ERROR] = "\x1B[1;31m",
+    [WLR_INFO] = "\x1B[1;34m",
+    [WLR_DEBUG] = "\x1B[1;90m"
+};
+
 static const char* importance_names[] = {
     [WLR_SILENT] = "",
     [WLR_ERROR] = "ERROR",
@@ -45,7 +52,7 @@ static void e_vlog(enum wlr_log_importance importance, const char* fmt, va_list 
     //print format with args into buffer, truncated if necessary
     vsnprintf(msg, sizeof(char) * LOG_MSG_MAX_LENGTH, fmt, args);
 
-    printf("[%s (%s)] %s\n", importance_names[importance], time_string(), msg);
+    printf("%s[%s (%s)] %s\n", importance_colors[importance], importance_names[importance], time_string(), msg);
 }
 
 void e_log_init(void)
