@@ -63,7 +63,7 @@ void e_log_init(void)
     wlr_log_init(WLR_ERROR, e_vlog);
     #endif
 
-    e_log_info("ESTROGENWL LOG START");
+    e_log_info("-~- ESTROGENWL LOG START -~-");
 }
 
 void e_log_info(const char* fmt, ...)
