@@ -89,8 +89,6 @@ int main()
     e_server_fini(&server);
 
     e_config_fini(&config);
-
-    e_log_fini();
     
     return 0;
 }
