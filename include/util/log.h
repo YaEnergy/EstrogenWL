@@ -1,6 +1,6 @@
 #pragma once
 
-// Init wlr log & log file.
+// Init estrogenwl & wlr log
 void e_log_init(void);
 
 void e_log_info(const char* fmt, ...);
