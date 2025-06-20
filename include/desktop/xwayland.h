@@ -70,6 +70,7 @@ struct e_xwayland_unmanaged
 
     // Xwayland surface wants to be configured in a specific way.
     struct wl_listener request_configure;
+    struct wl_listener set_geometry;
 
     // Surface becomes valid.
     struct wl_listener associate;
@@ -80,13 +81,9 @@ struct e_xwayland_unmanaged
     struct wl_listener map;
     // Surface no longer wants to be displayed.
     struct wl_listener unmap;
-    // New surface state got committed.
-    struct wl_listener commit;
     
     // Xwayland surface is destroyed.
     struct wl_listener destroy;
-
-    //struct wl_list link; //output::unmanaged_surfaces
 };
 
 // Update useable geometry not covered by panels, docks, etc. for xwayland.
