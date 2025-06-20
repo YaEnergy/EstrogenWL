@@ -40,8 +40,6 @@ struct e_desktop
     // Xwayland unmanaged surfaces.
     struct wlr_scene_tree* unmanaged;
 
-    struct e_list workspaces; //struct e_workspace*
-
     // nodes that are waiting to be reparented
     struct wlr_scene_tree* pending;
 
