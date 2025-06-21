@@ -65,6 +65,13 @@ static void xdg_popup_unconstrain(struct e_xdg_popup* popup)
     wlr_xdg_popup_unconstrain_from_box(popup->xdg_popup, &output_toplevel_space_box);
 }
 
+static void xdg_popup_handle_reposition(struct wl_listener* listener, void* data)
+{
+    struct e_xdg_popup* popup = wl_container_of(listener, popup, reposition);
+
+    xdg_popup_unconstrain(popup);
+}
+
 static void xdg_popup_handle_commit(struct wl_listener* listener, void* data)
 {
     struct e_xdg_popup* popup = wl_container_of(listener, popup, commit);
@@ -80,6 +87,7 @@ static void xdg_popup_handle_destroy(struct wl_listener* listener, void* data)
 {
     struct e_xdg_popup* popup = wl_container_of(listener, popup, destroy);
 
+    SIGNAL_DISCONNECT(popup->reposition);
     SIGNAL_DISCONNECT(popup->new_popup);
     SIGNAL_DISCONNECT(popup->commit);
     SIGNAL_DISCONNECT(popup->destroy);
@@ -106,6 +114,7 @@ static struct e_xdg_popup* xdg_popup_create(struct wlr_xdg_popup* xdg_popup, str
 
     //events
 
+    SIGNAL_CONNECT(xdg_popup->events.reposition, popup->new_popup, xdg_popup_handle_reposition);
     SIGNAL_CONNECT(xdg_popup->base->events.new_popup, popup->new_popup, xdg_popup_handle_new_popup);
     SIGNAL_CONNECT(xdg_popup->base->surface->events.commit, popup->commit, xdg_popup_handle_commit);
     SIGNAL_CONNECT(xdg_popup->events.destroy, popup->destroy, xdg_popup_handle_destroy);
