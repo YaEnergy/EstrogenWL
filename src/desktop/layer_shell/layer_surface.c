@@ -103,7 +103,7 @@ static struct e_layer_popup* layer_popup_create(struct wlr_xdg_popup* popup, str
 
     //create popup's scene tree, and add popup to scene tree of parent
     layer_popup->tree = wlr_scene_xdg_surface_create(parent, popup->base);
-    //TODO: e_node_desc_create(&layer_popup->tree->node, E_NODE_DESC_LAYER_POPUP, popup);
+    e_node_desc_create(&layer_popup->tree->node, E_NODE_DESC_LAYER_POPUP, popup);
 
     SIGNAL_CONNECT(popup->base->events.new_popup, layer_popup->new_popup, layer_popup_handle_new_popup);
     SIGNAL_CONNECT(popup->base->surface->events.commit, layer_popup->commit, layer_popup_handle_commit);

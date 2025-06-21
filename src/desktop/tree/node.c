@@ -41,7 +41,7 @@ struct e_node_desc* e_node_desc_create(struct wlr_scene_node* node, enum e_node_
     return node_desc;
 }
 
-//may return NULL
+// Returns NULL on fail.
 struct e_view* e_view_try_from_e_node_desc(struct e_node_desc* node_desc) 
 {
     assert(node_desc);
@@ -52,7 +52,7 @@ struct e_view* e_view_try_from_e_node_desc(struct e_node_desc* node_desc)
     return (struct e_view*)node_desc->data;
 }
 
-//may return NULL
+// Returns NULL on fail.
 struct e_xdg_popup* e_xdg_popup_try_from_e_node_desc(struct e_node_desc* node_desc)
 {
     assert(node_desc);
@@ -63,7 +63,18 @@ struct e_xdg_popup* e_xdg_popup_try_from_e_node_desc(struct e_node_desc* node_de
     return (struct e_xdg_popup*)node_desc->data;
 }
 
-//may return NULL
+// Returns NULL on fail.
+struct e_layer_popup* e_layer_popup_try_from_e_node_desc(struct e_node_desc* node_desc)
+{
+    assert(node_desc);
+
+    if (node_desc->type != E_NODE_DESC_LAYER_POPUP)
+        return NULL;
+
+    return (struct e_layer_popup*)node_desc->data;
+}
+
+// Returns NULL on fail.
 struct e_layer_surface* e_layer_surface_try_from_e_node_desc(struct e_node_desc* node_desc)
 {
     assert(node_desc);
