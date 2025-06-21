@@ -61,6 +61,7 @@ struct e_output
 
     struct wlr_scene_tree* tree;
     struct e_output_desktop_layers layers;
+    struct wlr_scene_tree* layer_popup_tree;
 
     struct wl_list layer_surfaces; //struct e_layer_surface*
 
