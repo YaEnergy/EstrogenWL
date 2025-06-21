@@ -329,6 +329,8 @@ static void output_init_scene(struct e_server* server, struct e_output* output)
     output->layers.floating = wlr_scene_tree_create(output->tree);
     output->layers.top = wlr_scene_tree_create(output->tree);
     output->layers.overlay = wlr_scene_tree_create(output->tree);
+
+    output->layer_popup_tree = wlr_scene_tree_create(output->tree);
 }
 
 static bool output_init_layout(struct e_desktop* desktop, struct e_output* output)

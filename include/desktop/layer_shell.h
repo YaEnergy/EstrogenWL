@@ -25,6 +25,7 @@ struct e_layer_surface
     struct e_output* output;
 
     struct wlr_scene_layer_surface_v1* scene_layer_surface_v1;
+    struct wlr_scene_tree* popup_tree;
 
     // New surface state got committed.
     struct wl_listener commit;
@@ -42,6 +43,21 @@ struct e_layer_surface
     struct wl_listener output_destroy;
 
     struct wl_list link; //e_output::layer_surfaces
+};
+
+// Temporary surface for layer surfaces.
+struct e_layer_popup
+{
+    struct e_layer_surface* layer_surface;
+
+    struct wlr_xdg_popup* xdg_popup;
+    struct wlr_scene_tree* tree;
+
+    struct wl_listener new_popup;
+
+    struct wl_listener commit;
+
+    struct wl_listener destroy;
 };
 
 /* layer surface functions */

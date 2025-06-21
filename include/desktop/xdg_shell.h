@@ -42,5 +42,18 @@ struct e_toplevel_view
     //TODO: request resize, fullscreen, ... events
 };
 
+// Temporary surface for toplevel views.
+struct e_xdg_popup
+{
+    struct e_view* view;
+
+    struct wlr_xdg_popup* xdg_popup;
+    struct wlr_scene_tree* tree;
+
+    struct wl_listener new_popup;
+    struct wl_listener commit;
+    struct wl_listener destroy;
+};
+
 //creates new top level view on desktop
 struct e_toplevel_view* e_toplevel_view_create(struct e_desktop* desktop, struct wlr_xdg_toplevel* xdg_toplevel);

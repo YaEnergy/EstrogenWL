@@ -15,7 +15,6 @@
 
 #include "desktop/desktop.h"
 #include "desktop/output.h"
-#include "desktop/xdg_popup.h"
 #include "desktop/tree/node.h"
 #include "desktop/views/view.h"
 
@@ -23,6 +22,70 @@
 
 #include "util/log.h"
 #include "util/wl_macros.h"
+
+/* Toplevel view popups */
+
+// Returns NULL on fail.
+static struct e_xdg_popup* xdg_popup_create(struct wlr_xdg_popup* xdg_popup, struct e_view* view, struct wlr_scene_tree* parent);
+
+static void xdg_popup_handle_new_popup(struct wl_listener* listener, void* data)
+{
+    struct e_xdg_popup* popup = wl_container_of(listener, popup, new_popup);
+    struct wlr_xdg_popup* new_xdg_popup = data;
+
+    e_log_info("popup creates new popup!");
+    xdg_popup_create(new_xdg_popup, popup->view, popup->tree);
+}
+
+static void xdg_popup_handle_commit(struct wl_listener* listener, void* data)
+{
+    struct e_xdg_popup* popup = wl_container_of(listener, popup, commit);
+    
+    if (popup->xdg_popup->base->initial_commit)
+    {
+        //TODO: unconstrain popup
+        wlr_xdg_surface_schedule_configure(popup->xdg_popup->base);
+    }
+}
+
+static void xdg_popup_handle_destroy(struct wl_listener* listener, void* data)
+{
+    struct e_xdg_popup* popup = wl_container_of(listener, popup, destroy);
+
+    SIGNAL_DISCONNECT(popup->new_popup);
+    SIGNAL_DISCONNECT(popup->commit);
+    SIGNAL_DISCONNECT(popup->destroy);
+
+    free(popup);
+}
+
+// Returns NULL on fail.
+static struct e_xdg_popup* xdg_popup_create(struct wlr_xdg_popup* xdg_popup, struct e_view* view, struct wlr_scene_tree* parent)
+{
+    assert(xdg_popup && parent);
+
+    struct e_xdg_popup* popup = calloc(1, sizeof(*popup));
+
+    if (popup == NULL)
+        return NULL;
+
+    popup->xdg_popup = xdg_popup;
+    popup->view = view;
+
+    //create popup's scene tree, and add popup to scene tree of parent
+    popup->tree = wlr_scene_xdg_surface_create(parent, xdg_popup->base);
+    e_node_desc_create(&popup->tree->node, E_NODE_DESC_XDG_POPUP, popup);
+
+    //events
+
+    SIGNAL_CONNECT(xdg_popup->base->events.new_popup, popup->new_popup, xdg_popup_handle_new_popup);
+    SIGNAL_CONNECT(xdg_popup->base->surface->events.commit, popup->commit, xdg_popup_handle_commit);
+    SIGNAL_CONNECT(xdg_popup->events.destroy, popup->destroy, xdg_popup_handle_destroy);
+
+    return popup;
+}
+
+/* Toplevel view */
 
 // Returns size hints of view.
 static struct e_view_size_hints e_view_toplevel_get_size_hints(struct e_view* view)
@@ -131,7 +194,7 @@ static void e_toplevel_view_new_popup(struct wl_listener* listener, void* data)
 
     e_log_info("new popup by toplevel view: %s", toplevel_view->xdg_toplevel->title);
 
-    e_xdg_popup_create(xdg_popup, toplevel_view->base.tree);
+    xdg_popup_create(xdg_popup, &toplevel_view->base, toplevel_view->base.tree);
 }
 
 static void e_toplevel_view_request_fullscreen(struct wl_listener* listener, void* data)
