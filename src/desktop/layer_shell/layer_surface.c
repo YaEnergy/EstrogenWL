@@ -16,7 +16,6 @@
 
 #include "desktop/desktop.h"
 #include "desktop/output.h"
-#include "desktop/xdg_popup.h"
 #include "desktop/tree/node.h"
 
 #include "input/seat.h"
@@ -24,14 +23,68 @@
 #include "util/log.h"
 #include "util/wl_macros.h"
 
+static void layer_popup_handle_commit(struct wl_listener* listener, void* data)
+{
+    struct e_layer_popup* popup = wl_container_of(listener, popup, commit);
+    
+    if (popup->xdg_popup->base->initial_commit)
+    {
+        //TODO: ensure the popup isn't positioned offscreen
+        wlr_xdg_surface_schedule_configure(popup->xdg_popup->base);
+    }
+}
+
+static void layer_popup_handle_destroy(struct wl_listener* listener, void* data)
+{
+    struct e_layer_popup* popup = wl_container_of(listener, popup, destroy);
+
+    SIGNAL_DISCONNECT(popup->commit);
+    SIGNAL_DISCONNECT(popup->destroy);
+
+    free(popup);
+}
+
+// Returns NULL on fail.
+static struct e_layer_popup* layer_popup_create(struct wlr_xdg_popup* popup, struct e_layer_surface* layer_surface, struct wlr_scene_tree* parent)
+{
+    assert(popup && layer_surface);
+
+    if (popup == NULL || layer_surface == NULL)
+        return NULL;
+
+    struct e_layer_popup* layer_popup = calloc(1, sizeof(*layer_popup));
+
+    if (layer_popup == NULL)
+        return NULL;
+
+    layer_popup->layer_surface = layer_surface;
+    layer_popup->xdg_popup = popup;
+
+    //create popup's scene tree, and add popup to scene tree of parent
+    layer_popup->tree = wlr_scene_xdg_surface_create(parent, popup->base);
+    //TODO: e_node_desc_create(&layer_popup->tree->node, E_NODE_DESC_LAYER_POPUP, popup);
+
+    /*
+    //allows further popup scene trees to add themselves to this popup's scene tree
+    popup->base->data = layer_popup->tree;
+    */
+
+    //TODO: handle popups for layer popups
+
+    SIGNAL_CONNECT(popup->base->surface->events.commit, layer_popup->commit, layer_popup_handle_commit);
+    SIGNAL_CONNECT(popup->events.destroy, layer_popup->destroy, layer_popup_handle_destroy);
+
+    return layer_popup;
+}
+
 // New layer popup.
-static void e_layer_surface_new_popup(struct wl_listener* listener, void* data)
+static void e_layer_surface_handle_new_popup(struct wl_listener* listener, void* data)
 {
     struct e_layer_surface* layer_surface = wl_container_of(listener, layer_surface, new_popup);
     struct wlr_xdg_popup* xdg_popup = data;
 
     e_log_info("layer surface creates new popup");
-    e_xdg_popup_create(xdg_popup, layer_surface->scene_layer_surface_v1->tree);
+    layer_popup_create(xdg_popup, layer_surface, layer_surface->popup_tree);
 }
 
 // Returns NULL on fail.
@@ -241,6 +294,7 @@ struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct
 
     layer_surface->desktop = desktop;
     layer_surface->output = output;
+    layer_surface->popup_tree = wlr_scene_tree_create(output->layer_popup_tree);
 
     layer_surface->scene_layer_surface_v1 = scene_layer_surface;
     e_node_desc_create(&scene_layer_surface->tree->node, E_NODE_DESC_LAYER_SURFACE, layer_surface);
@@ -253,7 +307,7 @@ struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct
 
     //events
 
-    SIGNAL_CONNECT(wlr_layer_surface_v1->events.new_popup, layer_surface->new_popup, e_layer_surface_new_popup);
+    SIGNAL_CONNECT(wlr_layer_surface_v1->events.new_popup, layer_surface->new_popup, e_layer_surface_handle_new_popup);
 
     SIGNAL_CONNECT(wlr_layer_surface_v1->surface->events.commit, layer_surface->commit, e_layer_surface_commit);
     SIGNAL_CONNECT(wlr_layer_surface_v1->surface->events.map, layer_surface->map, e_layer_surface_map);
