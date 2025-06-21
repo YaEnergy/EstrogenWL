@@ -36,13 +36,49 @@ static void layer_popup_handle_new_popup(struct wl_listener* listener, void* dat
     layer_popup_create(xdg_popup, popup->layer_surface, popup->tree);
 }
 
+static void layer_popup_unconstrain(struct e_layer_popup* popup)
+{
+    assert(popup);
+
+    if (popup == NULL)
+        return;
+
+    struct e_output* output = popup->layer_surface->output;
+
+    struct wlr_box layout_output_box;
+    wlr_output_layout_get_box(output->layout, output->wlr_output, &layout_output_box);
+
+    //toplevel layout coords
+    int lx, ly;
+    wlr_scene_node_coords(&popup->layer_surface->scene_layer_surface_v1->tree->node, &lx, &ly);
+
+    //output geometry relative to toplevel
+    //ex: output left border | <- 5 pixels space on the left side: -5 -> | toplevel | <- 200 pixels space on the right side: 200 -> | output right border
+    struct wlr_box output_toplevel_space_box = (struct wlr_box)
+    {
+        .x = layout_output_box.x - lx,
+        .y = layout_output_box.y - ly,
+        .width = layout_output_box.width,
+        .height = layout_output_box.height
+    };
+
+    wlr_xdg_popup_unconstrain_from_box(popup->xdg_popup, &output_toplevel_space_box);
+}
+
+static void layer_popup_handle_reposition(struct wl_listener* listener, void* data)
+{
+    struct e_layer_popup* popup = wl_container_of(listener, popup, reposition);
+
+    layer_popup_unconstrain(popup);
+}
+
 static void layer_popup_handle_commit(struct wl_listener* listener, void* data)
 {
     struct e_layer_popup* popup = wl_container_of(listener, popup, commit);
     
     if (popup->xdg_popup->base->initial_commit)
     {
-        //TODO: unconstrain popup
+        layer_popup_unconstrain(popup);
         wlr_xdg_surface_schedule_configure(popup->xdg_popup->base);
     }
 }
@@ -51,6 +87,7 @@ static void layer_popup_handle_destroy(struct wl_listener* listener, void* data)
 {
     struct e_layer_popup* popup = wl_container_of(listener, popup, destroy);
 
+    SIGNAL_DISCONNECT(popup->reposition);
     SIGNAL_DISCONNECT(popup->new_popup);
     SIGNAL_DISCONNECT(popup->commit);
     SIGNAL_DISCONNECT(popup->destroy);
@@ -78,6 +115,7 @@ static struct e_layer_popup* layer_popup_create(struct wlr_xdg_popup* popup, str
     layer_popup->tree = wlr_scene_xdg_surface_create(parent, popup->base);
     e_node_desc_create(&layer_popup->tree->node, E_NODE_DESC_LAYER_POPUP, popup);
 
+    SIGNAL_CONNECT(popup->events.reposition, layer_popup->reposition, layer_popup_handle_reposition);
     SIGNAL_CONNECT(popup->base->events.new_popup, layer_popup->new_popup, layer_popup_handle_new_popup);
     SIGNAL_CONNECT(popup->base->surface->events.commit, layer_popup->commit, layer_popup_handle_commit);
     SIGNAL_CONNECT(popup->events.destroy, layer_popup->destroy, layer_popup_handle_destroy);
