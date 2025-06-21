@@ -23,6 +23,19 @@
 #include "util/log.h"
 #include "util/wl_macros.h"
 
+// Returns NULL on fail.
+static struct e_layer_popup* layer_popup_create(struct wlr_xdg_popup* popup, struct e_layer_surface* layer_surface, struct wlr_scene_tree* parent);
+
+static void layer_popup_handle_new_popup(struct wl_listener* listener, void* data)
+{
+    struct e_layer_popup* popup = wl_container_of(listener, popup, new_popup);
+
+    struct wlr_xdg_popup* xdg_popup = data;
+
+    e_log_info("layer surface creates new popup");
+    layer_popup_create(xdg_popup, popup->layer_surface, popup->tree);
+}
+
 static void layer_popup_handle_commit(struct wl_listener* listener, void* data)
 {
     struct e_layer_popup* popup = wl_container_of(listener, popup, commit);
@@ -38,6 +51,7 @@ static void layer_popup_handle_destroy(struct wl_listener* listener, void* data)
 {
     struct e_layer_popup* popup = wl_container_of(listener, popup, destroy);
 
+    SIGNAL_DISCONNECT(popup->new_popup);
     SIGNAL_DISCONNECT(popup->commit);
     SIGNAL_DISCONNECT(popup->destroy);
 
@@ -69,8 +83,7 @@ static struct e_layer_popup* layer_popup_create(struct wlr_xdg_popup* popup, str
     popup->base->data = layer_popup->tree;
     */
 
-    //TODO: handle popups for layer popups
-
+    SIGNAL_CONNECT(popup->base->events.new_popup, layer_popup->new_popup, layer_popup_handle_new_popup);
     SIGNAL_CONNECT(popup->base->surface->events.commit, layer_popup->commit, layer_popup_handle_commit);
     SIGNAL_CONNECT(popup->events.destroy, layer_popup->destroy, layer_popup_handle_destroy);
 
