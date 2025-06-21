@@ -30,7 +30,6 @@ estrogenwl_src = files(
     'src/desktop/desktop.c',
     'src/desktop/output.c',
     'src/desktop/xdg_shell.c',
-    'src/desktop/xdg_popup.c',
 
     'src/desktop/tree/workspace.c',
     'src/desktop/tree/container.c',
