@@ -52,6 +52,8 @@ static void layer_popup_unconstrain(struct e_layer_popup* popup)
     int lx, ly;
     wlr_scene_node_coords(&popup->layer_surface->scene_layer_surface_v1->tree->node, &lx, &ly);
 
+    //output geometry relative to toplevel
+    //ex: output left border | <- 5 pixels space on the left side: -5 -> | toplevel | <- 200 pixels space on the right side: 200 -> | output right border
     struct wlr_box output_toplevel_space_box = (struct wlr_box)
     {
         .x = layout_output_box.x - lx,
