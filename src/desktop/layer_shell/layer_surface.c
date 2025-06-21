@@ -36,13 +36,40 @@ static void layer_popup_handle_new_popup(struct wl_listener* listener, void* dat
     layer_popup_create(xdg_popup, popup->layer_surface, popup->tree);
 }
 
+static void layer_popup_unconstrain(struct e_layer_popup* popup)
+{
+    assert(popup);
+
+    if (popup == NULL)
+        return;
+
+    struct e_output* output = popup->layer_surface->output;
+
+    struct wlr_box layout_output_box;
+    wlr_output_layout_get_box(output->layout, output->wlr_output, &layout_output_box);
+
+    //toplevel layout coords
+    int lx, ly;
+    wlr_scene_node_coords(&popup->layer_surface->scene_layer_surface_v1->tree->node, &lx, &ly);
+
+    struct wlr_box output_toplevel_space_box = (struct wlr_box)
+    {
+        .x = layout_output_box.x - lx,
+        .y = layout_output_box.y - ly,
+        .width = layout_output_box.width,
+        .height = layout_output_box.height
+    };
+
+    wlr_xdg_popup_unconstrain_from_box(popup->xdg_popup, &output_toplevel_space_box);
+}
+
 static void layer_popup_handle_commit(struct wl_listener* listener, void* data)
 {
     struct e_layer_popup* popup = wl_container_of(listener, popup, commit);
     
     if (popup->xdg_popup->base->initial_commit)
     {
-        //TODO: unconstrain popup
+        layer_popup_unconstrain(popup);
         wlr_xdg_surface_schedule_configure(popup->xdg_popup->base);
     }
 }
