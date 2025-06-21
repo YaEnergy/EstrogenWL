@@ -116,7 +116,7 @@ static struct e_xdg_popup* xdg_popup_create(struct wlr_xdg_popup* xdg_popup, str
 
     //events
 
-    SIGNAL_CONNECT(xdg_popup->events.reposition, popup->new_popup, xdg_popup_handle_reposition);
+    SIGNAL_CONNECT(xdg_popup->events.reposition, popup->reposition, xdg_popup_handle_reposition);
     SIGNAL_CONNECT(xdg_popup->base->events.new_popup, popup->new_popup, xdg_popup_handle_new_popup);
     SIGNAL_CONNECT(xdg_popup->base->surface->events.commit, popup->commit, xdg_popup_handle_commit);
     SIGNAL_CONNECT(xdg_popup->events.destroy, popup->destroy, xdg_popup_handle_destroy);
