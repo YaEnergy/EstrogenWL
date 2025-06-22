@@ -9,57 +9,17 @@
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_scene.h>
 
-#include "output.h"
+struct e_server;
 
-struct e_config;
+struct e_output;
 struct e_seat;
 
 struct e_view;
 struct e_layer_surface;
 
-// main struct handling what is visible to the user (root tree, outputs) & input (seat).
-// basically for clients to make themselves visible and what views and layer surfaces need to communicate with.
-struct e_desktop
-{
-    struct e_config* config;
-
-    struct wl_display* display;
-
-    struct wl_list outputs; //struct e_output* 
-    // wlroots utility for working with arrangement of screens in a physical layout
-    struct wlr_output_layout* output_layout;
-
-    // root node of the scene.
-    // handles all rendering & damage tracking, 
-    // use this to add renderable things to the scene graph 
-    // and then call wlr_scene_commit_output to render the frame
-    struct wlr_scene* scene;
-    // layout of outputs in the scene
-    struct wlr_scene_output_layout* scene_layout;
-    
-    // Xwayland unmanaged surfaces.
-    struct wlr_scene_tree* unmanaged;
-
-    // nodes that are waiting to be reparented
-    struct wlr_scene_tree* pending;
-
-    struct wl_list views; //struct e_view*
-
-    struct e_seat* seat;
-};
-
-// Creates a desktop.
-// Returns NULL on fail.
-struct e_desktop* e_desktop_create(struct wl_display* display, struct wlr_compositor* compositor, struct e_config* config);
-
-// Set seat used by desktop.
-void e_desktop_set_seat(struct e_desktop* desktop, struct e_seat* seat);
-
-/* outputs */
-
-// Get output at specified index.
-// Returns NULL on fail.
-struct e_output* e_desktop_get_output(struct e_desktop* desktop, int index);
+// Functions for
+// - Managing a collection of views
+// - Desktop focus management (seat handles raw focus)
 
 /* scene */
 
@@ -73,34 +33,30 @@ struct wlr_scene_surface* e_desktop_scene_surface_at(struct wlr_scene_node* node
 
 // Returns output currently hovered by cursor.
 // Returns NULL if no output is being hovered.
-struct e_output* e_desktop_hovered_output(struct e_desktop* desktop);
+struct e_output* e_desktop_hovered_output(struct e_server* server);
 
 // Returns view currently hovered by cursor.
 // Returns NULL if no view is being hovered.
-struct e_view* e_desktop_hovered_view(struct e_desktop* desktop);
+struct e_view* e_desktop_hovered_view(struct e_server* server);
 
 /* focus */
 
 // Set seat focus on a view if possible, and does whatever is necessary to do so.
-void e_desktop_focus_view(struct e_desktop* desktop, struct e_view* view);
+void e_desktop_focus_view(struct e_view* view);
 
 // Set seat focus on a layer surface if possible.
-void e_desktop_focus_layer_surface(struct e_desktop* desktop, struct e_layer_surface* layer_surface);
+void e_desktop_focus_layer_surface(struct e_layer_surface* layer_surface);
 
 // Gets the type of surface (view or layer surface) and sets seat focus.
-// This will do nothing if surface isn't of a type that should be focused on by the desktop's seat.
-void e_desktop_focus_surface(struct e_desktop* desktop, struct wlr_surface* surface);
+// This will do nothing if surface isn't of a type that can be focused on by the seat
+void e_desktop_focus_surface(struct e_server* server, struct wlr_surface* surface);
 
 // Returns view currently in focus.
 // Returns NULL if no view has focus.
-struct e_view* e_desktop_focused_view(struct e_desktop* desktop);
+struct e_view* e_desktop_focused_view(struct e_server* server);
 
 // Returns view previously in focus.
 // Returns NULL if no view had focus.
-struct e_view* e_desktop_prev_focused_view(struct e_desktop* desktop);
+struct e_view* e_desktop_prev_focused_view(struct e_server* server);
 
-void e_desktop_clear_focus(struct e_desktop* desktop);
-
-/* destruction */
-
-void e_desktop_destroy(struct e_desktop* desktop);
+void e_desktop_clear_focus(struct e_server* server);

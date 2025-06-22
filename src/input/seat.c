@@ -26,6 +26,8 @@
 #include "util/log.h"
 #include "util/wl_macros.h"
 
+#include "server.h"
+
 //2024-12-18 22:29:22 | starting to be able to do this more on my own now, I feel like I'm learning a lot :3
 
 static void e_seat_request_set_cursor_shape(struct wl_listener* listener, void* data)
@@ -177,7 +179,7 @@ static void e_seat_init_dnd(struct e_seat* seat)
     }
 
     seat->current_dnd.icon = NULL;
-    seat->drag_icon_tree = wlr_scene_tree_create(&seat->desktop->scene->tree);
+    seat->drag_icon_tree = wlr_scene_tree_create(&seat->server->scene->tree);
 
     SIGNAL_CONNECT(seat->wlr_seat->events.request_start_drag, seat->request_start_drag, e_seat_request_start_drag);
     SIGNAL_CONNECT(seat->wlr_seat->events.start_drag, seat->start_drag, e_seat_start_drag);
@@ -214,9 +216,9 @@ static void e_seat_handle_destroy(struct wl_listener* listener, void* data)
     free(seat);
 }
 
-struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* desktop, struct wlr_output_layout* output_layout, const char* name)
+struct e_seat* e_seat_create(struct e_server* server, struct wlr_output_layout* output_layout, const char* name)
 {
-    assert(display && desktop && output_layout && name);
+    assert(server && output_layout && name);
 
     struct e_seat* seat = calloc(1, sizeof(*seat));
 
@@ -226,9 +228,9 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
         return NULL;
     }
 
-    struct wlr_seat* wlr_seat = wlr_seat_create(display, name);
+    struct wlr_seat* wlr_seat = wlr_seat_create(server->display, name);
 
-    seat->desktop = desktop;
+    seat->server = server;
     seat->wlr_seat = wlr_seat;
     seat->focus_surface = NULL;
     seat->previous_focus_surface = NULL;
@@ -237,7 +239,7 @@ struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* deskt
 
     e_seat_init_dnd(seat);
 
-    seat->cursor_shape_manager = wlr_cursor_shape_manager_v1_create(display, 1);
+    seat->cursor_shape_manager = wlr_cursor_shape_manager_v1_create(server->display, 1);
 
     wl_list_init(&seat->keyboards);
 

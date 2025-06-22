@@ -23,6 +23,8 @@
 #include "util/log.h"
 #include "util/wl_macros.h"
 
+#include "server.h"
+
 /* Toplevel view popups */
 
 // Returns NULL on fail.
@@ -274,8 +276,8 @@ static void e_toplevel_view_request_move(struct wl_listener* listener, void* dat
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, request_move);
 
-    struct e_desktop* desktop = toplevel_view->base.desktop;
-    e_cursor_start_view_move(desktop->seat->cursor, &toplevel_view->base);
+    struct e_server* server = toplevel_view->base.server;
+    e_cursor_start_view_move(server->seat->cursor, &toplevel_view->base);
 }
 
 static void e_toplevel_view_request_resize(struct wl_listener* listener, void* data)
@@ -283,8 +285,8 @@ static void e_toplevel_view_request_resize(struct wl_listener* listener, void* d
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, request_resize);
     struct wlr_xdg_toplevel_resize_event* event = data;
     
-    struct e_desktop* desktop = toplevel_view->base.desktop;
-    e_cursor_start_view_resize(desktop->seat->cursor, &toplevel_view->base, event->edges);
+    struct e_server* server = toplevel_view->base.server;
+    e_cursor_start_view_resize(server->seat->cursor, &toplevel_view->base, event->edges);
 }
 
 static void e_toplevel_view_set_title(struct wl_listener* listener, void* data)
@@ -426,9 +428,9 @@ static const struct e_view_impl view_toplevel_implementation = {
     .send_close = e_view_toplevel_send_close,
 };
 
-struct e_toplevel_view* e_toplevel_view_create(struct e_desktop* desktop, struct wlr_xdg_toplevel* xdg_toplevel)
+struct e_toplevel_view* e_toplevel_view_create(struct e_server* server, struct wlr_xdg_toplevel* xdg_toplevel)
 {
-    assert(desktop && xdg_toplevel);
+    assert(server && xdg_toplevel);
 
     struct e_toplevel_view* toplevel_view = calloc(1, sizeof(*toplevel_view));
 
@@ -441,7 +443,7 @@ struct e_toplevel_view* e_toplevel_view_create(struct e_desktop* desktop, struct
     //give pointer to xdg toplevel
     toplevel_view->xdg_toplevel = xdg_toplevel;
 
-    e_view_init(&toplevel_view->base, desktop, E_VIEW_TOPLEVEL, toplevel_view, &view_toplevel_implementation);
+    e_view_init(&toplevel_view->base, server, E_VIEW_TOPLEVEL, toplevel_view, &view_toplevel_implementation);
 
     toplevel_view->base.title = xdg_toplevel->title;
     toplevel_view->base.surface = xdg_toplevel->base->surface;
