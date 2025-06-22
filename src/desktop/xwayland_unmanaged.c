@@ -14,6 +14,8 @@
 #include "util/wl_macros.h"
 #include "util/log.h"
 
+#include "server.h"
+
 // Xwayland surface wants to be configured in a specific way.
 static void e_xwayland_unmanaged_request_configure(struct wl_listener* listener, void* data)
 {
@@ -45,7 +47,7 @@ static void e_xwayland_unmanaged_map(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_unmanaged* unmanaged = wl_container_of(listener, unmanaged, map);
 
-    struct e_desktop* desktop = unmanaged->desktop;
+    struct e_desktop* desktop = unmanaged->server->desktop;
 
     SIGNAL_CONNECT(unmanaged->xwayland_surface->events.set_geometry, unmanaged->set_geometry, e_xwayland_unmanaged_set_geometry);
 
@@ -98,11 +100,11 @@ static void e_xwayland_unmanaged_destroy(struct wl_listener* listener, void* dat
     free(unmanaged);
 }
 
-// Creates new xwayland unmanaged surface on desktop.
+// Creates new xwayland unmanaged surface for server.
 // Returns NULL on fail.
-struct e_xwayland_unmanaged* e_xwayland_unmanaged_create(struct e_desktop* desktop, struct wlr_xwayland_surface* xwayland_surface)
+struct e_xwayland_unmanaged* e_xwayland_unmanaged_create(struct e_server* server, struct wlr_xwayland_surface* xwayland_surface)
 {
-    assert(desktop && xwayland_surface);
+    assert(server && xwayland_surface);
 
     struct e_xwayland_unmanaged* unmanaged = calloc(1, sizeof(*unmanaged));
 
@@ -112,7 +114,7 @@ struct e_xwayland_unmanaged* e_xwayland_unmanaged_create(struct e_desktop* deskt
         return NULL;
     }
 
-    unmanaged->desktop = desktop;
+    unmanaged->server = server;
     unmanaged->xwayland_surface = xwayland_surface;
     unmanaged->tree = NULL;
 

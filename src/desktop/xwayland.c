@@ -31,7 +31,7 @@ static void xwayland_new_surface(struct wl_listener* listener, void* data)
 
     if (xwayland_surface->override_redirect)
     {
-        struct e_xwayland_unmanaged* unmanaged = e_xwayland_unmanaged_create(server->desktop, xwayland_surface);
+        struct e_xwayland_unmanaged* unmanaged = e_xwayland_unmanaged_create(server, xwayland_surface);
 
         if (unmanaged != NULL)
             e_log_info("new xwayland unmanaged surface!");
