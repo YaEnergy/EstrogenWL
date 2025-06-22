@@ -179,7 +179,7 @@ static void e_seat_init_dnd(struct e_seat* seat)
     }
 
     seat->current_dnd.icon = NULL;
-    seat->drag_icon_tree = wlr_scene_tree_create(&seat->server->desktop->scene->tree);
+    seat->drag_icon_tree = wlr_scene_tree_create(&seat->server->scene->tree);
 
     SIGNAL_CONNECT(seat->wlr_seat->events.request_start_drag, seat->request_start_drag, e_seat_request_start_drag);
     SIGNAL_CONNECT(seat->wlr_seat->events.start_drag, seat->start_drag, e_seat_start_drag);

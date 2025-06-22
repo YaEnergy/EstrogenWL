@@ -64,7 +64,7 @@ void e_view_init(struct e_view* view, struct e_server* server, enum e_view_type 
 
     view->title = NULL;
     
-    view->tree = wlr_scene_tree_create(server->desktop->pending);
+    view->tree = wlr_scene_tree_create(server->pending);
     wlr_scene_node_set_enabled(&view->tree->node, false);
     e_node_desc_create(&view->tree->node, E_NODE_DESC_VIEW, view);
 
@@ -182,7 +182,7 @@ static void e_view_set_workspace(struct e_view* view, struct e_workspace* worksp
     }
     else 
     {
-        wlr_scene_node_reparent(&view->tree->node, view->server->desktop->pending);
+        wlr_scene_node_reparent(&view->tree->node, view->server->pending);
     }
 
     view->workspace = workspace;
@@ -399,11 +399,11 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output)
 
     e_log_info("view map");
 
-    struct e_desktop* desktop = view->server->desktop;
+    struct e_server* server = view->server;
 
     if (output == NULL || output->active_workspace == NULL)
     {
-        output = e_desktop_hovered_output(desktop);
+        output = e_desktop_hovered_output(server);
 
         if (output == NULL || output->active_workspace == NULL)
         {
@@ -412,7 +412,7 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output)
         }
     }
 
-    wl_list_insert(&desktop->views, &view->link);
+    wl_list_insert(&server->views, &view->link);
 
     view->content_tree = e_view_create_content_tree(view);
 
@@ -438,7 +438,7 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output)
 
     //set focus to this view
     if (view->surface != NULL)
-        e_desktop_focus_view(desktop, view);
+        e_desktop_focus_view(view);
 }
 
 // Stop displaying view.
@@ -468,19 +468,19 @@ void e_view_unmap(struct e_view* view)
     wl_list_remove(&view->link);
 }
 
-struct e_view* e_view_from_surface(struct e_desktop* desktop, struct wlr_surface* surface)
+struct e_view* e_view_from_surface(struct e_server* server, struct wlr_surface* surface)
 {
-    assert(desktop);
+    assert(server);
     
     if (surface == NULL)
         return NULL;
 
-    if (wl_list_empty(&desktop->views))
+    if (wl_list_empty(&server->views))
         return NULL;
 
     struct e_view* view;
 
-    wl_list_for_each(view, &desktop->views, link)
+    wl_list_for_each(view, &server->views, link)
     {
         if (view->surface == NULL)
             continue;

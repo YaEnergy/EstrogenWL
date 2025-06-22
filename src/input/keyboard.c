@@ -24,9 +24,9 @@
 #include "commands.h"
 #include "server.h"
 
-bool e_desktop_handle_keybind(struct e_desktop* desktop, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods)
+bool e_desktop_handle_keybind(struct e_server* server, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods)
 {
-    struct e_list* keybinds = &desktop->config->keyboard.keybinds;
+    struct e_list* keybinds = &server->config->keyboard.keybinds;
 
     for (int i = 0; i < keybinds->count; i++)
     {
@@ -34,7 +34,7 @@ bool e_desktop_handle_keybind(struct e_desktop* desktop, xkb_keysym_t keysym, en
 
         if (e_keybind_should_activate(keybind, keysym, mods))
         {
-            e_commands_parse(desktop, keybind->command);
+            e_commands_parse(server, keybind->command);
             return true;
         }
     }
@@ -64,7 +64,7 @@ static void e_keyboard_key(struct wl_listener* listener, void* data)
 
         for (int i = 0; i < num_syms; i++)
         {
-            if (e_desktop_handle_keybind(keyboard->seat->server->desktop, syms[i], modifiers))
+            if (e_desktop_handle_keybind(keyboard->seat->server, syms[i], modifiers))
                 handled = true;
         }
     }

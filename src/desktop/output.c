@@ -318,7 +318,7 @@ static void output_init_scene(struct e_server* server, struct e_output* output)
     if (output == NULL || server == NULL)
         return;
 
-    output->tree = wlr_scene_tree_create(&server->desktop->scene->tree);
+    output->tree = wlr_scene_tree_create(&server->scene->tree);
     wlr_scene_node_lower_to_bottom(&output->tree->node);
     
     //create scene trees for all layers
@@ -333,18 +333,18 @@ static void output_init_scene(struct e_server* server, struct e_output* output)
     output->layer_popup_tree = wlr_scene_tree_create(output->tree);
 }
 
-static bool output_init_layout(struct e_desktop* desktop, struct e_output* output)
+static bool output_init_layout(struct e_server* server, struct e_output* output)
 {
-    assert(desktop && output);
+    assert(server && output);
 
-    if (desktop == NULL || output == NULL)
+    if (server == NULL || output == NULL)
         return false;
 
     struct wlr_output* wlr_output = output->wlr_output;
 
     //output layout auto adds wl_output to the display, allows wl clients to find out information about the display
     //TODO: allow configuring the arrangement of outputs in the layout
-    struct wlr_output_layout_output* layout_output = wlr_output_layout_add_auto(desktop->output_layout, wlr_output);
+    struct wlr_output_layout_output* layout_output = wlr_output_layout_add_auto(server->output_layout, wlr_output);
 
     if (layout_output == NULL)
     {
@@ -352,21 +352,21 @@ static bool output_init_layout(struct e_desktop* desktop, struct e_output* outpu
         return false;
     }
 
-    struct wlr_scene_output* scene_output = wlr_scene_output_create(desktop->scene, wlr_output);
+    struct wlr_scene_output* scene_output = wlr_scene_output_create(server->scene, wlr_output);
 
     if (scene_output == NULL)
     {
         e_log_error("e_output_init_layout: failed to create scene output");
-        wlr_output_layout_remove(desktop->output_layout, wlr_output);
+        wlr_output_layout_remove(server->output_layout, wlr_output);
         return false;
     }
 
-    wlr_scene_output_layout_add_output(desktop->scene_layout, layout_output, scene_output);
+    wlr_scene_output_layout_add_output(server->scene_layout, layout_output, scene_output);
 
-    output->layout = desktop->output_layout;
+    output->layout = server->output_layout;
     output->scene_output = scene_output;
 
-    wl_list_insert(&desktop->outputs, &output->link);
+    wl_list_insert(&server->outputs, &output->link);
 
     return true;
 }
@@ -442,7 +442,7 @@ static void server_new_output(struct wl_listener* listener, void* data)
 
     output->server = server;
     
-    if (!output_init_layout(server->desktop, output))
+    if (!output_init_layout(server, output))
     {
         e_log_error("server_new_output: failed to init layout!");
         e_output_destroy(output);
@@ -467,6 +467,11 @@ bool e_server_init_outputs(struct e_server* server)
 
     if (server == NULL)
         return false;
+
+    wl_list_init(&server->outputs);
+
+    //wlroots utility for working with arrangement of screens in a physical layout
+    server->output_layout = wlr_output_layout_create(server->display);
 
     SIGNAL_CONNECT(server->backend->events.new_output, server->new_output, server_new_output);
 
@@ -499,4 +504,15 @@ void e_server_fini_outputs(struct e_server* server)
         return;
 
     SIGNAL_DISCONNECT(server->new_output);
+
+    //disable & then remove outputs
+    struct e_output* output;
+    struct e_output* tmp;
+
+    wl_list_for_each_safe(output, tmp, &server->outputs, link)
+    {
+        e_output_destroy(output);
+    }
+
+    wlr_output_layout_destroy(server->output_layout);
 }

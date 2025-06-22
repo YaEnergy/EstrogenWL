@@ -11,8 +11,6 @@
 
 #include <wlr/util/box.h>
 
-#include "desktop/desktop.h"
-
 #include "desktop/tree/container.h"
 #include "desktop/tree/workspace.h"
 
@@ -188,7 +186,7 @@ void e_view_raise_to_top(struct e_view* view);
 
 // Finds the view which has this surface as its main surface.
 // Returns NULL on fail.
-struct e_view* e_view_from_surface(struct e_desktop* desktop, struct wlr_surface* surface);
+struct e_view* e_view_from_surface(struct e_server* server, struct wlr_surface* surface);
 
 // Returns NULL on fail.
 struct e_view* e_view_try_from_node_ancestors(struct wlr_scene_node* node);

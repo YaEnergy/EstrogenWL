@@ -9,8 +9,6 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/xwayland.h>
 
-#include "desktop/desktop.h"
-
 #include "util/wl_macros.h"
 #include "util/log.h"
 
@@ -47,11 +45,11 @@ static void e_xwayland_unmanaged_map(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_unmanaged* unmanaged = wl_container_of(listener, unmanaged, map);
 
-    struct e_desktop* desktop = unmanaged->server->desktop;
+    struct e_server* server = unmanaged->server;
 
     SIGNAL_CONNECT(unmanaged->xwayland_surface->events.set_geometry, unmanaged->set_geometry, e_xwayland_unmanaged_set_geometry);
 
-    unmanaged->tree = wlr_scene_subsurface_tree_create(desktop->unmanaged, unmanaged->xwayland_surface->surface);
+    unmanaged->tree = wlr_scene_subsurface_tree_create(server->unmanaged, unmanaged->xwayland_surface->surface);
     wlr_scene_node_set_position(&unmanaged->tree->node, unmanaged->xwayland_surface->x, unmanaged->xwayland_surface->y);
 }
 

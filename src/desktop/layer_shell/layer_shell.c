@@ -25,7 +25,7 @@ static void layer_shell_new_layer_surface(struct wl_listener* listener, void* da
     //output may be null
     if (layer_surface->output == NULL)
     {
-        struct e_output* output = e_desktop_hovered_output(server->desktop);
+        struct e_output* output = e_desktop_hovered_output(server);
 
         if (output == NULL)
         {

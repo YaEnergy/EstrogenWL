@@ -1,7 +1,5 @@
 #include "commands.h"
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
@@ -10,8 +8,6 @@
 #include <sys/wait.h>
 
 #include <wayland-server-core.h>
-
-#include <wlr/types/wlr_xdg_shell.h>
 
 #include "desktop/desktop.h"
 #include "desktop/output.h"
@@ -27,11 +23,15 @@
 #include "util/list.h"
 #include "util/log.h"
 
+#include "server.h"
+
+//TODO: this really needs to be updated and be rewritten in the same style as the rest of the code, because WOW this is garbage
+
 #define SHELL_PATH "/bin/sh"
 
-static void e_commands_kill_focused_view(struct e_desktop* desktop)
+static void e_commands_kill_focused_view(struct e_server* server)
 {
-    struct e_view* view = e_desktop_focused_view(desktop);
+    struct e_view* view = e_desktop_focused_view(server);
 
     if (view != NULL)
     {
@@ -45,9 +45,9 @@ static void e_commands_kill_focused_view(struct e_desktop* desktop)
     }
 }
 
-static void e_commands_toggle_tiling_focused_view(struct e_desktop* desktop)
+static void e_commands_toggle_tiling_focused_view(struct e_server* server)
 {
-    struct e_view* view = e_desktop_focused_view(desktop);
+    struct e_view* view = e_desktop_focused_view(server);
 
     if (view != NULL)
     {
@@ -61,11 +61,11 @@ static void e_commands_toggle_tiling_focused_view(struct e_desktop* desktop)
     }
 }
 
-static void e_commands_switch_tiling_mode(struct e_desktop* desktop)
+static void e_commands_switch_tiling_mode(struct e_server* server)
 {
-    assert(desktop);
+    assert(server);
 
-    struct e_view* view = e_desktop_focused_view(desktop);
+    struct e_view* view = e_desktop_focused_view(server);
 
     if (view == NULL || view->container.parent == NULL)
         return;
@@ -80,9 +80,9 @@ static void e_commands_switch_tiling_mode(struct e_desktop* desktop)
     e_tree_container_arrange(parent_container);
 }
 
-static void e_commands_toggle_fullscreen_focused_view(struct e_desktop* desktop)
+static void e_commands_toggle_fullscreen_focused_view(struct e_server* server)
 {
-    struct e_view* view = e_desktop_focused_view(desktop);
+    struct e_view* view = e_desktop_focused_view(server);
 
     if (view != NULL)
     {
@@ -93,16 +93,6 @@ static void e_commands_toggle_fullscreen_focused_view(struct e_desktop* desktop)
     {
         e_log_error("e_commands_toggle_fullscreen_focused_view: failed to toggle fullscreen mode of view!");
     }
-}
-
-static void e_commands_maximize_focused_view(struct e_desktop* desktop)
-{
-    assert(desktop);
-
-    //struct e_view* view = e_desktop_focused_view(desktop->seat);
-
-    //if (view != NULL)
-        //e_window_maximize(view);
 }
 
 static void e_commands_exec_as_new_process(const char* command)
@@ -133,7 +123,7 @@ static void e_commands_exec_as_new_process(const char* command)
     }
 }
 
-void e_commands_parse(struct e_desktop* desktop, const char* command)
+void e_commands_parse(struct e_server* server, const char* command)
 {
     int commandLength = strlen(command);
     char arguments[commandLength + 1];
@@ -160,35 +150,36 @@ void e_commands_parse(struct e_desktop* desktop, const char* command)
     else if (strcmp(argument, "exit") == 0)
     {
         //will quit EstrogenWL
-        wl_display_terminate(desktop->display);
+        e_server_terminate(server);
     }
     //type is kill
     else if (strcmp(argument, "kill") == 0)
     {
-        e_commands_kill_focused_view(desktop);
+        e_commands_kill_focused_view(server);
     }
     //TODO: toggle_fullscreen & toggle_tiling are currently placeholders
     else if (strcmp(argument, "toggle_fullscreen") == 0)
     {
-        e_commands_toggle_fullscreen_focused_view(desktop);
+        e_commands_toggle_fullscreen_focused_view(server);
     }
     else if (strcmp(argument, "toggle_tiling") == 0)
     {
-        e_commands_toggle_tiling_focused_view(desktop);
+        e_commands_toggle_tiling_focused_view(server);
     }
     //TODO: switch_tiling_mode is a placeholder name
     else if (strcmp(argument, "switch_tiling_mode") == 0)
     {
-        e_commands_switch_tiling_mode(desktop);
+        e_commands_switch_tiling_mode(server);
     }
     else if (strcmp(argument, "maximize") == 0)
     {
-        e_commands_maximize_focused_view(desktop);
+        e_log_info("maximize");
+        //TODO: maximize
     }
     //TODO: next_workspace is for testing only, remove
     else if (strcmp(argument, "next_workspace") == 0)
     {
-        struct e_output* output = e_desktop_hovered_output(desktop);
+        struct e_output* output = e_desktop_hovered_output(server);
 
         struct e_workspace* workspace = output->active_workspace;
 
@@ -201,18 +192,18 @@ void e_commands_parse(struct e_desktop* desktop, const char* command)
         int i = e_list_find_index(&output->workspace_group.workspaces, workspace);
 
         e_output_display_workspace(output, e_list_at(&output->workspace_group.workspaces, (i + 1) % output->workspace_group.workspaces.count));
-        e_cursor_set_focus_hover(desktop->seat->cursor);
+        e_cursor_set_focus_hover(server->seat->cursor);
         e_log_info("output workspace index: %i", (i + 1) % output->workspace_group.workspaces.count);
     }
     //TODO: testing only, remove
     else if (strcmp(argument, "move_to_next_workspace") == 0)
     {
-        struct e_view* focused_view = e_desktop_focused_view(desktop);
+        struct e_view* focused_view = e_desktop_focused_view(server);
 
         if (focused_view == NULL)
             return;
 
-        struct e_output* output = e_desktop_hovered_output(desktop);
+        struct e_output* output = e_desktop_hovered_output(server);
 
         struct e_workspace* workspace = output->active_workspace;
 
@@ -225,7 +216,7 @@ void e_commands_parse(struct e_desktop* desktop, const char* command)
         int i = e_list_find_index(&output->workspace_group.workspaces, workspace);
 
         e_view_move_to_workspace(focused_view, e_list_at(&output->workspace_group.workspaces, (i + 1) % output->workspace_group.workspaces.count));
-        e_cursor_set_focus_hover(desktop->seat->cursor);
+        e_cursor_set_focus_hover(server->seat->cursor);
         e_log_info("view workspace index: %i", (i + 1) % output->workspace_group.workspaces.count);
     }
     else 

@@ -43,8 +43,8 @@ struct e_ext_workspace_manager;
 #define E_EXT_WORKSPACE_VERSION 1
 
 // main struct handling:
-//  - backend (wl_display, wlr_backend, wlr_allocator, wlr_renderer, shells, protocols ...)
-//  - frontend (e_desktop)
+//  - protocols (shells, other, ...)
+//  - scene
 //  - config
 struct e_server
 {
@@ -97,8 +97,24 @@ struct e_server
     struct e_cosmic_workspace_manager* cosmic_workspace_manager;
     struct e_ext_workspace_manager* ext_workspace_manager;
 
-    // what the user interacts with
-    struct e_desktop* desktop;
+    struct wl_list outputs; //struct e_output* 
+    // wlroots utility for working with arrangement of screens in a physical layout
+    struct wlr_output_layout* output_layout;
+
+    // root node of the scene.
+    // handles all rendering & damage tracking, 
+    // use this to add renderable things to the scene graph 
+    // and then call wlr_scene_commit_output to render the frame
+    struct wlr_scene* scene;
+    // layout of outputs in the scene
+    struct wlr_scene_output_layout* scene_layout;
+    
+    // Xwayland unmanaged surfaces.
+    struct wlr_scene_tree* unmanaged;
+    // nodes that are waiting to be reparented
+    struct wlr_scene_tree* pending;
+
+    struct wl_list views; //struct e_view*
 
     // collection & management of input devices: keyboard, mouse, ...
     struct e_seat* seat;
