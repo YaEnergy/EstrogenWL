@@ -30,6 +30,8 @@
 #include "util/log.h"
 #include "util/wl_macros.h"
 
+#include "server.h"
+
 //xcursor names: https://www.freedesktop.org/wiki/Specifications/cursor-spec/
 
 // codes in /usr/include/linux/input-event-codes.h
@@ -48,7 +50,7 @@ static void start_grab_resize_focused_view(struct e_cursor* cursor)
 {
     assert(cursor);
 
-    struct e_view* focused_view = e_desktop_focused_view(cursor->seat->desktop);
+    struct e_view* focused_view = e_desktop_focused_view(cursor->seat->server);
 
     if (focused_view == NULL)
         return;
@@ -78,7 +80,7 @@ static void start_grab_move_focused_view(struct e_cursor* cursor)
 {
     assert(cursor);
 
-    struct e_view* focused_view = e_desktop_focused_view(cursor->seat->desktop);
+    struct e_view* focused_view = e_desktop_focused_view(cursor->seat->server);
 
     if (focused_view != NULL)
         e_cursor_start_view_move(cursor, focused_view);
@@ -195,10 +197,10 @@ static void e_cursor_handle_mode_move(struct e_cursor* cursor)
 
     if (cursor->grab_view->tiled)
     {
-        struct e_desktop* desktop = cursor->seat->desktop;
+        struct e_server* server = cursor->seat->server;
         
         //get current view under cursor
-        struct e_view* cursor_view = e_view_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
+        struct e_view* cursor_view = e_view_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
     
         //if not the same tiled view as grabbed tiled view, swap them
         if (cursor_view != NULL && cursor_view->tiled && cursor_view != cursor->grab_view)
@@ -351,11 +353,11 @@ static void e_cursor_handle_motion(struct e_cursor* cursor, uint32_t time_msec)
             break;
     }
 
-    struct e_desktop* desktop = cursor->seat->desktop;
+    struct e_server* server = cursor->seat->server;
     struct e_seat* seat = cursor->seat;
 
     double sx, sy;
-    struct wlr_scene_surface* hover_surface = e_desktop_scene_surface_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &sx, &sy);
+    struct wlr_scene_surface* hover_surface = e_desktop_scene_surface_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &sx, &sy);
 
     e_cursor_set_focus_hover(cursor);
 
@@ -581,11 +583,11 @@ void e_cursor_set_focus_hover(struct e_cursor* cursor)
     if (cursor->mode != E_CURSOR_MODE_DEFAULT)
         return;
 
-    struct e_desktop* desktop = cursor->seat->desktop;
+    struct e_server* server = cursor->seat->server;
     struct e_seat* seat = cursor->seat;
 
     double sx, sy;
-    struct wlr_scene_surface* hover_surface = e_desktop_scene_surface_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &sx, &sy);
+    struct wlr_scene_surface* hover_surface = e_desktop_scene_surface_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &sx, &sy);
     struct e_view* view = (hover_surface == NULL) ? NULL : e_view_try_from_node_ancestors(&hover_surface->buffer->node);
 
     if (hover_surface != NULL)
@@ -593,7 +595,7 @@ void e_cursor_set_focus_hover(struct e_cursor* cursor)
         wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface->surface, sx, sy); //is only sent once
 
         //sloppy focus
-        e_desktop_focus_surface(desktop, hover_surface->surface);
+        e_desktop_focus_surface(server, hover_surface->surface);
     }
     else 
     {

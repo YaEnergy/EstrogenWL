@@ -1,7 +1,6 @@
 #include "desktop/xwayland.h"
 
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
@@ -32,7 +31,7 @@ static void xwayland_new_surface(struct wl_listener* listener, void* data)
 
     if (xwayland_surface->override_redirect)
     {
-        struct e_xwayland_unmanaged* unmanaged = e_xwayland_unmanaged_create(server->desktop, xwayland_surface);
+        struct e_xwayland_unmanaged* unmanaged = e_xwayland_unmanaged_create(server, xwayland_surface);
 
         if (unmanaged != NULL)
             e_log_info("new xwayland unmanaged surface!");
@@ -41,7 +40,7 @@ static void xwayland_new_surface(struct wl_listener* listener, void* data)
     }
     else
     {
-        struct e_xwayland_view* view = e_xwayland_view_create(server->desktop, xwayland_surface);
+        struct e_xwayland_view* view = e_xwayland_view_create(server, xwayland_surface);
         
         if (view != NULL)
             e_log_info("new xwayland view!");
@@ -102,25 +101,24 @@ void e_server_fini_xwayland(struct e_server* server)
 // Update useable geometry not covered by panels, docks, etc. for xwayland
 void e_server_update_xwayland_workareas(struct e_server* server)
 {
-    assert(server && server->desktop && server->xwayland);
+    assert(server && server->xwayland);
 
-    if (server == NULL || server->desktop == NULL || server->xwayland == NULL)
+    if (server == NULL || server->xwayland == NULL)
         return;
 
-    struct e_desktop* desktop = server->desktop;
     struct wlr_xwayland* xwayland = server->xwayland;
 
     //connection is not ready yet
     if (xwayland->xwm == NULL)
         return;
     
-    if (wl_list_empty(&desktop->outputs))
+    if (wl_list_empty(&server->outputs))
         return;
 
     //TODO: set separate workareas for each output
     //TODO: use useable area for workarea only
 
-    struct wlr_output_layout* layout = desktop->output_layout;
+    struct wlr_output_layout* layout = server->output_layout;
 
     int left = 0;
     int right = 0;
@@ -128,7 +126,7 @@ void e_server_update_xwayland_workareas(struct e_server* server)
     int bottom = 0;
 
     struct e_output* output = NULL;
-    wl_list_for_each(output, &desktop->outputs, link)
+    wl_list_for_each(output, &server->outputs, link)
     {
         struct wlr_box output_box;
         wlr_output_layout_get_box(layout, output->wlr_output, &output_box);

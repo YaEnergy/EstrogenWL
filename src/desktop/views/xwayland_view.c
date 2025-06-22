@@ -25,6 +25,8 @@
 #include "util/log.h"
 #include "util/wl_macros.h"
 
+#include "server.h"
+
 // Returns size hints of view.
 static struct e_view_size_hints e_view_xwayland_get_size_hints(struct e_view* view)
 {
@@ -208,8 +210,8 @@ static void e_xwayland_view_request_move(struct wl_listener* listener, void* dat
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, request_move);
     
-    struct e_desktop* desktop = xwayland_view->base.desktop;
-    e_cursor_start_view_move(desktop->seat->cursor, &xwayland_view->base);
+    struct e_server* server = xwayland_view->base.server;
+    e_cursor_start_view_move(server->seat->cursor, &xwayland_view->base);
 }
 
 static void e_xwayland_view_request_resize(struct wl_listener* listener, void* data)
@@ -217,8 +219,8 @@ static void e_xwayland_view_request_resize(struct wl_listener* listener, void* d
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, request_resize);
     struct wlr_xwayland_resize_event* event = data;
     
-    struct e_desktop* desktop = xwayland_view->base.desktop;
-    e_cursor_start_view_resize(desktop->seat->cursor, &xwayland_view->base, event->edges);
+    struct e_server* server = xwayland_view->base.server;
+    e_cursor_start_view_resize(server->seat->cursor, &xwayland_view->base, event->edges);
 }
 
 static void e_xwayland_view_set_title(struct wl_listener* listener, void* data)
@@ -370,11 +372,11 @@ static const struct e_view_impl view_xwayland_implementation = {
     .send_close = e_view_xwayland_send_close,
 };
 
-// Creates new xwayland view on desktop.
+// Creates new xwayland view for server.
 // Returns NULL on fail.
-struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct wlr_xwayland_surface* xwayland_surface)
+struct e_xwayland_view* e_xwayland_view_create(struct e_server* server, struct wlr_xwayland_surface* xwayland_surface)
 {
-    assert(desktop && xwayland_surface);
+    assert(server && xwayland_surface);
     
     struct e_xwayland_view* xwayland_view = calloc(1, sizeof(*xwayland_view));
 
@@ -386,7 +388,7 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct
 
     xwayland_view->xwayland_surface = xwayland_surface;
 
-    e_view_init(&xwayland_view->base, desktop, E_VIEW_XWAYLAND, xwayland_view, &view_xwayland_implementation);
+    e_view_init(&xwayland_view->base, server, E_VIEW_XWAYLAND, xwayland_view, &view_xwayland_implementation);
 
     xwayland_view->base.title = xwayland_surface->title;
 

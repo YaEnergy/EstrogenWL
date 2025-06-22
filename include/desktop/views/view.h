@@ -11,8 +11,6 @@
 
 #include <wlr/util/box.h>
 
-#include "desktop/desktop.h"
-
 #include "desktop/tree/container.h"
 #include "desktop/tree/workspace.h"
 
@@ -22,6 +20,7 @@
 //  - e_view_set_resizing
 //  - e_view_set_suspended
 
+struct e_server;
 struct e_output;
 
 struct e_view;
@@ -84,7 +83,7 @@ struct e_view_impl
 // A view: xdg toplevel or xwayland view
 struct e_view
 {
-    struct e_desktop* desktop;
+    struct e_server* server;
 
     // Determines what type of view this is: see e_view_type
     enum e_view_type type;
@@ -128,7 +127,7 @@ struct e_view
 // Init a view, must call e_view_fini at the end of its life.
 // This function should only be called by the implementations of each view type. 
 // I mean it would be a bit weird to even call this function somewhere else.
-void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_type type, void* data, const struct e_view_impl* implementation);
+void e_view_init(struct e_view* view, struct e_server* server, enum e_view_type type, void* data, const struct e_view_impl* implementation);
 
 // Returns size hints of view.
 struct e_view_size_hints e_view_get_size_hints(struct e_view* view);
@@ -187,7 +186,7 @@ void e_view_raise_to_top(struct e_view* view);
 
 // Finds the view which has this surface as its main surface.
 // Returns NULL on fail.
-struct e_view* e_view_from_surface(struct e_desktop* desktop, struct wlr_surface* surface);
+struct e_view* e_view_from_surface(struct e_server* server, struct wlr_surface* surface);
 
 // Returns NULL on fail.
 struct e_view* e_view_try_from_node_ancestors(struct wlr_scene_node* node);

@@ -18,7 +18,6 @@
 #include "desktop/views/view.h"
 
 struct e_server;
-struct e_desktop;
 
 // Xwayland implementation of a view.
 struct e_xwayland_view
@@ -62,7 +61,7 @@ struct e_xwayland_view
 // We should let these do their thing.
 struct e_xwayland_unmanaged
 {
-    struct e_desktop* desktop;
+    struct e_server* server;
 
     struct wlr_xwayland_surface* xwayland_surface;
 
@@ -91,12 +90,12 @@ void e_server_update_xwayland_workareas(struct e_server* server);
 
 /* xwayland view functions */
 
-// Creates new xwayland view on desktop.
+// Creates new xwayland view for server.
 // Returns NULL on fail.
-struct e_xwayland_view* e_xwayland_view_create(struct e_desktop* desktop, struct wlr_xwayland_surface* xwayland_surface);
+struct e_xwayland_view* e_xwayland_view_create(struct e_server* server, struct wlr_xwayland_surface* xwayland_surface);
 
 /* xwayland unmanaged functions */
 
-// Creates new xwayland unmanaged surface on desktop.
+// Creates new xwayland unmanaged surface for server.
 // Returns NULL on fail.
-struct e_xwayland_unmanaged* e_xwayland_unmanaged_create(struct e_desktop* desktop, struct wlr_xwayland_surface* xwayland_surface);
+struct e_xwayland_unmanaged* e_xwayland_unmanaged_create(struct e_server* server, struct wlr_xwayland_surface* xwayland_surface);
