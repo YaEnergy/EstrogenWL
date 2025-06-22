@@ -22,6 +22,7 @@
 //  - e_view_set_resizing
 //  - e_view_set_suspended
 
+struct e_server;
 struct e_output;
 
 struct e_view;

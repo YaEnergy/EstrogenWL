@@ -18,7 +18,6 @@
 #include "desktop/views/view.h"
 
 struct e_server;
-struct e_desktop;
 
 // Xwayland implementation of a view.
 struct e_xwayland_view

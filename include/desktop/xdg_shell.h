@@ -9,8 +9,6 @@
 
 #include "views/view.h"
 
-struct e_desktop;
-
 struct e_toplevel_view
 {
     //base view
