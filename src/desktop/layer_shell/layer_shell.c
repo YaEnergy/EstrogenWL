@@ -37,7 +37,7 @@ static void layer_shell_new_layer_surface(struct wl_listener* listener, void* da
         layer_surface->output = output->wlr_output;
     }
     
-    if (e_layer_surface_create(server->desktop, layer_surface) == NULL)
+    if (e_layer_surface_create(server, layer_surface) == NULL)
     {
         e_log_error("layer_shell_new_layer_surface: failed to create layer surface");
         wlr_layer_surface_v1_destroy(layer_surface);
