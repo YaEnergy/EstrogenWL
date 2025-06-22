@@ -9,15 +9,17 @@
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_scene.h>
 
-#include "output.h"
+struct e_server;
 
-struct e_config;
+struct e_output;
 struct e_seat;
 
 struct e_view;
 struct e_layer_surface;
 
-//TODO: header description comment
+// Functions for
+// - Managing a collection of views
+// - Desktop focus management (seat handles raw focus)
 
 /* scene */
 
