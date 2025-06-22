@@ -1,7 +1,6 @@
 #include "desktop/xwayland.h"
 
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
@@ -41,7 +40,7 @@ static void xwayland_new_surface(struct wl_listener* listener, void* data)
     }
     else
     {
-        struct e_xwayland_view* view = e_xwayland_view_create(server->desktop, xwayland_surface);
+        struct e_xwayland_view* view = e_xwayland_view_create(server, xwayland_surface);
         
         if (view != NULL)
             e_log_info("new xwayland view!");

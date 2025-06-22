@@ -56,5 +56,6 @@ struct e_xdg_popup
     struct wl_listener destroy;
 };
 
-//creates new top level view on desktop
-struct e_toplevel_view* e_toplevel_view_create(struct e_desktop* desktop, struct wlr_xdg_toplevel* xdg_toplevel);
+// Creates new toplevel view for server.
+// Returns NULL on fail.
+struct e_toplevel_view* e_toplevel_view_create(struct e_server* server, struct wlr_xdg_toplevel* xdg_toplevel);

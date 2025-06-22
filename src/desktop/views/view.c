@@ -1,7 +1,6 @@
 #include "desktop/views/view.h"
 
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdbool.h>
 #include <assert.h>
 
@@ -26,6 +25,8 @@
 #include "util/list.h"
 #include "util/log.h"
 
+#include "server.h"
+
 static void e_container_configure_view(struct e_container* container, int lx, int ly, int width, int height)
 {
     assert(container);
@@ -47,11 +48,11 @@ static void e_container_destroy_view(struct e_container* container)
 
 //this function should only be called by the implementations of each view type. 
 //I mean it would be a bit weird to even call this function somewhere else.
-void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_type type, void* data, const struct e_view_impl* implementation)
+void e_view_init(struct e_view* view, struct e_server* server, enum e_view_type type, void* data, const struct e_view_impl* implementation)
 {
-    assert(view && desktop && implementation);
+    assert(view && server && implementation);
 
-    view->desktop = desktop;
+    view->server = server;
     view->type = type;
     view->data = data;
 
@@ -63,7 +64,7 @@ void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_typ
 
     view->title = NULL;
     
-    view->tree = wlr_scene_tree_create(desktop->pending);
+    view->tree = wlr_scene_tree_create(server->desktop->pending);
     wlr_scene_node_set_enabled(&view->tree->node, false);
     e_node_desc_create(&view->tree->node, E_NODE_DESC_VIEW, view);
 
@@ -181,7 +182,7 @@ static void e_view_set_workspace(struct e_view* view, struct e_workspace* worksp
     }
     else 
     {
-        wlr_scene_node_reparent(&view->tree->node, view->desktop->pending);
+        wlr_scene_node_reparent(&view->tree->node, view->server->desktop->pending);
     }
 
     view->workspace = workspace;
@@ -398,9 +399,11 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output)
 
     e_log_info("view map");
 
+    struct e_desktop* desktop = view->server->desktop;
+
     if (output == NULL || output->active_workspace == NULL)
     {
-        output = e_desktop_hovered_output(view->desktop);
+        output = e_desktop_hovered_output(desktop);
 
         if (output == NULL || output->active_workspace == NULL)
         {
@@ -409,7 +412,7 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output)
         }
     }
 
-    wl_list_insert(&view->desktop->views, &view->link);
+    wl_list_insert(&desktop->views, &view->link);
 
     view->content_tree = e_view_create_content_tree(view);
 
@@ -435,7 +438,7 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output)
 
     //set focus to this view
     if (view->surface != NULL)
-        e_desktop_focus_view(view->desktop, view);
+        e_desktop_focus_view(desktop, view);
 }
 
 // Stop displaying view.
