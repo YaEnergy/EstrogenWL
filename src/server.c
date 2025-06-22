@@ -233,7 +233,7 @@ int e_server_init(struct e_server* server, struct e_config* config)
     }
 
     //input device management
-    server->seat = e_seat_create(server->display, server->desktop, server->desktop->output_layout, "seat0");
+    server->seat = e_seat_create(server, server->desktop->output_layout, "seat0");
 
     if (server->seat == NULL)
     {

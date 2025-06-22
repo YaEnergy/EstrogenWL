@@ -30,6 +30,8 @@
 #include "util/log.h"
 #include "util/wl_macros.h"
 
+#include "server.h"
+
 //xcursor names: https://www.freedesktop.org/wiki/Specifications/cursor-spec/
 
 // codes in /usr/include/linux/input-event-codes.h
@@ -48,7 +50,7 @@ static void start_grab_resize_focused_view(struct e_cursor* cursor)
 {
     assert(cursor);
 
-    struct e_view* focused_view = e_desktop_focused_view(cursor->seat->desktop);
+    struct e_view* focused_view = e_desktop_focused_view(cursor->seat->server->desktop);
 
     if (focused_view == NULL)
         return;
@@ -78,7 +80,7 @@ static void start_grab_move_focused_view(struct e_cursor* cursor)
 {
     assert(cursor);
 
-    struct e_view* focused_view = e_desktop_focused_view(cursor->seat->desktop);
+    struct e_view* focused_view = e_desktop_focused_view(cursor->seat->server->desktop);
 
     if (focused_view != NULL)
         e_cursor_start_view_move(cursor, focused_view);
@@ -195,7 +197,7 @@ static void e_cursor_handle_mode_move(struct e_cursor* cursor)
 
     if (cursor->grab_view->tiled)
     {
-        struct e_desktop* desktop = cursor->seat->desktop;
+        struct e_desktop* desktop = cursor->seat->server->desktop;
         
         //get current view under cursor
         struct e_view* cursor_view = e_view_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
@@ -351,7 +353,7 @@ static void e_cursor_handle_motion(struct e_cursor* cursor, uint32_t time_msec)
             break;
     }
 
-    struct e_desktop* desktop = cursor->seat->desktop;
+    struct e_desktop* desktop = cursor->seat->server->desktop;
     struct e_seat* seat = cursor->seat;
 
     double sx, sy;
@@ -581,7 +583,7 @@ void e_cursor_set_focus_hover(struct e_cursor* cursor)
     if (cursor->mode != E_CURSOR_MODE_DEFAULT)
         return;
 
-    struct e_desktop* desktop = cursor->seat->desktop;
+    struct e_desktop* desktop = cursor->seat->server->desktop;
     struct e_seat* seat = cursor->seat;
 
     double sx, sy;
