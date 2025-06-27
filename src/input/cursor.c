@@ -339,7 +339,7 @@ static void e_cursor_resize_tiled(struct e_cursor* cursor)
 
     e_log_info("new: %g, start grab: %g", cursor_pos, grab_start_pos);
 
-    //calc abs percentage moved from start pos
+    //calc percentage moved from start pos
     float delta_percentage = (cursor_pos - grab_start_pos) / (float)size;
 
     //are we growing container along its end? right edge in horizontal tiling, bottom edge in vertical tiling
