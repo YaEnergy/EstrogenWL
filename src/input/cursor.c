@@ -224,6 +224,16 @@ static bool edge_is_along_tiling_axis(enum wlr_edges edge, enum e_tiling_mode ti
         return false; 
 }
 
+static float size_along_tiling_axis(struct e_container* container, enum e_tiling_mode tiling_mode)
+{
+    if (tiling_mode == E_TILING_MODE_HORIZONTAL)
+        return container->area.width;
+    else if (tiling_mode == E_TILING_MODE_VERTICAL)
+        return container->area.height;
+    else //E_TILING_MODE_NONE
+        return 0.0; 
+}
+
 // Grow/shrink container's percentage to the given percentage along end or start by as much as it can.
 // Returns if they're able to be resizd.
 static bool resize_tiled_container(struct e_container* container, bool end, float percentage)
@@ -255,20 +265,22 @@ static bool resize_tiled_container(struct e_container* container, bool end, floa
 
     float total_percentage = container->percentage + affected_container->percentage;
 
-    //TODO: should limit by view constraints
-    //TODO: 5% is kind of arbitrary
-    //TODO: respect min size hint if possible
+    //minimum percentage required for atleast two pixels, but forced to be atleast 2%
+    float min_percentage = 2.0f / size_along_tiling_axis(&container->parent->base, container->parent->tiling_mode);
+
+    if (min_percentage < 0.02f)
+        min_percentage = 0.02f;
 
     //can't resize without breaking limits
-    if (total_percentage < 0.1f)
+    if (total_percentage < min_percentage * 2)
         return false;
 
-    //limit size of affected container, keep min 5%
-    if (total_percentage - percentage < 0.05f)
-        percentage = total_percentage - 0.05f;
-    //limit size of main container, keep min 5%
-    else if (percentage < 0.05f)
-        percentage = 0.05f;
+    //limit size of affected container, keep min %
+    if (total_percentage - percentage < min_percentage)
+        percentage = total_percentage - min_percentage;
+    //limit size of main container, keep min %
+    else if (percentage < min_percentage)
+        percentage = min_percentage;
 
     container->percentage = percentage;
     affected_container->percentage  = total_percentage - percentage;
