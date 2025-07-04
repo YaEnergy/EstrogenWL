@@ -77,9 +77,6 @@ static bool e_server_init_scene(struct e_server* server)
     else
         e_log_error("e_server_init_scene: failed to create wlr gamma control manager v1");
 
-    if (server->linux_dmabuf != NULL)
-        wlr_scene_set_linux_dmabuf_v1(server->scene, server->linux_dmabuf);
-
     return true;
 }
 
@@ -221,19 +218,17 @@ int e_server_init(struct e_server* server, struct e_config* config)
     
     SIGNAL_CONNECT(server->renderer->events.lost, server->renderer_lost, e_server_renderer_lost);
 
+    struct wlr_linux_dmabuf_v1* linux_dmabuf = NULL;
+
     if (wlr_renderer_get_texture_formats(server->renderer, WLR_BUFFER_CAP_DMABUF) != NULL)
     {
-        server->linux_dmabuf = wlr_linux_dmabuf_v1_create_with_renderer(server->display, E_LINUX_DMABUF_VERSION, server->renderer);
+        linux_dmabuf = wlr_linux_dmabuf_v1_create_with_renderer(server->display, E_LINUX_DMABUF_VERSION, server->renderer);
 
-        if (server->linux_dmabuf == NULL)
+        if (linux_dmabuf == NULL)
         {
             e_log_error("e_server_init: dmabuf buffer capability, but failed to create wlr linux dmabuf v1 with renderer");
             return 1;
         }
-    }
-    else 
-    {
-        server->linux_dmabuf = NULL;
     }
 
     int drm_fd = wlr_renderer_get_drm_fd(server->renderer);
@@ -283,6 +278,9 @@ int e_server_init(struct e_server* server, struct e_config* config)
         e_log_error("e_server_init: failed to init scene");
         return 1;
     }
+
+    if (linux_dmabuf != NULL)
+        wlr_scene_set_linux_dmabuf_v1(server->scene, linux_dmabuf);
 
     //input device management
     server->seat = e_seat_create(server, server->output_layout, "seat0");
