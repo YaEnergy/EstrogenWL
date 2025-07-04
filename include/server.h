@@ -24,6 +24,8 @@ struct wlr_layer_shell_v1;
 struct wlr_xwayland;
 #endif
 
+struct wlr_linux_dmabuf_v1;
+
 struct e_cosmic_workspace_manager;
 struct e_ext_workspace_manager;
 
@@ -38,6 +40,7 @@ struct e_ext_workspace_manager;
 #define E_EXT_IMAGE_COPY_CAPTURE_VERSION 1
 
 #define E_LINUX_DRM_SYNCOBJ_VERSION 1
+#define E_LINUX_DMABUF_VERSION 4
 
 #define E_COSMIC_WORKSPACE_VERSION 2
 #define E_EXT_WORKSPACE_VERSION 1
@@ -96,6 +99,8 @@ struct e_server
 
     struct e_cosmic_workspace_manager* cosmic_workspace_manager;
     struct e_ext_workspace_manager* ext_workspace_manager;
+    
+    struct wlr_linux_dmabuf_v1* linux_dmabuf;
 
     struct wl_list outputs; //struct e_output* 
     // wlroots utility for working with arrangement of screens in a physical layout

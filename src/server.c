@@ -32,6 +32,7 @@
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
 #include <wlr/types/wlr_alpha_modifier_v1.h>
+#include <wlr/types/wlr_linux_dmabuf_v1.h>
 #include <wlr/types/wlr_linux_drm_syncobj_v1.h>
 
 #if E_XWAYLAND_SUPPORT
@@ -75,6 +76,9 @@ static bool e_server_init_scene(struct e_server* server)
         wlr_scene_set_gamma_control_manager_v1(server->scene, gamma_control_manager);
     else
         e_log_error("e_server_init_scene: failed to create wlr gamma control manager v1");
+
+    if (server->linux_dmabuf != NULL)
+        wlr_scene_set_linux_dmabuf_v1(server->scene, server->linux_dmabuf);
 
     return true;
 }
@@ -129,12 +133,6 @@ static void e_server_renderer_lost(struct wl_listener* listener, void* data)
     if (server->renderer == NULL)
     {
         e_log_error("failed to create renderer");
-        return;
-    }
-
-    if(!wlr_renderer_init_wl_display(server->renderer, server->display))
-    {
-        e_log_error("failed to init renderer & display");
         return;
     }
 
@@ -219,13 +217,24 @@ int e_server_init(struct e_server* server, struct e_config* config)
         return 1;
     }
 
-    if(!wlr_renderer_init_wl_display(server->renderer, server->display))
-    {
-        e_log_error("failed to init renderer & display");
-        return 1;
-    }
-
+    wlr_renderer_init_wl_shm(server->renderer, server->display);
+    
     SIGNAL_CONNECT(server->renderer->events.lost, server->renderer_lost, e_server_renderer_lost);
+
+    if (wlr_renderer_get_texture_formats(server->renderer, WLR_BUFFER_CAP_DMABUF) != NULL)
+    {
+        server->linux_dmabuf = wlr_linux_dmabuf_v1_create_with_renderer(server->display, E_LINUX_DMABUF_VERSION, server->renderer);
+
+        if (server->linux_dmabuf == NULL)
+        {
+            e_log_error("e_server_init: dmabuf buffer capability, but failed to create wlr linux dmabuf v1 with renderer");
+            return 1;
+        }
+    }
+    else 
+    {
+        server->linux_dmabuf = NULL;
+    }
 
     int drm_fd = wlr_renderer_get_drm_fd(server->renderer);
 
