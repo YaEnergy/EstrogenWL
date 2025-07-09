@@ -227,73 +227,6 @@ static bool edge_is_along_tiling_axis(enum wlr_edges edge, enum e_tiling_mode ti
     }
 }
 
-static float size_along_tiling_axis(struct e_container* container, enum e_tiling_mode tiling_mode)
-{
-    switch (tiling_mode)
-    {
-        case E_TILING_MODE_HORIZONTAL:
-            return container->area.width;
-        case E_TILING_MODE_VERTICAL:
-            return container->area.height;
-        default:
-            return 0.0f;
-    }
-}
-
-// Grow/shrink container's percentage to the given percentage along end or start by as much as it can.
-// Returns if they're able to be resizd.
-static bool resize_tiled_container(struct e_container* container, bool end, float percentage)
-{
-    if (container == NULL)
-    {
-        e_log_error("resize_tiled_container: container is NULL");
-        return false;
-    }
-
-    if (container->parent == NULL)
-    {
-        e_log_error("resize_tiled_container: container is not tiled!");
-        return false;
-    }
-
-    struct e_container* affected_container = NULL;
-
-    if (end)
-        affected_container = e_container_next_sibling(container);
-    else
-        affected_container = e_container_prev_sibling(container);
-
-    if (affected_container == NULL)
-    {
-        e_log_error("resize_tiled_container: no other container is affected by resize, can't resize");
-        return false;
-    }
-
-    float total_percentage = container->percentage + affected_container->percentage;
-
-    //minimum percentage required for atleast two pixels, but forced to be atleast 2%
-    float min_percentage = 2.0f / size_along_tiling_axis(&container->parent->base, container->parent->tiling_mode);
-
-    if (min_percentage < 0.02f)
-        min_percentage = 0.02f;
-
-    //can't resize without breaking limits
-    if (total_percentage < min_percentage * 2)
-        return false;
-
-    //limit size of affected container, keep min %
-    if (total_percentage - percentage < min_percentage)
-        percentage = total_percentage - min_percentage;
-    //limit size of main container, keep min %
-    else if (percentage < min_percentage)
-        percentage = min_percentage;
-
-    container->percentage = percentage;
-    affected_container->percentage  = total_percentage - percentage;
-    
-    return true;
-}
-
 static void e_cursor_resize_tiled(struct e_cursor* cursor)
 {
     if (cursor == NULL)
@@ -343,8 +276,6 @@ static void e_cursor_resize_tiled(struct e_cursor* cursor)
 
     double grab_start_pos = (tiling_axis == E_TILING_MODE_HORIZONTAL) ? cursor->grab_start_x : cursor->grab_start_y;
 
-    e_log_info("new: %g, start grab: %g", cursor_pos, grab_start_pos);
-
     //calc percentage moved from start pos
     float delta_percentage = (cursor_pos - grab_start_pos) / (float)size;
 
@@ -355,13 +286,10 @@ static void e_cursor_resize_tiled(struct e_cursor* cursor)
     if (!end)
         delta_percentage = -delta_percentage;
 
-    e_log_info("delta percentage: %g", delta_percentage);
+    struct e_container* affected = end ? e_container_next_sibling(container_resize) : e_container_prev_sibling(container_resize);
 
-    resize_tiled_container(container_resize, end, cursor->grab_start_tile_percentage + delta_percentage);
-    
-    e_log_info("new percentage %g", container_resize->percentage);
-
-    e_tree_container_arrange(container_resize->parent);
+    if (affected != NULL)
+        e_container_resize_tiled(container_resize, affected, cursor->grab_start_tile_percentage + delta_percentage);
 }
 
 static void e_cursor_resize_floating(struct e_cursor* cursor)

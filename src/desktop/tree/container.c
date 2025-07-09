@@ -11,7 +11,6 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/box.h>
 
-#include "desktop/tree/node.h"
 #include "util/list.h"
 #include "util/log.h"
 
@@ -102,6 +101,70 @@ void e_container_configure(struct e_container* container, int x, int y, int widt
         container->implementation.configure(container, x, y, width, height);
     else
         e_log_error("e_container_configure: not implemented!");
+}
+
+static float size_along_tiling_axis(struct e_container* container, enum e_tiling_mode tiling_mode)
+{
+    switch (tiling_mode)
+    {
+        case E_TILING_MODE_HORIZONTAL:
+            return container->area.width;
+        case E_TILING_MODE_VERTICAL:
+            return container->area.height;
+        default:
+            return 0.0f;
+    }
+}
+
+// Grow/shrink container's percentage to the given percentage along end or start by as much as it can.
+// Returns if they're able to be resizd.
+bool e_container_resize_tiled(struct e_container* container, struct e_container* affected_sibling, float percentage)
+{
+    assert(container && affected_sibling && container->parent == affected_sibling->parent);
+
+    if (container == NULL)
+    {
+        e_log_error("e_container_resize_tiled: container is NULL");
+        return false;
+    }
+
+    if (affected_sibling == NULL)
+    {
+        e_log_error("e_container_resize_tiled: affected_sibling is NULL");
+        return false;
+    }
+
+    if (container->parent != affected_sibling->parent)
+    {
+        e_log_error("e_container_resize_tiled: given containers are not siblings!");
+        return false;
+    }
+
+    float total_percentage = container->percentage + affected_sibling->percentage;
+
+    //minimum percentage required for atleast two pixels, but forced to be atleast 5%
+    float min_percentage = 2.0f / size_along_tiling_axis(&container->parent->base, container->parent->tiling_mode);
+
+    if (min_percentage < 0.05f)
+        min_percentage = 0.05f;
+
+    //can't resize without breaking limits
+    if (total_percentage < min_percentage * 2)
+        return false;
+
+    //limit size of affected container, keep min %
+    if (total_percentage - percentage < min_percentage)
+        percentage = total_percentage - min_percentage;
+    //limit size of main container, keep min %
+    else if (percentage < min_percentage)
+        percentage = min_percentage;
+
+    container->percentage = percentage;
+    affected_sibling->percentage  = total_percentage - percentage;
+
+    e_tree_container_arrange(container->parent);
+    
+    return true;
 }
 
 void e_container_destroy(struct e_container* container)

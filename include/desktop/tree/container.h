@@ -94,6 +94,11 @@ struct e_container* e_container_prev_sibling(struct e_container* container);
 // Configure the container.
 void e_container_configure(struct e_container* container, int x, int y, int width, int height);
 
+// Grow/shrink tiled container's percentage, keeping the percentage sum of the main container and a sibling container the same.
+// Sibling containers have the same parent container.
+// Returns if they were able to be resized.
+bool e_container_resize_tiled(struct e_container* container, struct e_container* affected_sibling, float percentage);
+
 // Destroy the container and free its memory.
 void e_container_destroy(struct e_container* container);
 
