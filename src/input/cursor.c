@@ -216,22 +216,28 @@ static void e_cursor_handle_mode_move(struct e_cursor* cursor)
 
 static bool edge_is_along_tiling_axis(enum wlr_edges edge, enum e_tiling_mode tiling_mode)
 {
-    if (tiling_mode == E_TILING_MODE_HORIZONTAL)
-        return (edge & WLR_EDGE_LEFT || edge & WLR_EDGE_RIGHT);
-    else if (tiling_mode == E_TILING_MODE_VERTICAL)
-        return (edge & WLR_EDGE_TOP || edge & WLR_EDGE_BOTTOM);
-    else //E_TILING_MODE_NONE
-        return false; 
+    switch (tiling_mode)
+    {
+        case E_TILING_MODE_HORIZONTAL:
+            return (edge & WLR_EDGE_LEFT || edge & WLR_EDGE_RIGHT);
+        case E_TILING_MODE_VERTICAL:
+            return (edge & WLR_EDGE_TOP || edge & WLR_EDGE_BOTTOM);
+        default:
+            return false;
+    }
 }
 
 static float size_along_tiling_axis(struct e_container* container, enum e_tiling_mode tiling_mode)
 {
-    if (tiling_mode == E_TILING_MODE_HORIZONTAL)
-        return container->area.width;
-    else if (tiling_mode == E_TILING_MODE_VERTICAL)
-        return container->area.height;
-    else //E_TILING_MODE_NONE
-        return 0.0; 
+    switch (tiling_mode)
+    {
+        case E_TILING_MODE_HORIZONTAL:
+            return container->area.width;
+        case E_TILING_MODE_VERTICAL:
+            return container->area.height;
+        default:
+            return 0.0f;
+    }
 }
 
 // Grow/shrink container's percentage to the given percentage along end or start by as much as it can.
@@ -244,7 +250,7 @@ static bool resize_tiled_container(struct e_container* container, bool end, floa
         return false;
     }
 
-    if (container->parent == NULL || container->parent->tiling_mode == E_TILING_MODE_NONE)
+    if (container->parent == NULL)
     {
         e_log_error("resize_tiled_container: container is not tiled!");
         return false;
