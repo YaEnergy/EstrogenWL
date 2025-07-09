@@ -55,9 +55,8 @@ struct e_container
 
 enum e_tiling_mode
 {
-    E_TILING_MODE_NONE = 0, //Mainly used by root floating container, as it's not supposed to tile
-    E_TILING_MODE_HORIZONTAL = 1, //Tile child containers horizontally
-    E_TILING_MODE_VERTICAL = 2 //Tile child containers vertically
+    E_TILING_MODE_HORIZONTAL, //Tile child containers horizontally
+    E_TILING_MODE_VERTICAL //Tile child containers vertically
 };
 
 // A container that tiles its children containers.

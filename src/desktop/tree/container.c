@@ -242,9 +242,6 @@ void e_tree_container_arrange(struct e_tree_container* tree_container)
     e_log_info("tree container arrange");
     #endif
 
-    if (tree_container->tiling_mode == E_TILING_MODE_NONE)
-        return;
-
     float percentageStart = 0.0f;
 
     for (int i = 0; i < tree_container->children.count; i++)
@@ -263,7 +260,7 @@ void e_tree_container_arrange(struct e_tree_container* tree_container)
                 child_area.height *= child_container->percentage;
                 break;
             default:
-                e_log_error("Unknown container tiling mode!");
+                e_log_error("e_tree_container_arrange: unknown container tiling mode!");
                 continue;
         }
 
