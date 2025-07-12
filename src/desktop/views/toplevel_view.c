@@ -52,16 +52,12 @@ static void xdg_popup_unconstrain(struct e_xdg_popup* popup)
     struct wlr_box layout_output_box;
     wlr_output_layout_get_box(output->layout, output->wlr_output, &layout_output_box);
 
-    //toplevel layout coords
-    int lx, ly;
-    wlr_scene_node_coords(&popup->view->tree->node, &lx, &ly);
-
     //output geometry relative to toplevel
     //ex: output left border | <- 5 pixels space on the left side: -5 -> | toplevel | <- 200 pixels space on the right side: 200 -> | output right border
     struct wlr_box output_toplevel_space_box = (struct wlr_box)
     {
-        .x = layout_output_box.x - lx,
-        .y = layout_output_box.y - ly,
+        .x = layout_output_box.x - popup->view->current.x,
+        .y = layout_output_box.y - popup->view->current.y,
         .width = layout_output_box.width,
         .height = layout_output_box.height
     };
