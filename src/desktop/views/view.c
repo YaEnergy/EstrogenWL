@@ -234,24 +234,10 @@ void e_view_set_tiled(struct e_view* view, bool tiled)
 
     e_log_info("setting tiling mode of view to %d...", tiled);
 
-    if (view->tiled != tiled)
-    {
-        view->tiled = tiled;
-
-        if (view->implementation->notify_tiled != NULL)
-            view->implementation->notify_tiled(view, tiled);
-    }
-
-    struct e_workspace* workspace = view->workspace;
-
-    if (workspace != NULL && !view->fullscreen)
-    {
-        //TODO: tiled -> parent to previously focused tiled container
-        //TODO: floating -> return to natural geometry and center
-
-        e_view_set_parent_container(view, tiled ? workspace->root_tiling_container : NULL);
-        wlr_scene_node_reparent(&view->tree->node, tiled ? workspace->layers.tiling : workspace->layers.floating);
-    }
+    if (view->implementation->set_tiled != NULL)
+        view->implementation->set_tiled(view, tiled);
+    else
+        e_log_error("e_view_set_tiled: not implemented!");
 }
 
 void e_view_set_activated(struct e_view* view, bool activated)
