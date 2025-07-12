@@ -250,63 +250,6 @@ void e_view_set_activated(struct e_view* view, bool activated)
         e_log_error("e_view_set_activated: not implemented!");
 }
 
-
-// Set view to fullscreen.
-void e_view_fullscreen(struct e_view* view)
-{
-    assert(view);
-
-    struct e_workspace* workspace = view->workspace;
-
-    if (workspace == NULL)
-    {
-        e_log_error("e_view_unfullscreen: workspace is NULL!");
-        return;
-    }
-
-    if (workspace->fullscreen_view == view)
-        return;
-
-    if (workspace->fullscreen_view != NULL)
-        e_view_set_fullscreen(workspace->fullscreen_view, false);
-
-    view->fullscreen = true;
-    workspace->fullscreen_view = view;
-    e_view_set_parent_container(view, NULL);
-
-    wlr_scene_node_reparent(&view->tree->node, workspace->layers.fullscreen);
-
-    e_workspace_update_tree_visibility(workspace);
-    e_workspace_arrange(workspace, workspace->full_area, workspace->tiled_area);
-}
-
-// Unfullscreen view.
-void e_view_unfullscreen(struct e_view* view)
-{
-    assert(view);
-
-    struct e_workspace* workspace = view->workspace;
-
-    if (workspace == NULL)
-    {
-        e_log_error("e_view_unfullscreen: workspace is NULL!");
-        return;
-    }
-
-    //this view must be the one that's in fullscreen mode
-    if (workspace->fullscreen_view != view)
-        return;
-
-    view->fullscreen = false;
-    workspace->fullscreen_view = NULL;
-    
-    e_view_set_tiled(view, view->tiled);
-
-    e_workspace_update_tree_visibility(workspace);
-    e_workspace_arrange(workspace, workspace->full_area, workspace->tiled_area);
-}
-
-
 // Set the fullscreen mode of the view.
 void e_view_set_fullscreen(struct e_view* view, bool fullscreen)
 {
@@ -414,8 +357,7 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output)
 
     e_view_set_workspace(view, output->active_workspace);
 
-    if (fullscreen)
-        e_view_fullscreen(view);
+    e_view_set_fullscreen(view, fullscreen);
 
     bool wants_floating = e_view_wants_floating(view);
     e_view_set_tiled(view, !wants_floating);
