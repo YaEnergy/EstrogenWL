@@ -41,7 +41,7 @@ struct e_container
     // May be NULL.
     void* data;
 
-    struct e_container_impl implementation;
+    const struct e_container_impl* implementation;
 
     // area container is taking in
     struct wlr_box area;
@@ -74,7 +74,7 @@ struct e_tree_container
 };
 
 // Returns true on success, false on fail.
-bool e_container_init(struct e_container* container, enum e_container_type type, void* data);
+bool e_container_init(struct e_container* container, const struct e_container_impl* implementation, enum e_container_type type, void* data);
 
 void e_container_fini(struct e_container* container);
 

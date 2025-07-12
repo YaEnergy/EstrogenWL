@@ -46,6 +46,12 @@ static void e_container_destroy_view(struct e_container* container)
     e_view_fini(view);
 }
 
+//TODO: replace with e_view_container
+static const struct e_container_impl view_container_impl = {
+    .configure = e_container_configure_view,
+    .destroy = e_container_destroy_view
+};
+
 //this function should only be called by the implementations of each view type. 
 //I mean it would be a bit weird to even call this function somewhere else.
 void e_view_init(struct e_view* view, struct e_server* server, enum e_view_type type, void* data, const struct e_view_impl* implementation)
@@ -72,9 +78,7 @@ void e_view_init(struct e_view* view, struct e_server* server, enum e_view_type 
 
     view->implementation = implementation;
 
-    e_container_init(&view->container, E_CONTAINER_VIEW, view);
-    view->container.implementation.configure = e_container_configure_view;
-    view->container.implementation.destroy = e_container_destroy_view;
+    e_container_init(&view->container, &view_container_impl, E_CONTAINER_VIEW, view);
 
     wl_list_init(&view->link);
 }

@@ -11,19 +11,16 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/box.h>
 
-#include "desktop/tree/node.h"
 #include "util/list.h"
 #include "util/log.h"
 
-bool e_container_init(struct e_container* container, enum e_container_type type, void* data)
+bool e_container_init(struct e_container* container, const struct e_container_impl* implementation, enum e_container_type type, void* data)
 {
-    assert(container && data);
+    assert(container && implementation && data);
 
     container->type = type;
     container->data = data;
-
-    container->implementation.configure = NULL;
-    container->implementation.destroy = NULL;
+    container->implementation = implementation;
 
     return true;
 }
@@ -34,8 +31,6 @@ void e_container_fini(struct e_container* container)
 
     if (container->parent != NULL)
         e_tree_container_remove_container(container->parent, container);
-
-    container->implementation.configure = NULL;
 }
 
 // Sets the parent of a container.
@@ -68,8 +63,8 @@ void e_container_configure(struct e_container* container, int x, int y, int widt
 {
     assert(container);
 
-    if (container->implementation.configure != NULL)
-        container->implementation.configure(container, x, y, width, height);
+    if (container->implementation->configure != NULL)
+        container->implementation->configure(container, x, y, width, height);
     else
         e_log_error("e_container_configure: not implemented!");
 }
@@ -78,8 +73,10 @@ void e_container_destroy(struct e_container* container)
 {
     assert(container);
 
-    if (container->implementation.destroy != NULL)
-        container->implementation.destroy(container);
+    if (container->implementation->destroy != NULL)
+        container->implementation->destroy(container);
+    else
+        e_log_error("e_container_destroy: not implemented!");
 }
 
 // Tree container functions
@@ -101,6 +98,11 @@ static void e_container_destroy_tree_container(struct e_container* container)
     e_tree_container_destroy(container->data);
 }
 
+static const struct e_container_impl tree_impl = {
+    .configure = e_container_configure_tree_container,
+    .destroy = e_container_destroy_tree_container
+};
+
 // Creates a tree container.
 // Returns NULL on fail.
 struct e_tree_container* e_tree_container_create(enum e_tiling_mode tiling_mode)
@@ -115,15 +117,10 @@ struct e_tree_container* e_tree_container_create(enum e_tiling_mode tiling_mode)
 
     e_list_init(&tree_container->children, 5);
 
-    e_container_init(&tree_container->base, E_CONTAINER_TREE, tree_container);
+    e_container_init(&tree_container->base, &tree_impl, E_CONTAINER_TREE, tree_container);
     tree_container->tiling_mode = tiling_mode;
 
     tree_container->destroying = false;
-
-    //implementation
-    
-    tree_container->base.implementation.configure = e_container_configure_tree_container;
-    tree_container->base.implementation.destroy = e_container_destroy_tree_container;
 
     return tree_container;
 }
