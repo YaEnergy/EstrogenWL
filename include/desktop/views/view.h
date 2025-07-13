@@ -80,6 +80,12 @@ struct e_view_impl
     void (*send_close)(struct e_view* view);
 };
 
+// View wants to start an interactive move action.
+struct e_view_request_move_event
+{
+    struct e_view* view;
+};
+
 // View wants to start an interactive resize action.
 struct e_view_request_resize_event
 {
@@ -127,6 +133,8 @@ struct e_view
 
     struct
     {
+        // View wants to start an interactive move action.
+        struct wl_signal request_move; //struct e_view_request_move_event
         // View wants to start an interactive resize action.
         struct wl_signal request_resize; //struct e_view_request_resize_event
 

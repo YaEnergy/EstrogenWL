@@ -201,8 +201,11 @@ static void e_xwayland_view_request_move(struct wl_listener* listener, void* dat
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, request_move);
     
-    struct e_server* server = xwayland_view->base.server;
-    e_cursor_start_view_move(server->seat->cursor, &xwayland_view->base);
+    struct e_view_request_move_event view_event = {
+        .view = &xwayland_view->base
+    };
+
+    wl_signal_emit_mutable(&xwayland_view->base.events.request_move, &view_event);
 }
 
 static void e_xwayland_view_request_resize(struct wl_listener* listener, void* data)

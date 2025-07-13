@@ -260,8 +260,11 @@ static void e_toplevel_view_request_move(struct wl_listener* listener, void* dat
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, request_move);
 
-    struct e_server* server = toplevel_view->base.server;
-    e_cursor_start_view_move(server->seat->cursor, &toplevel_view->base);
+    struct e_view_request_move_event view_event = {
+        .view = &toplevel_view->base
+    };
+
+    wl_signal_emit_mutable(&toplevel_view->base.events.request_move, &view_event);
 }
 
 static void e_toplevel_view_request_resize(struct wl_listener* listener, void* data)

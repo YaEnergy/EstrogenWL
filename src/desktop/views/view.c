@@ -57,6 +57,7 @@ void e_view_init(struct e_view* view, struct e_server* server, enum e_view_type 
 
     // signals
 
+    wl_signal_init(&view->events.request_move);
     wl_signal_init(&view->events.request_resize);
 
     wl_signal_init(&view->events.destroy);
