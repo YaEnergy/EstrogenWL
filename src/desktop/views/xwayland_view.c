@@ -210,8 +210,12 @@ static void e_xwayland_view_request_resize(struct wl_listener* listener, void* d
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, request_resize);
     struct wlr_xwayland_resize_event* event = data;
     
-    struct e_server* server = xwayland_view->base.server;
-    e_cursor_start_view_resize(server->seat->cursor, &xwayland_view->base, event->edges);
+    struct e_view_request_resize_event view_event = {
+        .view = &xwayland_view->base,
+        .edges = event->edges,
+    };
+
+    wl_signal_emit_mutable(&xwayland_view->base.events.request_resize, &view_event);
 }
 
 static void e_xwayland_view_set_title(struct wl_listener* listener, void* data)

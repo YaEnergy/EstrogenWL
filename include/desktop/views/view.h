@@ -80,6 +80,13 @@ struct e_view_impl
     void (*send_close)(struct e_view* view);
 };
 
+// View wants to start an interactive resize action.
+struct e_view_request_resize_event
+{
+    struct e_view* view;
+    uint32_t edges;
+};
+
 // A view: xdg toplevel or xwayland view
 struct e_view
 {
@@ -120,6 +127,9 @@ struct e_view
 
     struct
     {
+        // View wants to start an interactive resize action.
+        struct wl_signal request_resize; //struct e_view_request_resize_event
+
         struct wl_signal destroy;
     } events;
 
