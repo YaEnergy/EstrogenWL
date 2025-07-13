@@ -57,6 +57,9 @@ void e_view_init(struct e_view* view, struct e_server* server, enum e_view_type 
 
     // signals
 
+    wl_signal_init(&view->events.map);
+    wl_signal_init(&view->events.unmap);
+
     wl_signal_init(&view->events.request_fullscreen);
     wl_signal_init(&view->events.request_move);
     wl_signal_init(&view->events.request_resize);
@@ -205,10 +208,10 @@ static bool e_view_wants_floating(struct e_view* view)
     }
 }
 
-// Display view.
-// Set fullscreen to true and set output if you want the view to be on a specific output immediately.
-// If output is NULL, searches for current hovered output instead.
-void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output)
+// Display view within view's tree & emit map signal.
+// Set fullscreen to true and set fullscreen_output if you want to request that the view should be on a specific output immediately.
+// Output is allowed to be NULL.
+void e_view_map(struct e_view* view, bool fullscreen, struct e_output* fullscreen_output)
 {
     assert(view);
 
@@ -227,9 +230,17 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output)
     }
 
     view->mapped = true;
+
+    struct e_view_map_event view_event = {
+        .fullscreen = fullscreen,
+        .fullscreen_output = fullscreen_output,
+        .wants_floating = e_view_wants_floating(view)
+    };
+
+    wl_signal_emit_mutable(&view->events.map, &view_event);
 }
 
-// Stop displaying view.
+// Stop displaying view within view's tree & emit unmap signal.
 void e_view_unmap(struct e_view* view)
 {   
     assert(view);
@@ -239,10 +250,16 @@ void e_view_unmap(struct e_view* view)
     #endif
 
     view->mapped = false;
-    wlr_scene_node_destroy(&view->content_tree->node);
-    view->content_tree = NULL;
+
+    if (view->content_tree != NULL)
+    {
+        wlr_scene_node_destroy(&view->content_tree->node);
+        view->content_tree = NULL;
+    }
 
     wl_list_remove(&view->link);
+
+    wl_signal_emit_mutable(&view->events.unmap, NULL);
 }
 
 struct e_view* e_view_from_surface(struct e_server* server, struct wlr_surface* surface)

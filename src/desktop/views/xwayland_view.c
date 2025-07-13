@@ -107,22 +107,22 @@ static void e_xwayland_view_commit(struct wl_listener* listener, void* data)
 static void e_xwayland_view_map(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, map);
-
-    e_view_map(&xwayland_view->base, xwayland_view->xwayland_surface->fullscreen, NULL);
-
+    
     // According to labwc, map and unmap can change the surface used
     SIGNAL_CONNECT(xwayland_view->xwayland_surface->surface->events.commit, xwayland_view->commit, e_xwayland_view_commit);
+
+    e_view_map(&xwayland_view->base, xwayland_view->xwayland_surface->fullscreen, NULL);
 }
 
 // Surface no longer wants to be displayed.
 static void e_xwayland_view_unmap(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, unmap);
-
-    e_view_unmap(&xwayland_view->base);
-
+    
     /* According to labwc, map and unmap can change the surface used */
     SIGNAL_DISCONNECT(xwayland_view->commit);
+
+    e_view_unmap(&xwayland_view->base);
 }
 
 // Sets the tiled state of the view.

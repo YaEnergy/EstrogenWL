@@ -80,6 +80,17 @@ struct e_view_impl
     void (*send_close)(struct e_view* view);
 };
 
+// View is ready to be displayed.
+struct e_view_map_event
+{
+    struct e_view* view;
+    
+    bool fullscreen;
+    struct e_output* fullscreen_output; //may be NULL
+
+    bool wants_floating;
+};
+
 // View wants to set fullscreen mode.
 struct e_view_request_fullscreen_event
 {
@@ -141,6 +152,10 @@ struct e_view
 
     struct
     {
+        // View is ready to be displayed.
+        struct wl_signal map; //struct e_view_map_event
+        struct wl_signal unmap;
+
         // View wants to set fullscreen mode.
         struct wl_signal request_fullscreen; //struct e_view_request_fullscreen_event
         // View wants to start an interactive move action.
@@ -162,12 +177,12 @@ void e_view_init(struct e_view* view, struct e_server* server, enum e_view_type 
 // Returns size hints of view.
 struct e_view_size_hints e_view_get_size_hints(struct e_view* view);
 
-// Display view.
-// Set fullscreen to true and set output if you want the view to be on a specific output immediately.
-// If output is NULL, searches for current hovered output instead.
-void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output);
+// Display view within view's tree & emit map signal.
+// Set fullscreen to true and set fullscreen_output if you want to request that the view should be on a specific output immediately.
+// Output is allowed to be NULL.
+void e_view_map(struct e_view* view, bool fullscreen, struct e_output* fullscreen_output);
 
-// Stop displaying view.
+// Stop displaying view within view's tree & emit unmap signal.
 void e_view_unmap(struct e_view* view);
 
 // Sets output of view.
