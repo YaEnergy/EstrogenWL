@@ -118,9 +118,6 @@ struct e_view
     // Workspace view is currently in, may be NULL.
     struct e_workspace* workspace;
 
-    // Base container
-    struct e_container container;
-
     struct wl_list link; //e_desktop::views
 };
 
@@ -140,9 +137,9 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output);
 // Stop displaying view.
 void e_view_unmap(struct e_view* view);
 
-// Moves view to a different workspace, and updating its container parent.
-// If workspace is NULL, removes view from current workspace.
-void e_view_move_to_workspace(struct e_view* view, struct e_workspace* workspace);
+// Sets workspace of view.
+// Workspace is allowed to be NULL.
+void e_view_set_workspace(struct e_view* view, struct e_workspace* workspace);
 
 // Set pending position of view using layout coordinates.
 // Only use if you are moving the view and not resizing it in any way.
@@ -153,10 +150,6 @@ void e_view_configure(struct e_view* view, int lx, int ly, int width, int height
 
 // Configure view using pending changes.
 void e_view_configure_pending(struct e_view* view);
-
-// Updates view's tree node to current position.
-// Should be called when view has moved. (Current x & y changed)
-void e_view_moved(struct e_view* view);
 
 // Sets the tiled state of the view.
 void e_view_set_tiled(struct e_view* view, bool tiled);

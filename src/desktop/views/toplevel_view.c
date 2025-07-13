@@ -214,10 +214,6 @@ static void e_toplevel_view_commit(struct wl_listener* listener, void* data)
     toplevel_view->base.current.width = toplevel_view->xdg_toplevel->current.width;
     toplevel_view->base.current.height = toplevel_view->xdg_toplevel->current.height;
 
-    e_view_moved(&toplevel_view->base);
-
-    toplevel_view->base.container.area = toplevel_view->base.current;
-
     //Now that we've finished the changes that were scheduled, we can schedule the next changes.
     if (e_view_has_pending_changes(&toplevel_view->base))
         e_view_configure_pending(&toplevel_view->base);
@@ -242,18 +238,11 @@ static void e_toplevel_view_request_fullscreen(struct wl_listener* listener, voi
     if (!toplevel_view->base.mapped)
         return;
 
-    struct wlr_xdg_toplevel* toplevel = toplevel_view->xdg_toplevel;
+    //struct wlr_xdg_toplevel* toplevel = toplevel_view->xdg_toplevel;
 
     //respect requested output
-    if (toplevel->requested.fullscreen_output != NULL)
-    {
-        struct e_output* requested_output = toplevel->requested.fullscreen_output->data;
-
-        if (requested_output != NULL && requested_output->active_workspace != NULL)
-            e_view_move_to_workspace(&toplevel_view->base, requested_output->active_workspace);
-    }
-
-    e_view_set_fullscreen(&toplevel_view->base, toplevel->requested.fullscreen);
+    //TODO: fullscreen request
+    wlr_xdg_surface_schedule_configure(toplevel_view->xdg_toplevel->base);
 }
 
 static void e_toplevel_view_request_maximize(struct wl_listener* listener, void* data)
@@ -374,7 +363,6 @@ static void e_view_toplevel_configure(struct e_view* view, int lx, int ly, int w
     {
         toplevel_view->base.current.x = lx;
         toplevel_view->base.current.y = ly;
-        e_view_moved(&toplevel_view->base);
     }
     else
     {
