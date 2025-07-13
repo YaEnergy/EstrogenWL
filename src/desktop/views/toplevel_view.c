@@ -233,15 +233,18 @@ static void e_toplevel_view_request_fullscreen(struct wl_listener* listener, voi
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, request_fullscreen);
 
-    //will (un)fullscreen on map
-    if (!toplevel_view->base.mapped)
-        return;
+    struct wlr_xdg_toplevel* toplevel = toplevel_view->xdg_toplevel;
 
-    //struct wlr_xdg_toplevel* toplevel = toplevel_view->xdg_toplevel;
+    struct e_view_request_fullscreen_event view_event = {
+        .view = &toplevel_view->base,
+        .fullscreen = toplevel->requested.fullscreen,
+        .output = NULL
+    };
 
-    //respect requested output
-    //TODO: fullscreen request
-    wlr_xdg_surface_schedule_configure(toplevel_view->xdg_toplevel->base);
+    if (toplevel->requested.fullscreen_output != NULL)
+        view_event.output = toplevel->requested.fullscreen_output->data;
+
+    wl_signal_emit_mutable(&toplevel_view->base.events.request_fullscreen, &view_event);
 }
 
 static void e_toplevel_view_request_maximize(struct wl_listener* listener, void* data)

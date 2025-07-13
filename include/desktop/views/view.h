@@ -80,6 +80,14 @@ struct e_view_impl
     void (*send_close)(struct e_view* view);
 };
 
+// View wants to set fullscreen mode.
+struct e_view_request_fullscreen_event
+{
+    struct e_view* view;
+    bool fullscreen;
+    struct e_output* output; //may be NULL
+};
+
 // View wants to start an interactive move action.
 struct e_view_request_move_event
 {
@@ -133,6 +141,8 @@ struct e_view
 
     struct
     {
+        // View wants to set fullscreen mode.
+        struct wl_signal request_fullscreen; //struct e_view_request_fullscreen_event
         // View wants to start an interactive move action.
         struct wl_signal request_move; //struct e_view_request_move_event
         // View wants to start an interactive resize action.
