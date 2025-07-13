@@ -115,8 +115,8 @@ struct e_view
     // View's title
     char* title;
 
-    // Workspace view is currently in, may be NULL.
-    struct e_workspace* workspace;
+    // Output where view is currently being displayed, may be NULL.
+    struct e_output* output;
 
     struct wl_list link; //e_desktop::views
 };
@@ -137,9 +137,9 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output);
 // Stop displaying view.
 void e_view_unmap(struct e_view* view);
 
-// Sets workspace of view.
-// Workspace is allowed to be NULL.
-void e_view_set_workspace(struct e_view* view, struct e_workspace* workspace);
+// Sets output of view.
+// Output is allowed to be NULL.
+void e_view_set_output(struct e_view* view, struct e_output* output);
 
 // Set pending position of view using layout coordinates.
 // Only use if you are moving the view and not resizing it in any way.

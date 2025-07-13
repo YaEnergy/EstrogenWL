@@ -51,6 +51,8 @@ void e_view_init(struct e_view* view, struct e_server* server, enum e_view_type 
 
     view->implementation = implementation;
 
+    view->output = NULL;
+
     wl_list_init(&view->link);
 }
 
@@ -74,19 +76,21 @@ struct e_view_size_hints e_view_get_size_hints(struct e_view* view)
     }
 }
 
-// Sets workspace of view.
-// Workspace is allowed to be NULL.
-void e_view_set_workspace(struct e_view* view, struct e_workspace* workspace)
+// Sets output of view.
+// Output is allowed to be NULL.
+void e_view_set_output(struct e_view* view, struct e_output* output)
 {
     assert(view);
 
     if (view == NULL)
     {
-        e_log_error("e_view_set_workspace: view is NULL!");
+        e_log_error("e_view_set_output: view is NULL!");
         return;
     }
 
-    view->workspace = workspace;
+    view->output = output;
+
+    //TODO: later, foreign toplevel output enter & leave
 }
 
 // Set pending layout position of view.

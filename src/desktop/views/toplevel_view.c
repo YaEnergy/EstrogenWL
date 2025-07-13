@@ -43,17 +43,16 @@ static void xdg_popup_unconstrain(struct e_xdg_popup* popup)
 {
     assert(popup);
 
-    //popup's view might not be in a workspace
-    if (popup == NULL || popup->view->workspace == NULL || popup->view->tree == NULL)
+    //popup's view's output might be NULL
+    if (popup == NULL || popup->view->output == NULL || popup->view->tree == NULL)
         return;
 
-    struct e_output* output = popup->view->workspace->output;
+    struct e_output* output = popup->view->output;
 
     struct wlr_box layout_output_box;
     wlr_output_layout_get_box(output->layout, output->wlr_output, &layout_output_box);
 
     //output geometry relative to toplevel
-    //ex: output left border | <- 5 pixels space on the left side: -5 -> | toplevel | <- 200 pixels space on the right side: 200 -> | output right border
     struct wlr_box output_toplevel_space_box = (struct wlr_box)
     {
         .x = layout_output_box.x - popup->view->current.x,
