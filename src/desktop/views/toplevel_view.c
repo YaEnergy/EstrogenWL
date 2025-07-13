@@ -285,6 +285,8 @@ static void e_toplevel_view_destroy(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, destroy);
 
+    wl_signal_emit_mutable(&toplevel_view->base.events.destroy, NULL);
+
     SIGNAL_DISCONNECT(toplevel_view->map);
     SIGNAL_DISCONNECT(toplevel_view->unmap);
     SIGNAL_DISCONNECT(toplevel_view->commit);

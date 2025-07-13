@@ -259,6 +259,8 @@ static void e_xwayland_view_destroy(struct wl_listener* listener, void* data)
 
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, destroy);
 
+    wl_signal_emit_mutable(&xwayland_view->base.events.destroy, NULL);
+
     SIGNAL_DISCONNECT(xwayland_view->set_title);
     SIGNAL_DISCONNECT(xwayland_view->map_request);
 

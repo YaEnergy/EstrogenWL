@@ -118,6 +118,11 @@ struct e_view
     // Output where view is currently being displayed, may be NULL.
     struct e_output* output;
 
+    struct
+    {
+        struct wl_signal destroy;
+    } events;
+
     struct wl_list link; //e_desktop::views
 };
 

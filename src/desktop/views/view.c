@@ -54,6 +54,10 @@ void e_view_init(struct e_view* view, struct e_server* server, enum e_view_type 
     view->output = NULL;
 
     wl_list_init(&view->link);
+
+    // signals
+
+    wl_signal_init(&view->events.destroy);
 }
 
 // Returns size hints of view.
