@@ -288,24 +288,6 @@ struct e_view* e_view_from_surface(struct e_server* server, struct wlr_surface* 
     return NULL; 
 }
 
-// Raise view to the top of its parent tree.
-void e_view_raise_to_top(struct e_view* view)
-{
-    if (view == NULL)
-    {
-        e_log_error("e_view_raise_to_top: view is NULL!");
-        return;
-    }
-
-    if (view->tree == NULL)
-    {
-        e_log_error("e_view_raise_to_top: view has no tree!");
-        return;
-    }
-
-    wlr_scene_node_raise_to_top(&view->tree->node);
-}
-
 // Returns NULL on fail.
 static struct e_view* e_view_try_from_node(struct wlr_scene_node* node)
 {
