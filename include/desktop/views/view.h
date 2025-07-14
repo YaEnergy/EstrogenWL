@@ -112,6 +112,16 @@ struct e_view_request_resize_event
     uint32_t edges;
 };
 
+// View requests a specific configure.
+struct e_view_request_configure_event
+{
+    struct e_view* view;
+    int x;
+    int y;
+    int width;
+    int height;
+};
+
 // A view: xdg toplevel or xwayland view
 struct e_view
 {
@@ -157,11 +167,15 @@ struct e_view
         struct wl_signal unmap;
 
         // View wants to set fullscreen mode.
+        // View must be configured, even if nothing changes.
         struct wl_signal request_fullscreen; //struct e_view_request_fullscreen_event
         // View wants to start an interactive move action.
         struct wl_signal request_move; //struct e_view_request_move_event
         // View wants to start an interactive resize action.
         struct wl_signal request_resize; //struct e_view_request_resize_event
+        // View requests a specific configure.
+        // View must be configured, even if nothing changes.
+        struct wl_signal request_configure; //struct e_view_request_configure_event
 
         struct wl_signal destroy;
     } events;

@@ -196,11 +196,14 @@ static void e_xwayland_view_request_configure(struct wl_listener* listener, void
     e_log_info("xwayland view request configure");
     #endif
 
-    //respect configure request if view is floating, otherwise don't
-    if (!xwayland_view->base.tiled)
-        e_view_configure(&xwayland_view->base, event->x, event->y, event->width, event->height);
-    else
-        e_view_configure_pending(&xwayland_view->base);
+    struct e_view_request_configure_event view_event = {
+        .x = event->x,
+        .y = event->y,
+        .width = event->width,
+        .height = event->height,
+    };
+
+    wl_signal_emit_mutable(&xwayland_view->base.events.request_configure, &view_event);
 }
 
 static void e_xwayland_view_request_move(struct wl_listener* listener, void* data)
