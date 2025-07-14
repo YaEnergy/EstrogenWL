@@ -71,10 +71,10 @@ static void e_xwayland_view_update_current_geometry(struct e_xwayland_view* xway
 {
     assert(xwayland_view);
 
-    xwayland_view->base.current.x = xwayland_view->xwayland_surface->x;
-    xwayland_view->base.current.y = xwayland_view->xwayland_surface->y;
-    xwayland_view->base.current.width = xwayland_view->xwayland_surface->width;
-    xwayland_view->base.current.height = xwayland_view->xwayland_surface->height;
+    xwayland_view->base.geometry.x = xwayland_view->xwayland_surface->x;
+    xwayland_view->base.geometry.y = xwayland_view->xwayland_surface->y;
+    xwayland_view->base.geometry.width = xwayland_view->xwayland_surface->width;
+    xwayland_view->base.geometry.height = xwayland_view->xwayland_surface->height;
 }
 
 // Xwayland surface wants to be mapped.
@@ -87,9 +87,8 @@ static void e_xwayland_view_map_request(struct wl_listener* listener, void* data
     #endif
 
     e_xwayland_view_update_current_geometry(xwayland_view);
-    xwayland_view->base.pending = xwayland_view->base.current;
 
-    e_view_configure_pending(&xwayland_view->base);
+    e_view_configure(&xwayland_view->base, xwayland_view->xwayland_surface->x, xwayland_view->xwayland_surface->y, xwayland_view->xwayland_surface->width, xwayland_view->xwayland_surface->height);
 }
 
 // New surface state got committed.
@@ -99,8 +98,7 @@ static void e_xwayland_view_commit(struct wl_listener* listener, void* data)
 
     e_xwayland_view_update_current_geometry(xwayland_view);
 
-    if (e_view_has_pending_changes(&xwayland_view->base))
-        e_view_configure_pending(&xwayland_view->base);
+    wl_signal_emit_mutable(&xwayland_view->base.events.commit, NULL);
 }
 
 // Surface is ready to be displayed.
@@ -296,29 +294,13 @@ static void e_xwayland_view_destroy(struct wl_listener* listener, void* data)
     free(xwayland_view);
 }
 
-// FIXME: i'm unsure of this actually works, should probably check that
-// it does not
-static bool xwayland_surface_geo_configure_is_scheduled(struct wlr_xwayland_surface* xwayland_surface)
-{
-    assert(xwayland_surface);
-
-    if (xwayland_surface->surface == NULL)
-        return false;
-
-    return false;
-}
-
 static void e_view_xwayland_configure(struct e_view* view, int lx, int ly, int width, int height)
 {
     assert(view);
 
     struct e_xwayland_view* xwayland_view = view->data;
 
-    view->pending = (struct wlr_box){lx, ly, width, height};
-
-    //if configure is already scheduled, commit will start next one
-    if (!xwayland_surface_geo_configure_is_scheduled(xwayland_view->xwayland_surface))
-        wlr_xwayland_surface_configure(xwayland_view->xwayland_surface, lx, ly, (uint16_t)width, (uint16_t)height);
+    wlr_xwayland_surface_configure(xwayland_view->xwayland_surface, lx, ly, (uint16_t)width, (uint16_t)height);
 
     //TODO: according to labwc, if the xwayland surface is offscreen it may not send a commit event
     // and thus not move the view as wait we for a commit that never happens. In these cases we should move it immediately.

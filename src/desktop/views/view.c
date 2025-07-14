@@ -60,6 +60,8 @@ void e_view_init(struct e_view* view, struct e_server* server, enum e_view_type 
     wl_signal_init(&view->events.map);
     wl_signal_init(&view->events.unmap);
 
+    wl_signal_init(&view->events.commit);
+
     wl_signal_init(&view->events.request_fullscreen);
     wl_signal_init(&view->events.request_move);
     wl_signal_init(&view->events.request_resize);
@@ -105,12 +107,19 @@ void e_view_set_output(struct e_view* view, struct e_output* output)
     //TODO: later, foreign toplevel output enter & leave
 }
 
-// Set pending layout position of view.
-void e_view_set_position(struct e_view* view, int lx, int ly)
+// Set space for popups relative to view.
+// Note: not relative to root toplevel surface, but to toplevels (0, 0) point. So no need to access view's geometry when setting this.
+void e_view_set_popup_space(struct e_view* view, struct wlr_box popup_space)
 {
     assert(view);
 
-    e_view_configure(view, lx, ly, view->pending.width, view->pending.height);
+    if (view == NULL)
+    {
+        e_log_error("e_view_set_popup_space: view is NULL!");
+        return;
+    }
+
+    view->popup_space = popup_space;
 }
 
 void e_view_configure(struct e_view* view, int lx, int ly, int width, int height)
@@ -158,23 +167,6 @@ void e_view_set_fullscreen(struct e_view* view, bool fullscreen)
         view->implementation->set_fullscreen(view, fullscreen);
     else
         e_log_error("e_view_set_fullscreen: set fullscreen not implemented!");
-}
-
-bool e_view_has_pending_changes(struct e_view* view)
-{
-    return !wlr_box_equal(&view->current, &view->pending) && !wlr_box_empty(&view->pending);
-}
-
-// Configure view using pending changes.
-void e_view_configure_pending(struct e_view* view)
-{
-    assert(view);
-
-    #if E_VERBOSE
-    e_log_info("view configure pending");
-    #endif
-
-    e_view_configure(view, view->pending.x, view->pending.y, view->pending.width, view->pending.height);
 }
 
 // Create a scene tree displaying this view's surfaces and subsurfaces.

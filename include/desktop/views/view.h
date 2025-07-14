@@ -137,10 +137,11 @@ struct e_view
     // View's main surface, may be NULL.
     struct wlr_surface* surface;
 
-    // View's current surface geometry
-    struct wlr_box current;
-    // View's pending surface geometry
-    struct wlr_box pending;
+    // View's current root surface geometry
+    struct wlr_box geometry;
+    // Space for popups relative to view.
+    // Note: not relative to root toplevel surface, but to toplevels (0, 0) point. So no need to access view's geometry when setting this.
+    struct wlr_box popup_space;
 
     // View's tree
     struct wlr_scene_tree* tree;
@@ -165,6 +166,9 @@ struct e_view
         // View is ready to be displayed.
         struct wl_signal map; //struct e_view_map_event
         struct wl_signal unmap;
+
+        // View committed surface state.
+        struct wl_signal commit;
 
         // View wants to set fullscreen mode.
         // View must be configured, even if nothing changes.
@@ -203,15 +207,12 @@ void e_view_unmap(struct e_view* view);
 // Output is allowed to be NULL.
 void e_view_set_output(struct e_view* view, struct e_output* output);
 
-// Set pending position of view using layout coordinates.
-// Only use if you are moving the view and not resizing it in any way.
-void e_view_set_position(struct e_view* view, int lx, int ly);
+// Set space for popups relative to view.
+// Note: not relative to root toplevel surface, but to toplevels (0, 0) point. So no need to access view's geometry when setting this.
+void e_view_set_popup_space(struct e_view* view, struct wlr_box toplevel_popup_space);
 
 // Configures a view within given layout position and size.
 void e_view_configure(struct e_view* view, int lx, int ly, int width, int height);
-
-// Configure view using pending changes.
-void e_view_configure_pending(struct e_view* view);
 
 // Sets the tiled state of the view.
 void e_view_set_tiled(struct e_view* view, bool tiled);
@@ -227,8 +228,6 @@ void e_view_set_maximized(struct e_view* view, bool maximized);
 void e_view_set_resizing(struct e_view* view, bool resizing);
 void e_view_set_suspended(struct e_view* view, bool suspended);
 */
-
-bool e_view_has_pending_changes(struct e_view* view);
 
 // Finds the view which has this surface as its main surface.
 // Returns NULL on fail.

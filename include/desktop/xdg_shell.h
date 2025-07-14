@@ -16,8 +16,6 @@ struct e_toplevel_view
 
     struct wlr_xdg_toplevel* xdg_toplevel;
 
-    int32_t scheduled_x, scheduled_y;
-
     //surface is ready to be displayed
     struct wl_listener map;
     //surface no longer wants to be displayed

@@ -43,25 +43,14 @@ static void xdg_popup_unconstrain(struct e_xdg_popup* popup)
 {
     assert(popup);
 
-    //popup's view's output might be NULL
-    if (popup == NULL || popup->view->output == NULL || popup->view->tree == NULL)
+    if (popup == NULL)
         return;
 
-    struct e_output* output = popup->view->output;
+    struct wlr_box toplevel_popup_space = popup->view->popup_space;
+    toplevel_popup_space.x -= popup->view->geometry.x;
+    toplevel_popup_space.y -= popup->view->geometry.y;
 
-    struct wlr_box layout_output_box;
-    wlr_output_layout_get_box(output->layout, output->wlr_output, &layout_output_box);
-
-    //output geometry relative to toplevel
-    struct wlr_box output_toplevel_space_box = (struct wlr_box)
-    {
-        .x = layout_output_box.x - popup->view->current.x,
-        .y = layout_output_box.y - popup->view->current.y,
-        .width = layout_output_box.width,
-        .height = layout_output_box.height
-    };
-
-    wlr_xdg_popup_unconstrain_from_box(popup->xdg_popup, &output_toplevel_space_box);
+    wlr_xdg_popup_unconstrain_from_box(popup->xdg_popup, &toplevel_popup_space);
 }
 
 static void xdg_popup_handle_reposition(struct wl_listener* listener, void* data)
@@ -204,18 +193,9 @@ static void e_toplevel_view_commit(struct wl_listener* listener, void* data)
         return;
     }
 
-    if (!toplevel_view->xdg_toplevel->base->surface->mapped)
-        return;
+    toplevel_view->base.geometry = toplevel_view->xdg_toplevel->base->geometry;
 
-    toplevel_view->base.current.x = toplevel_view->scheduled_x;
-    toplevel_view->base.current.y = toplevel_view->scheduled_y;
-    
-    toplevel_view->base.current.width = toplevel_view->xdg_toplevel->current.width;
-    toplevel_view->base.current.height = toplevel_view->xdg_toplevel->current.height;
-
-    //Now that we've finished the changes that were scheduled, we can schedule the next changes.
-    if (e_view_has_pending_changes(&toplevel_view->base))
-        e_view_configure_pending(&toplevel_view->base);
+    wl_signal_emit_mutable(&toplevel_view->base.events.commit, NULL);
 }
 
 //new wlr_xdg_popup by toplevel view
@@ -346,13 +326,6 @@ static void e_view_toplevel_set_fullscreen(struct e_view* view, bool fullscreen)
     wlr_xdg_toplevel_set_fullscreen(toplevel_view->xdg_toplevel, fullscreen);
 }
 
-static bool toplevel_size_configure_is_scheduled(struct wlr_xdg_toplevel* xdg_toplevel)
-{
-    assert(xdg_toplevel);
-
-    return xdg_toplevel->scheduled.width != xdg_toplevel->current.width || xdg_toplevel->scheduled.height != xdg_toplevel->current.height;
-}
-
 static void e_view_toplevel_configure(struct e_view* view, int lx, int ly, int width, int height)
 {
     assert(view && view->content_tree && view->data);
@@ -363,25 +336,7 @@ static void e_view_toplevel_configure(struct e_view* view, int lx, int ly, int w
     e_log_info("toplevel configure");
     #endif
     
-    view->pending = (struct wlr_box){lx, ly, width, height};
-
-    //configure is already scheduled, commit will start next one
-    if (toplevel_size_configure_is_scheduled(toplevel_view->xdg_toplevel))
-        return;
-
-    //if size remains the same then just move the container node
-    if (view->current.width == width && view->current.height == height)
-    {
-        toplevel_view->base.current.x = lx;
-        toplevel_view->base.current.y = ly;
-    }
-    else
-    {
-        //wait until surface commit to apply x & y
-        toplevel_view->scheduled_x = lx;
-        toplevel_view->scheduled_y = ly;
-        wlr_xdg_toplevel_set_size(toplevel_view->xdg_toplevel, width, height);
-    }
+    wlr_xdg_toplevel_set_size(toplevel_view->xdg_toplevel, width, height);
 }
 
 static bool e_view_toplevel_wants_floating(struct e_view* view)
