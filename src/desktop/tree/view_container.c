@@ -6,6 +6,8 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
+#include <wlr/types/wlr_scene.h>
+
 #include "desktop/tree/node.h"
 #include "desktop/views/view.h"
 
@@ -163,4 +165,19 @@ struct e_view_container* e_view_container_try_from_node_ancestors(struct wlr_sce
     }
 
     return NULL;
+}
+
+// Finds the view container at the specified layout coords in given scene graph.
+// Returns NULL on fail.
+struct e_view_container* e_view_container_at(struct wlr_scene_node* node, double lx, double ly)
+{
+    if (node == NULL)
+        return NULL;
+
+    struct wlr_scene_node* node_at = wlr_scene_node_at(node, lx, ly, NULL, NULL);
+    
+    if (node_at != NULL)
+        return e_view_container_try_from_node_ancestors(node_at);
+    else
+        return NULL;
 }

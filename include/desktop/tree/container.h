@@ -138,3 +138,7 @@ struct e_view_container* e_view_container_create(struct e_view* view);
 
 // Returns NULL on fail.
 struct e_view_container* e_view_container_try_from_node_ancestors(struct wlr_scene_node* node);
+
+// Finds the view container at the specified layout coords in given scene graph.
+// Returns NULL on fail.
+struct e_view_container* e_view_container_at(struct wlr_scene_node* node, double lx, double ly);
