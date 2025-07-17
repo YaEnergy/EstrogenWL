@@ -140,7 +140,7 @@ struct e_view
     // View's current root surface geometry
     struct wlr_box geometry;
     // Space for popups relative to view.
-    // Note: not relative to root toplevel surface, but to toplevels (0, 0) point. So no need to access view's geometry when setting this.
+    // Note: not relative to root toplevel surface, but to toplevels (0, 0) point. So no need to access view's geometry x & y when setting this.
     struct wlr_box popup_space;
 
     // View's tree
