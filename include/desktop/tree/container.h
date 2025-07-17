@@ -135,3 +135,6 @@ void e_tree_container_destroy(struct e_tree_container* tree_container);
 // Create a view container.
 // Returns NULL on fail.
 struct e_view_container* e_view_container_create(struct e_view* view);
+
+// Returns NULL on fail.
+struct e_view_container* e_view_container_try_from_node_ancestors(struct wlr_scene_node* node);

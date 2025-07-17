@@ -123,3 +123,44 @@ struct e_view_container* e_view_container_create(struct e_view* view)
 
     return NULL;
 }
+
+// Returns NULL on fail.
+static struct e_view_container* e_view_container_try_from_node(struct wlr_scene_node* node)
+{
+    if (node == NULL)
+        return NULL;
+
+    //data is either NULL or e_node_desc
+    if (node->data == NULL)
+        return NULL;
+
+    struct e_node_desc* node_desc = node->data;
+
+    return e_view_container_try_from_e_node_desc(node_desc);
+}
+
+// Returns NULL on fail.
+struct e_view_container* e_view_container_try_from_node_ancestors(struct wlr_scene_node* node)
+{
+    if (node == NULL)
+        return NULL;
+
+    struct e_view_container* view_container = e_view_container_try_from_node(node);
+
+    if (view_container != NULL)
+        return view_container;
+
+    //keep going upwards in the tree until we find a view (in which case we return it), or reach the root of the tree (no parent)
+    while (node->parent != NULL)
+    {
+        //go to parent node
+        node = &node->parent->node;
+
+        view_container = e_view_container_try_from_node(node);
+
+        if (view_container != NULL)
+            return view_container;
+    }
+
+    return NULL;
+}
