@@ -73,6 +73,22 @@ struct e_tree_container
     bool destroying;
 };
 
+// A container that contains a single view.
+struct e_view_container
+{
+    struct e_view* view;
+
+    // Holds view's tree.
+    struct wlr_scene_tree* tree;
+
+    struct e_container base;
+
+    struct wl_listener map;
+    struct wl_listener unmap;
+
+    struct wl_listener destroy;
+};
+
 // Returns true on success, false on fail.
 bool e_container_init(struct e_container* container, const struct e_container_impl* implementation, enum e_container_type type, void* data);
 
@@ -113,3 +129,9 @@ void e_tree_container_arrange(struct e_tree_container* tree_container);
 
 // Destroy a tree container and free its memory.
 void e_tree_container_destroy(struct e_tree_container* tree_container);
+
+// View container functions
+
+// Create a view container.
+// Returns NULL on fail.
+struct e_view_container* e_view_container_create(struct e_view* view);
