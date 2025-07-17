@@ -9,6 +9,7 @@ struct e_xdg_popup;
 struct e_layer_popup;
 struct e_layer_surface;
 struct e_workspace;
+struct e_view_container;
 
 // node descriptor
 
@@ -20,7 +21,8 @@ enum e_node_desc_type
     E_NODE_DESC_XDG_POPUP = 2, //struct e_xdg_popup*
     E_NODE_DESC_LAYER_POPUP = 3, //struct e_layer_popup*,
     E_NODE_DESC_LAYER_SURFACE = 4, //struct e_layer_surface*
-    E_NODE_DESC_WORKSPACE = 5 //struct e_workspace*
+    E_NODE_DESC_WORKSPACE = 5, //struct e_workspace*
+    E_NODE_DESC_VIEW_CONTAINER = 6 //struct e_view_container*
 };
 
 struct e_node_desc
@@ -48,3 +50,6 @@ struct e_layer_surface* e_layer_surface_try_from_e_node_desc(struct e_node_desc*
 
 // Returns NULL on fail.
 struct e_workspace* e_workspace_try_from_e_node_desc(struct e_node_desc* node_desc);
+
+// Returns NULL on fail.
+struct e_view_container* e_view_container_try_from_e_node_desc(struct e_node_desc* node_desc);

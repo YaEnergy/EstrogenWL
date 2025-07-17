@@ -6,6 +6,7 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
+#include "desktop/tree/node.h"
 #include "desktop/views/view.h"
 
 #include "util/log.h"
@@ -100,6 +101,13 @@ struct e_view_container* e_view_container_create(struct e_view* view)
 
     if (view_container->tree == NULL)
     {
+        free(view_container);
+        return NULL;
+    }
+
+    if (e_node_desc_create(&view_container->tree->node, E_NODE_DESC_VIEW_CONTAINER, view_container) == NULL)
+    {
+        wlr_scene_node_destroy(&view_container->tree->node);
         free(view_container);
         return NULL;
     }
