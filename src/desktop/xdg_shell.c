@@ -19,8 +19,7 @@ static void xdg_shell_new_toplevel(struct wl_listener* listener, void* data)
 
     e_log_info("New toplevel view");
 
-    //creates a top level view for the server
-    e_toplevel_view_create(server, xdg_toplevel);
+    e_toplevel_view_create(xdg_toplevel, server->pending);
 }
 
 bool e_server_init_xdg_shell(struct e_server* server)

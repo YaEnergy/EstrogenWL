@@ -40,7 +40,7 @@ static void xwayland_new_surface(struct wl_listener* listener, void* data)
     }
     else
     {
-        struct e_xwayland_view* view = e_xwayland_view_create(server, xwayland_surface);
+        struct e_xwayland_view* view = e_xwayland_view_create(xwayland_surface, server->pending);
         
         if (view != NULL)
             e_log_info("new xwayland view!");
