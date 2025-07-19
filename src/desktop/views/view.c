@@ -24,15 +24,12 @@
 
 #include "util/log.h"
 
-#include "server.h"
-
 //this function should only be called by the implementations of each view type. 
 //I mean it would be a bit weird to even call this function somewhere else.
-void e_view_init(struct e_view* view, struct e_server* server, enum e_view_type type, void* data, const struct e_view_impl* implementation)
+void e_view_init(struct e_view* view, enum e_view_type type, void* data, const struct e_view_impl* implementation, struct wlr_scene_tree* parent)
 {
-    assert(view && server && implementation);
+    assert(view && implementation && parent);
 
-    view->server = server;
     view->type = type;
     view->data = data;
 
@@ -44,7 +41,7 @@ void e_view_init(struct e_view* view, struct e_server* server, enum e_view_type 
 
     view->title = NULL;
     
-    view->tree = wlr_scene_tree_create(server->pending);
+    view->tree = wlr_scene_tree_create(parent);
     e_node_desc_create(&view->tree->node, E_NODE_DESC_VIEW, view);
 
     view->content_tree = NULL;
@@ -52,8 +49,6 @@ void e_view_init(struct e_view* view, struct e_server* server, enum e_view_type 
     view->implementation = implementation;
 
     view->output = NULL;
-
-    wl_list_init(&view->link);
 
     // signals
 
@@ -210,10 +205,6 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* fullscree
 
     e_log_info("view map");
 
-    struct e_server* server = view->server;
-
-    wl_list_insert(&server->views, &view->link);
-
     view->content_tree = e_view_create_content_tree(view);
 
     if (view->content_tree == NULL)
@@ -249,8 +240,6 @@ void e_view_unmap(struct e_view* view)
         wlr_scene_node_destroy(&view->content_tree->node);
         view->content_tree = NULL;
     }
-
-    wl_list_remove(&view->link);
 
     wl_signal_emit_mutable(&view->events.unmap, NULL);
 }

@@ -25,8 +25,6 @@
 #include "util/log.h"
 #include "util/wl_macros.h"
 
-#include "server.h"
-
 // Returns size hints of view.
 static struct e_view_size_hints e_view_xwayland_get_size_hints(struct e_view* view)
 {
@@ -363,11 +361,11 @@ static const struct e_view_impl view_xwayland_implementation = {
     .send_close = e_view_xwayland_send_close,
 };
 
-// Creates new xwayland view for server.
+// Creates new xwayland view.
 // Returns NULL on fail.
-struct e_xwayland_view* e_xwayland_view_create(struct e_server* server, struct wlr_xwayland_surface* xwayland_surface)
+struct e_xwayland_view* e_xwayland_view_create(struct wlr_xwayland_surface* xwayland_surface, struct wlr_scene_tree* parent)
 {
-    assert(server && xwayland_surface);
+    assert(xwayland_surface && parent);
     
     struct e_xwayland_view* xwayland_view = calloc(1, sizeof(*xwayland_view));
 
@@ -379,7 +377,7 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_server* server, struct w
 
     xwayland_view->xwayland_surface = xwayland_surface;
 
-    e_view_init(&xwayland_view->base, server, E_VIEW_XWAYLAND, xwayland_view, &view_xwayland_implementation);
+    e_view_init(&xwayland_view->base, E_VIEW_XWAYLAND, xwayland_view, &view_xwayland_implementation, parent);
 
     xwayland_view->base.title = xwayland_surface->title;
 

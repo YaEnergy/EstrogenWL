@@ -90,9 +90,9 @@ void e_server_update_xwayland_workareas(struct e_server* server);
 
 /* xwayland view functions */
 
-// Creates new xwayland view for server.
+// Creates new xwayland view.
 // Returns NULL on fail.
-struct e_xwayland_view* e_xwayland_view_create(struct e_server* server, struct wlr_xwayland_surface* xwayland_surface);
+struct e_xwayland_view* e_xwayland_view_create(struct wlr_xwayland_surface* xwayland_surface, struct wlr_scene_tree* parent);
 
 /* xwayland unmanaged functions */
 

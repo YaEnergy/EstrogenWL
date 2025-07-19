@@ -115,8 +115,6 @@ struct e_server
     // nodes that are waiting to be reparented
     struct wlr_scene_tree* pending;
 
-    struct wl_list views; //struct e_view*
-
     // collection & management of input devices: keyboard, mouse, ...
     struct e_seat* seat;
 };
