@@ -14,7 +14,7 @@ struct e_server;
 struct e_output;
 struct e_seat;
 
-struct e_view;
+struct e_view_container;
 struct e_layer_surface;
 
 // Functions for
@@ -35,28 +35,28 @@ struct wlr_scene_surface* e_desktop_scene_surface_at(struct wlr_scene_node* node
 // Returns NULL if no output is being hovered.
 struct e_output* e_desktop_hovered_output(struct e_server* server);
 
-// Returns view currently hovered by cursor.
-// Returns NULL if no view is being hovered.
-struct e_view* e_desktop_hovered_view(struct e_server* server);
+// Returns view container currently hovered by cursor.
+// Returns NULL if no view container is being hovered.
+struct e_view_container* e_desktop_hovered_view_container(struct e_server* server);
 
 /* focus */
 
-// Set seat focus on a view if possible, and does whatever is necessary to do so.
-void e_desktop_focus_view(struct e_view* view);
+// Set seat focus on a view container if possible, and does whatever is necessary to do so.
+void e_desktop_focus_view_container(struct e_view_container* view_container);
 
 // Set seat focus on a layer surface if possible.
 void e_desktop_focus_layer_surface(struct e_layer_surface* layer_surface);
 
-// Gets the type of surface (view or layer surface) and sets seat focus.
+// Gets the type of surface (view container or layer surface) and sets seat focus.
 // This will do nothing if surface isn't of a type that can be focused on by the seat
 void e_desktop_focus_surface(struct e_server* server, struct wlr_surface* surface);
 
-// Returns view currently in focus.
-// Returns NULL if no view has focus.
-struct e_view* e_desktop_focused_view(struct e_server* server);
+// Returns view container currently in focus.
+// Returns NULL if no view container has focus.
+struct e_view_container* e_desktop_focused_view_container(struct e_server* server);
 
-// Returns view previously in focus.
-// Returns NULL if no view had focus.
-struct e_view* e_desktop_prev_focused_view(struct e_server* server);
+// Returns view container previously in focus.
+// Returns NULL if no view container had focus.
+struct e_view_container* e_desktop_prev_focused_view_container(struct e_server* server);
 
 void e_desktop_clear_focus(struct e_server* server);
