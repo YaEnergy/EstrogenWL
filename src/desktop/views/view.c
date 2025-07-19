@@ -255,32 +255,6 @@ void e_view_unmap(struct e_view* view)
     wl_signal_emit_mutable(&view->events.unmap, NULL);
 }
 
-struct e_view* e_view_from_surface(struct e_server* server, struct wlr_surface* surface)
-{
-    assert(server);
-    
-    if (surface == NULL)
-        return NULL;
-
-    if (wl_list_empty(&server->views))
-        return NULL;
-
-    struct e_view* view;
-
-    wl_list_for_each(view, &server->views, link)
-    {
-        if (view->surface == NULL)
-            continue;
-        
-        //found view with given surface as main surface
-        if (view->surface == surface)
-            return view;
-    }
-
-    //none found
-    return NULL; 
-}
-
 // Returns NULL on fail.
 static struct e_view* e_view_try_from_node(struct wlr_scene_node* node)
 {

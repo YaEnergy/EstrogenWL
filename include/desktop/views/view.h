@@ -229,10 +229,6 @@ void e_view_set_resizing(struct e_view* view, bool resizing);
 void e_view_set_suspended(struct e_view* view, bool suspended);
 */
 
-// Finds the view which has this surface as its main surface.
-// Returns NULL on fail.
-struct e_view* e_view_from_surface(struct e_server* server, struct wlr_surface* surface);
-
 // Returns NULL on fail.
 struct e_view* e_view_try_from_node_ancestors(struct wlr_scene_node* node);
 
