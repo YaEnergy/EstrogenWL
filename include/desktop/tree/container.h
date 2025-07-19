@@ -12,10 +12,11 @@
 
 #include <util/list.h>
 
-//TODO: function for getting the preferred percentage of space a container that hasn't been added yet should take up
+struct e_server;
 
 struct e_container;
 struct e_tree_container;
+struct e_view;
 
 struct e_container_impl
 {
@@ -76,6 +77,8 @@ struct e_tree_container
 // A container that contains a single view.
 struct e_view_container
 {
+    struct e_server* server;
+
     struct e_view* view;
 
     // Holds view's tree.
@@ -87,6 +90,8 @@ struct e_view_container
     struct wl_listener unmap;
 
     struct wl_listener destroy;
+
+    struct wl_list link; //e_server::view_containers
 };
 
 // Returns true on success, false on fail.
@@ -134,7 +139,7 @@ void e_tree_container_destroy(struct e_tree_container* tree_container);
 
 // Create a view container.
 // Returns NULL on fail.
-struct e_view_container* e_view_container_create(struct e_view* view);
+struct e_view_container* e_view_container_create(struct e_server* server, struct e_view* view);
 
 // Returns NULL on fail.
 struct e_view_container* e_view_container_try_from_node_ancestors(struct wlr_scene_node* node);

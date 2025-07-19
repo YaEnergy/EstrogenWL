@@ -67,7 +67,7 @@ static bool e_server_init_scene(struct e_server* server)
     server->pending = wlr_scene_tree_create(&server->scene->tree);
     wlr_scene_node_set_enabled(&server->pending->node, false);
 
-    wl_list_init(&server->views);
+    wl_list_init(&server->view_containers);
 
     //gamma control manager for outputs
     struct wlr_gamma_control_manager_v1* gamma_control_manager = wlr_gamma_control_manager_v1_create(server->display);

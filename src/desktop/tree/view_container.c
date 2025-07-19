@@ -26,8 +26,10 @@ static void e_view_container_destroy(struct e_view_container* view_container)
         return;
     }
 
+    wl_list_remove(&view_container->link);
+
     //reparent view node before destroying container node, so we don't destroy the view's tree aswell
-    wlr_scene_node_reparent(&view_container->view->tree->node, view_container->view->server->pending);
+    wlr_scene_node_reparent(&view_container->view->tree->node, view_container->server->pending);
     wlr_scene_node_destroy(&view_container->tree->node);
 
     SIGNAL_DISCONNECT(view_container->map);
@@ -84,11 +86,11 @@ static void e_view_container_handle_view_destroy(struct wl_listener* listener, v
 
 // Create a view container.
 // Returns NULL on fail.
-struct e_view_container* e_view_container_create(struct e_view* view)
+struct e_view_container* e_view_container_create(struct e_server* server, struct e_view* view)
 {
-    assert(view);
+    assert(server && view);
 
-    if (view != NULL)
+    if (server == NULL || view == NULL)
         return NULL;
 
     struct e_view_container* view_container = calloc(1, sizeof(*view_container));
@@ -99,7 +101,7 @@ struct e_view_container* e_view_container_create(struct e_view* view)
         return NULL;
     }
 
-    view_container->tree = wlr_scene_tree_create(view->server->pending);
+    view_container->tree = wlr_scene_tree_create(server->pending);
 
     if (view_container->tree == NULL)
     {
@@ -114,6 +116,7 @@ struct e_view_container* e_view_container_create(struct e_view* view)
         return NULL;
     }
 
+    view_container->server = server;
     view_container->view = view;
 
     wlr_scene_node_reparent(&view->tree->node, view_container->tree);
@@ -122,6 +125,8 @@ struct e_view_container* e_view_container_create(struct e_view* view)
     SIGNAL_CONNECT(view->events.unmap, view_container->unmap, e_view_container_handle_view_unmap);
 
     SIGNAL_CONNECT(view->events.destroy, view_container->destroy, e_view_container_handle_view_destroy);
+
+    wl_list_insert(&server->view_containers, &view_container->link);
 
     return NULL;
 }
@@ -152,7 +157,7 @@ struct e_view_container* e_view_container_try_from_node_ancestors(struct wlr_sce
     if (view_container != NULL)
         return view_container;
 
-    //keep going upwards in the tree until we find a view (in which case we return it), or reach the root of the tree (no parent)
+    //keep going upwards in the tree until we find a view container (in which case we return it), or reach the root of the tree (no parent)
     while (node->parent != NULL)
     {
         //go to parent node
