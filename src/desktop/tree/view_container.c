@@ -132,6 +132,17 @@ struct e_view_container* e_view_container_create(struct e_server* server, struct
     return NULL;
 }
 
+// Raise view container to the top of its layer. (floating, tiled & fullscreen but only matters for floating)
+void e_view_container_raise_to_top(struct e_view_container* view_container)
+{
+    assert(view_container);
+
+    if (view_container == NULL)
+        return;
+
+    wlr_scene_node_raise_to_top(&view_container->tree->node);
+}
+
 // Returns NULL on fail.
 static struct e_view_container* e_view_container_try_from_node(struct wlr_scene_node* node)
 {

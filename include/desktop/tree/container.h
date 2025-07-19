@@ -142,6 +142,9 @@ void e_tree_container_destroy(struct e_tree_container* tree_container);
 // Returns NULL on fail.
 struct e_view_container* e_view_container_create(struct e_server* server, struct e_view* view);
 
+// Raise view container to the top of its layer. (floating, tiled & fullscreen but only matters for floating)
+void e_view_container_raise_to_top(struct e_view_container* view_container);
+
 // Returns NULL on fail.
 struct e_view_container* e_view_container_try_from_node_ancestors(struct wlr_scene_node* node);
 
