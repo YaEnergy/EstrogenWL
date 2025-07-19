@@ -6,6 +6,7 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
+#include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_scene.h>
 
 #include "desktop/tree/node.h"
@@ -185,4 +186,23 @@ struct e_view_container* e_view_container_at(struct wlr_scene_node* node, double
         return e_view_container_try_from_node_ancestors(node_at);
     else
         return NULL;
+}
+
+// Finds the view container which has this surface as its view's main surface.
+// Returns NULL on fail.
+struct e_view_container* e_view_container_try_from_surface(struct e_server* server, struct wlr_surface* surface)
+{
+    assert(server && surface);
+
+    if (server == NULL || surface == NULL)
+        return NULL;
+
+    struct e_view_container* view_container;
+    wl_list_for_each(view_container, &server->view_containers, link)
+    {
+        if (view_container->view->surface == surface)
+            return view_container;
+    }
+
+    return NULL;
 }

@@ -6,6 +6,7 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
+#include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_scene.h>
 
 #include <wlr/util/box.h>
@@ -147,3 +148,7 @@ struct e_view_container* e_view_container_try_from_node_ancestors(struct wlr_sce
 // Finds the view container at the specified layout coords in given scene graph.
 // Returns NULL on fail.
 struct e_view_container* e_view_container_at(struct wlr_scene_node* node, double lx, double ly);
+
+// Finds the view container which has this surface as its view's main surface.
+// Returns NULL on fail.
+struct e_view_container* e_view_container_try_from_surface(struct e_server* server, struct wlr_surface* surface);
