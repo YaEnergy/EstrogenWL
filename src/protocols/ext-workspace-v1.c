@@ -1033,6 +1033,9 @@ static void e_ext_workspace_manager_display_destroy(struct wl_listener* listener
 
     e_trans_session_clear(&manager->trans_session);
 
+    if (manager->done_idle_event != NULL)
+        wl_event_source_remove(manager->done_idle_event);
+
     SIGNAL_DISCONNECT(manager->listeners.display_destroy);
 
     wl_global_remove(manager->global);

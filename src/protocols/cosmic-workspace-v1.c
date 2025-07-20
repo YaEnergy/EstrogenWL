@@ -1056,6 +1056,9 @@ static void e_cosmic_workspace_manager_display_destroy(struct wl_listener* liste
     }
 
     e_trans_session_clear(&manager->trans_session);
+    
+    if (manager->done_idle_event != NULL)
+        wl_event_source_remove(manager->done_idle_event);
 
     SIGNAL_DISCONNECT(manager->listeners.display_destroy);
 
