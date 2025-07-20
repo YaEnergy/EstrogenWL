@@ -171,7 +171,7 @@ void e_workspace_arrange(struct e_workspace* workspace, struct wlr_box full_area
     if (workspace->fullscreen_view != NULL)
         e_view_configure(workspace->fullscreen_view, full_area.x, full_area.y, full_area.width, full_area.height);
 
-    e_container_configure(&workspace->root_tiling_container->base, tiled_area.x, tiled_area.y, tiled_area.width, tiled_area.height);
+    e_container_arrange(&workspace->root_tiling_container->base, tiled_area);
 }
 
 // Update visiblity of workspace trees.

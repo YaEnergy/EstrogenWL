@@ -58,15 +58,15 @@ bool e_container_set_parent(struct e_container* container, struct e_tree_contain
         return true;
 }
 
-// Configure the container.
-void e_container_configure(struct e_container* container, int x, int y, int width, int height)
+// Arrange container within given area.
+void e_container_arrange(struct e_container* container, struct wlr_box area)
 {
     assert(container);
 
-    if (container->implementation->configure != NULL)
-        container->implementation->configure(container, x, y, width, height);
+    if (container->implementation->arrange != NULL)
+        container->implementation->arrange(container, area);
     else
-        e_log_error("e_container_configure: not implemented!");
+        e_log_error("e_container_arrange: not implemented!");
 }
 
 void e_container_destroy(struct e_container* container)
@@ -81,14 +81,12 @@ void e_container_destroy(struct e_container* container)
 
 // Tree container functions
 
-static void e_container_configure_tree_container(struct e_container* container, int x, int y, int width, int height)
+static void e_tree_container_impl_arrange(struct e_container* container, struct wlr_box area)
 {
     assert(container);
 
-    container->area = (struct wlr_box){x, y, width, height};
-
-    struct e_tree_container* tree_container = container->data;
-    e_tree_container_arrange(tree_container);
+    struct e_tree_container* tree_container = wl_container_of(container, tree_container, base);
+    e_tree_container_arrange(tree_container, area);
 }
 
 static void e_container_destroy_tree_container(struct e_container* container)
@@ -99,7 +97,7 @@ static void e_container_destroy_tree_container(struct e_container* container)
 }
 
 static const struct e_container_impl tree_impl = {
-    .configure = e_container_configure_tree_container,
+    .arrange = e_tree_container_impl_arrange,
     .destroy = e_container_destroy_tree_container
 };
 
@@ -230,14 +228,16 @@ bool e_tree_container_remove_container(struct e_tree_container* tree_container, 
     return true;
 }
 
-// Arranges a tree container's children to fit within the container's area.
-void e_tree_container_arrange(struct e_tree_container* tree_container)
+// Arranges a tree container's children to fit within given area.
+void e_tree_container_arrange(struct e_tree_container* tree_container, struct wlr_box area)
 {
     assert(tree_container);
 
     #if E_VERBOSE
     e_log_info("tree container arrange");
     #endif
+
+    tree_container->base.area = area;
 
     float percentageStart = 0.0f;
 
@@ -263,7 +263,7 @@ void e_tree_container_arrange(struct e_tree_container* tree_container)
 
         percentageStart += child_container->percentage;
 
-        e_container_configure(child_container, child_area.x, child_area.y, child_area.width, child_area.height);
+        e_container_arrange(child_container, child_area);
     }
 }
 

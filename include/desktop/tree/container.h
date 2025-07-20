@@ -21,8 +21,8 @@ struct e_view;
 
 struct e_container_impl
 {
-    // Configure the container.
-    void (*configure)(struct e_container* container, int lx, int ly, int width, int height);
+    // Arrange container within area.
+    void (*arrange)(struct e_container* container, struct wlr_box area);
 
     // Destroy the container and free its memory.
     void (*destroy)(struct e_container* container);
@@ -105,8 +105,8 @@ void e_container_fini(struct e_container* container);
 // Returns true on success, false on fail.
 bool e_container_set_parent(struct e_container* container, struct e_tree_container* parent);
 
-// Configure the container.
-void e_container_configure(struct e_container* container, int x, int y, int width, int height);
+// Arrange container within area.
+void e_container_arrange(struct e_container* container, struct wlr_box area);
 
 // Destroy the container and free its memory.
 void e_container_destroy(struct e_container* container);
@@ -130,8 +130,8 @@ bool e_tree_container_add_container(struct e_tree_container* tree_container, str
 // Returns true on success, false on fail.
 bool e_tree_container_remove_container(struct e_tree_container* tree_container, struct e_container* container);
 
-// Arranges a tree container's children to fit within the container's area.
-void e_tree_container_arrange(struct e_tree_container* tree_container);
+// Arranges a tree container's children to fit within given area.
+void e_tree_container_arrange(struct e_tree_container* tree_container, struct wlr_box area);
 
 // Destroy a tree container and free its memory.
 void e_tree_container_destroy(struct e_tree_container* tree_container);

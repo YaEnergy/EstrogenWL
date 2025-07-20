@@ -43,9 +43,9 @@ static void e_view_container_destroy(struct e_view_container* view_container)
     free(view_container);
 }
 
-static void e_view_container_impl_configure(struct e_container* container, int lx, int ly, int width, int height)
+static void e_view_container_impl_arrange(struct e_container* container, struct wlr_box area)
 {
-    //TODO: view container impl configure
+    //TODO: view container impl arrange
 }
 
 static void e_view_container_impl_destroy(struct e_container* container)
@@ -64,7 +64,7 @@ static void e_view_container_impl_destroy(struct e_container* container)
 }
 
 static const struct e_container_impl view_container_impl = {
-    .configure = e_view_container_impl_configure,
+    .arrange = e_view_container_impl_arrange,
     .destroy = e_view_container_impl_destroy
 };
 
