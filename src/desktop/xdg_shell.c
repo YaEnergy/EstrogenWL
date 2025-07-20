@@ -3,9 +3,12 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
 
 #include <wlr/types/wlr_xdg_shell.h>
+
+#include "desktop/tree/container.h"
 
 #include "util/log.h"
 #include "util/wl_macros.h"
@@ -19,7 +22,24 @@ static void xdg_shell_new_toplevel(struct wl_listener* listener, void* data)
 
     e_log_info("New toplevel view");
 
-    e_toplevel_view_create(xdg_toplevel, server->pending);
+    struct e_toplevel_view* view = e_toplevel_view_create(xdg_toplevel, server->pending);
+
+    if (view == NULL)
+    {
+        e_log_error("xdg_shell_new_toplevel: failed to create toplevel view!");
+        wl_resource_post_no_memory(xdg_toplevel->resource);
+        return;
+    }
+
+    struct e_view_container* view_container = e_view_container_create(server, &view->base);
+
+    if (view_container == NULL)
+    {
+        e_log_error("xdg_shell_new_toplevel: failed to create view container for toplevel view!");
+        wl_resource_post_no_memory(xdg_toplevel->resource);
+        //TODO: destroy view?
+        return;
+    }
 }
 
 bool e_server_init_xdg_shell(struct e_server* server)

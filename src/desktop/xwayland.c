@@ -17,6 +17,7 @@
 #include "input/seat.h"
 
 #include "desktop/output.h"
+#include "desktop/tree/container.h"
 #include "desktop/desktop.h"
 
 #include "util/log.h"
@@ -42,10 +43,20 @@ static void xwayland_new_surface(struct wl_listener* listener, void* data)
     {
         struct e_xwayland_view* view = e_xwayland_view_create(xwayland_surface, server->pending);
         
-        if (view != NULL)
-            e_log_info("new xwayland view!");
-        else
-            e_log_error("xwayland_new_surface: failed to create xwayland view");
+        if (view == NULL)
+        {
+            e_log_error("xwayland_new_surface: failed to create xwayland view!");
+            return;
+        }
+
+        struct e_view_container* view_container = e_view_container_create(server, &view->base);
+
+        if (view_container == NULL)
+        {
+            e_log_error("xwayland_new_surface: failed to create view container for xwayland view!");
+            //TODO: destroy view?
+            return;
+        }
     }
 }
 
