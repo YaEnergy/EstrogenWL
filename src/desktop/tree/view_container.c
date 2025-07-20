@@ -129,7 +129,7 @@ struct e_view_container* e_view_container_create(struct e_server* server, struct
 
     wl_list_insert(&server->view_containers, &view_container->link);
 
-    return NULL;
+    return view_container;
 }
 
 // Raise view container to the top of its layer. (floating, tiled & fullscreen but only matters for floating)
