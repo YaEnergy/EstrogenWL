@@ -1038,7 +1038,6 @@ static void e_ext_workspace_manager_display_destroy(struct wl_listener* listener
 
     SIGNAL_DISCONNECT(manager->listeners.display_destroy);
 
-    wl_global_remove(manager->global);
     wl_global_destroy(manager->global);
 
     free(manager);

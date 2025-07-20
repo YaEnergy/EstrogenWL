@@ -1062,7 +1062,6 @@ static void e_cosmic_workspace_manager_display_destroy(struct wl_listener* liste
 
     SIGNAL_DISCONNECT(manager->listeners.display_destroy);
 
-    wl_global_remove(manager->global);
     wl_global_destroy(manager->global);
 
     free(manager);
