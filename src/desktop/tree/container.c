@@ -85,20 +85,33 @@ static void e_tree_container_impl_arrange(struct e_container* container, struct 
 {
     assert(container);
 
+    if (container == NULL)
+    {
+        e_log_error("e_tree_container_impl_arrange: container is NULL!");
+        return;
+    }
+
     struct e_tree_container* tree_container = wl_container_of(container, tree_container, base);
     e_tree_container_arrange(tree_container, area);
 }
 
-static void e_container_destroy_tree_container(struct e_container* container)
+static void e_tree_container_impl_destroy(struct e_container* container)
 {
     assert(container);
 
-    e_tree_container_destroy(container->data);
+    if (container == NULL)
+    {
+        e_log_error("e_tree_container_impl_destroy: container is NULL!");
+        return;
+    }
+
+    struct e_tree_container* tree_container = wl_container_of(container, tree_container, base);
+    e_tree_container_destroy(tree_container);
 }
 
 static const struct e_container_impl tree_impl = {
     .arrange = e_tree_container_impl_arrange,
-    .destroy = e_container_destroy_tree_container
+    .destroy = e_tree_container_impl_destroy
 };
 
 // Creates a tree container.
