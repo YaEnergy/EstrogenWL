@@ -31,6 +31,7 @@
 
 static void e_commands_kill_focused_view(struct e_server* server)
 {
+    /*
     struct e_view* view = e_desktop_focused_view(server);
 
     if (view != NULL)
@@ -43,10 +44,12 @@ static void e_commands_kill_focused_view(struct e_server* server)
     {
         e_log_info("failed to close focused view");
     }
+        */
 }
 
 static void e_commands_toggle_tiling_focused_view(struct e_server* server)
 {
+    /*
     struct e_view* view = e_desktop_focused_view(server);
 
     if (view != NULL)
@@ -59,13 +62,15 @@ static void e_commands_toggle_tiling_focused_view(struct e_server* server)
     {
         e_log_info("failed to set tiling of focused view");
     }
+        */
 }
 
 static void e_commands_switch_tiling_mode(struct e_server* server)
 {
     assert(server);
 
-    struct e_view* view = e_desktop_focused_view(server);
+    //struct e_view* view = e_desktop_focused_view(server);
+    /*
 
     if (view == NULL || view->container.parent == NULL)
         return;
@@ -78,10 +83,12 @@ static void e_commands_switch_tiling_mode(struct e_server* server)
         parent_container->tiling_mode = E_TILING_MODE_HORIZONTAL;
 
     e_tree_container_arrange(parent_container);
+    */
 }
 
 static void e_commands_toggle_fullscreen_focused_view(struct e_server* server)
 {
+    /*
     struct e_view* view = e_desktop_focused_view(server);
 
     if (view != NULL)
@@ -93,6 +100,7 @@ static void e_commands_toggle_fullscreen_focused_view(struct e_server* server)
     {
         e_log_error("e_commands_toggle_fullscreen_focused_view: failed to toggle fullscreen mode of view!");
     }
+    */
 }
 
 static void e_commands_exec_as_new_process(const char* command)
@@ -198,6 +206,7 @@ void e_commands_parse(struct e_server* server, const char* command)
     //TODO: testing only, remove
     else if (strcmp(argument, "move_to_next_workspace") == 0)
     {
+        /*
         struct e_view* focused_view = e_desktop_focused_view(server);
 
         if (focused_view == NULL)
@@ -215,9 +224,10 @@ void e_commands_parse(struct e_server* server, const char* command)
 
         int i = e_list_find_index(&output->workspace_group.workspaces, workspace);
 
-        e_view_move_to_workspace(focused_view, e_list_at(&output->workspace_group.workspaces, (i + 1) % output->workspace_group.workspaces.count));
+        //e_view_move_to_workspace(focused_view, e_list_at(&output->workspace_group.workspaces, (i + 1) % output->workspace_group.workspaces.count));
         e_cursor_set_focus_hover(server->seat->cursor);
         e_log_info("view workspace index: %i", (i + 1) % output->workspace_group.workspaces.count);
+        */
     }
     else 
     {

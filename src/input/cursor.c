@@ -50,14 +50,16 @@ static void start_grab_resize_focused_view(struct e_cursor* cursor)
 {
     assert(cursor);
 
+    /*
     struct e_view* focused_view = e_desktop_focused_view(cursor->seat->server);
 
     if (focused_view == NULL)
         return;
 
-    enum wlr_edges edges = WLR_EDGE_NONE;
+    //enum wlr_edges edges = WLR_EDGE_NONE;
 
     //get closest edges to cursor
+
     
     double mid_x = (double)focused_view->current.x + (double)focused_view->current.width / 2.0;
     
@@ -74,16 +76,20 @@ static void start_grab_resize_focused_view(struct e_cursor* cursor)
         edges |= WLR_EDGE_BOTTOM;
 
     e_cursor_start_view_resize(cursor, focused_view, edges);
+
+    */
 }
 
 static void start_grab_move_focused_view(struct e_cursor* cursor)
 {
     assert(cursor);
 
+    /*
     struct e_view* focused_view = e_desktop_focused_view(cursor->seat->server);
 
     if (focused_view != NULL)
         e_cursor_start_view_move(cursor, focused_view);
+    */
 }
 
 //mouse button presses
@@ -140,6 +146,8 @@ static void swap_tiled_views(struct e_view* a, struct e_view* b)
         return;
     }
 
+    /*
+
     if (a->container.parent == NULL || !a->tiled)
     {
         e_log_error("swap_tiled_views: view A is not tiled!");
@@ -182,6 +190,8 @@ static void swap_tiled_views(struct e_view* a, struct e_view* b)
     //only rearrange once if both views have the same parent container
     if (b->container.parent != a->container.parent)
         e_tree_container_arrange(b->container.parent);
+
+    */
 }
 
 static void e_cursor_handle_mode_move(struct e_cursor* cursor)
@@ -208,9 +218,9 @@ static void e_cursor_handle_mode_move(struct e_cursor* cursor)
     }
     else //floating
     {
-        float delta_x = cursor->wlr_cursor->x - cursor->grab_start_x;
-        float delta_y = cursor->wlr_cursor->y - cursor->grab_start_y;
-        e_view_set_position(cursor->grab_view, cursor->grab_start_vbox.x + delta_x, cursor->grab_start_vbox.y + delta_y);
+        //float delta_x = cursor->wlr_cursor->x - cursor->grab_start_x;
+        //float delta_y = cursor->wlr_cursor->y - cursor->grab_start_y;
+        //e_view_set_position(cursor->grab_view, cursor->grab_start_vbox.x + delta_x, cursor->grab_start_vbox.y + delta_y);
     }
 }
 
@@ -476,7 +486,7 @@ static void e_cursor_start_grab_view_mode(struct e_cursor* cursor, struct e_view
     e_cursor_set_mode(cursor, mode);
 
     cursor->grab_view = view;
-    cursor->grab_start_vbox = view->current;
+    //cursor->grab_start_vbox = view->current;
 
     cursor->grab_start_x = cursor->wlr_cursor->x;
     cursor->grab_start_y = cursor->wlr_cursor->y;
@@ -487,7 +497,7 @@ static void e_cursor_start_grab_view_mode(struct e_cursor* cursor, struct e_view
 
     #if E_VERBOSE
     e_log_info("Cursor grab position: XY(%f, %f)", cursor->grab_start_x, cursor->grab_start_y);
-    e_log_info("View current rect: XY(%i, %i); WH(%i, %i)", view->current.x, view->current.y, view->current.width, view->current.height);
+    //e_log_info("View current rect: XY(%i, %i); WH(%i, %i)", view->current.x, view->current.y, view->current.width, view->current.height);
     #endif
 }
 
