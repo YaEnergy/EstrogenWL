@@ -183,7 +183,6 @@ bool e_tree_container_add_container(struct e_tree_container* tree_container, str
 }
 
 // Removes a container from a tree container.
-// Tree container is destroyed when no children are left and has a parent.
 // Returns true on success, false on fail.
 bool e_tree_container_remove_container(struct e_tree_container* tree_container, struct e_container* container)
 {
@@ -201,12 +200,6 @@ bool e_tree_container_remove_container(struct e_tree_container* tree_container, 
 
     container->parent = NULL;
     e_list_remove(&tree_container->children, container);
-
-    if (tree_container->children.count == 0 && tree_container->base.parent != NULL)
-    {
-        e_tree_container_destroy(tree_container);
-        return true;
-    }
 
     //distribute container's percentage evenly across remaining children
 

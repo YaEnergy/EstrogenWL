@@ -62,7 +62,6 @@ enum e_tiling_mode
 };
 
 // A container that tiles its children containers.
-// Destroys itself if it has no parent when last child is removed.
 struct e_tree_container
 {
     // How this container should tile containers.
@@ -128,7 +127,6 @@ bool e_tree_container_insert_container(struct e_tree_container* tree_container, 
 bool e_tree_container_add_container(struct e_tree_container* tree_container, struct e_container* container);
 
 // Removes a container from a tree container.
-// Tree container is destroyed when no children are left and has a parent.
 // Returns true on success, false on fail.
 bool e_tree_container_remove_container(struct e_tree_container* tree_container, struct e_container* container);
 
