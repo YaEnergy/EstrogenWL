@@ -51,5 +51,9 @@ void e_list_clear(struct e_list* list);
 // Returns true on success, false on fail.
 bool e_list_swap_outside(struct e_list* list_a, int index_a, struct e_list* list_b, int index_b);
 
+// Replace all items in dest with those in src.
+// Returns true on success, false on fail.
+bool e_list_copy_to(struct e_list* src, struct e_list* dest);
+
 // Frees the list, and memory for holding the item pointers, but not the items themselves.
 void e_list_fini(struct e_list* list);

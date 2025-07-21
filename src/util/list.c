@@ -168,6 +168,23 @@ bool e_list_swap_outside(struct e_list* list_a, int index_a, struct e_list* list
     return true;
 }
 
+// Replace all items in dest with those in src.
+// Returns true on success, false on fail.
+bool e_list_copy_to(struct e_list* src, struct e_list* dest)
+{
+    assert(src && dest);
+
+    e_list_clear(dest);
+
+    if (!e_list_ensure_capacity(dest, src->count))
+        return false;
+
+    for (int i = 0; i < src->count; i++)
+        dest->items[i] = src->items[i];
+
+    return true;
+}
+
 void e_list_fini(struct e_list* list)
 {
     assert(list);
