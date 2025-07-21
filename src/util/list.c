@@ -35,21 +35,29 @@ void* e_list_at(struct e_list* list, int i)
 }
 
 // Returns true on success, false on fail.
-static bool e_list_expand(struct e_list* list)
+static bool e_list_ensure_capacity(struct e_list* list, int capacity)
 {
     assert(list && list->capacity > 0);
 
-    void** new_items = realloc(list->items, sizeof(*list->items) * list->capacity * 2);
+    if (list->capacity >= capacity)
+        return true;
+
+    int new_capacity = list->capacity;
+
+    while (new_capacity < capacity)
+        new_capacity <<= 1;
+
+    void** new_items = realloc(list->items, sizeof(*list->items) * new_capacity);
 
     if (new_items == NULL)
         return false;
 
     //fill new spots with NULL
-    for (int i = list->capacity; i < list->capacity * 2; i++)
+    for (int i = list->capacity; i < new_capacity; i++)
         new_items[i] = NULL;
 
     list->items = new_items;
-    list->capacity *= 2;
+    list->capacity = new_capacity;
 
     return true;
 }
@@ -70,11 +78,8 @@ bool e_list_insert(struct e_list* list, void* item, int index)
     if (index < 0 || index > list->count)
         return false;
 
-    if (list->count + 1 > list->capacity)
-    {
-        if (!e_list_expand(list))
-            return false;
-    }
+    if (!e_list_ensure_capacity(list, list->count + 1))
+        return false;
 
     //shift items to the right by 1 space
     for (int i = list->count - 1; i >= index; i--)
