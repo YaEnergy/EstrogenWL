@@ -9,8 +9,11 @@
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_scene.h>
 
+#include <wlr/util/box.h>
+
 #include "desktop/tree/node.h"
 #include "desktop/views/view.h"
+#include "desktop/tree/workspace.h"
 
 #include "util/log.h"
 #include "util/wl_macros.h"
@@ -43,6 +46,19 @@ static void e_view_container_destroy(struct e_view_container* view_container)
     free(view_container);
 }
 
+static void e_view_container_impl_set_workspace(struct e_container* container, struct e_workspace* workspace)
+{
+    assert(container);
+
+    if (container == NULL)
+    {
+        e_log_error("e_view_container_impl_set_workspace: container is NULL");
+        return;
+    }
+
+    container->workspace = workspace;
+}
+
 static void e_view_container_impl_arrange(struct e_container* container, struct wlr_box area)
 {
     //TODO: view container impl arrange
@@ -69,6 +85,7 @@ static void e_view_container_impl_destroy(struct e_container* container)
 }
 
 static const struct e_container_impl view_container_impl = {
+    .set_workspace = e_view_container_impl_set_workspace,
     .arrange = e_view_container_impl_arrange,
     .commit = e_view_container_impl_commit,
     .destroy = e_view_container_impl_destroy

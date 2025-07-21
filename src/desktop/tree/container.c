@@ -21,6 +21,9 @@ bool e_container_init(struct e_container* container, const struct e_container_im
     container->data = data;
     container->implementation = implementation;
 
+    container->workspace = NULL;
+    container->parent = NULL;
+
     container->current = (struct wlr_box){0, 0, 0, 0};
     container->pending = (struct wlr_box){0, 0, 0, 0};
 
@@ -40,6 +43,16 @@ bool e_container_is_tiled(struct e_container* container)
     assert(container);
 
     return container->parent != NULL;
+}
+
+void e_container_set_workspace(struct e_container* container, struct e_workspace* workspace)
+{
+    assert(container);
+
+    if (container->implementation->set_workspace != NULL)
+        container->implementation->set_workspace(container, workspace);
+    else
+        e_log_error("e_container_set_workspace: not implemented!");
 }
 
 // Sets the parent of a container.
@@ -108,6 +121,29 @@ void e_container_destroy(struct e_container* container)
 
 // Tree container functions
 
+static void e_tree_container_impl_set_workspace(struct e_container* container, struct e_workspace* workspace)
+{
+    assert(container);
+
+    if (container == NULL)
+    {
+        e_log_error("e_tree_container_impl_set_workspace: container is NULL!");
+        return;
+    }
+
+    struct e_tree_container* tree_container = wl_container_of(container, tree_container, base);
+    
+    tree_container->base.workspace = workspace;
+
+    for (int i = 0; i < tree_container->children.count; i++)
+    {
+        struct e_container* child = e_list_at(&tree_container->children, i);
+        
+        if (child != NULL)
+            e_container_set_workspace(child, workspace);
+    }
+}
+
 static void e_tree_container_impl_arrange(struct e_container* container, struct wlr_box area)
 {
     assert(container);
@@ -158,6 +194,7 @@ static void e_tree_container_impl_destroy(struct e_container* container)
 }
 
 static const struct e_container_impl tree_impl = {
+    .set_workspace = e_tree_container_impl_set_workspace,
     .arrange = e_tree_container_impl_arrange,
     .commit = e_tree_container_impl_commit,
     .destroy = e_tree_container_impl_destroy
@@ -206,6 +243,7 @@ bool e_tree_container_insert_container(struct e_tree_container* tree_container, 
         return false;
 
     container->parent = tree_container;
+    e_container_set_workspace(container, tree_container->base.workspace);
 
     //TODO: allow having containers of different percentages
     for (int i = 0; i < tree_container->children.count; i++)

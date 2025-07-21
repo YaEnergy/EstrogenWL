@@ -15,12 +15,15 @@
 
 struct e_server;
 
+struct e_workspace;
 struct e_container;
 struct e_tree_container;
 struct e_view;
 
 struct e_container_impl
 {
+    void (*set_workspace)(struct e_container* container, struct e_workspace* workspace);
+
     // Arrange container within area.
     void (*arrange)(struct e_container* container, struct wlr_box area);
 
@@ -52,6 +55,8 @@ struct e_container
     struct wlr_box current, pending;
     // percentage of space this container takes up within parent container
     float percentage;
+
+    struct e_workspace* workspace;
 
     // Parent of this container, NULL if root container or floating container.
     // May be NULL.
@@ -103,6 +108,8 @@ bool e_container_init(struct e_container* container, const struct e_container_im
 void e_container_fini(struct e_container* container);
 
 bool e_container_is_tiled(struct e_container* container);
+
+void e_container_set_workspace(struct e_container* container, struct e_workspace* workspace);
 
 // Sets the parent of a container.
 // Parent may be NULL.
