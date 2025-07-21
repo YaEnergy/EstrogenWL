@@ -33,6 +33,13 @@ void e_container_fini(struct e_container* container)
         e_tree_container_remove_container(container->parent, container);
 }
 
+bool e_container_is_tiled(struct e_container* container)
+{
+    assert(container);
+
+    return container->parent != NULL;
+}
+
 // Sets the parent of a container.
 // Parent may be NULL.
 // Returns true on success, false on fail.
