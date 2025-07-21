@@ -137,6 +137,17 @@ bool e_list_remove_index(struct e_list* list, int index)
     return true;
 }
 
+// Remove all items in the list.
+void e_list_clear(struct e_list* list)
+{
+    assert(list);
+
+    for (int i = 0; i < list->count; i++)
+        list->items[i] = NULL;
+
+    list->count = 0;
+}
+
 // Swaps 2 indexes in 2 separate lists.
 // List a & b are allowed to be the same list.
 // Returns true on success, false on fail.
