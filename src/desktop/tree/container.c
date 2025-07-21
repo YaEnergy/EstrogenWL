@@ -179,32 +179,7 @@ bool e_tree_container_insert_container(struct e_tree_container* tree_container, 
 // Returns true on success, false on fail.
 bool e_tree_container_add_container(struct e_tree_container* tree_container, struct e_container* container)
 {
-    assert(tree_container && container);
-
-    #if E_VERBOSE
-    e_log_info("tree container add container");
-    #endif
-
-    if (container->parent != NULL)
-    {
-        e_log_error("container is already inside a tree container!");
-        return false;
-    }
-
-    //add to children, return false on fail
-    if (!e_list_add(&tree_container->children, container))
-        return false;
-
-    container->parent = tree_container;
-
-    //TODO: allow having containers of different percentages
-    for (int i = 0; i < tree_container->children.count; i++)
-    {
-        struct e_container* container = e_list_at(&tree_container->children, i);
-        container->percentage = 1.0f / tree_container->children.count;
-    }
-
-    return true;
+    return e_tree_container_insert_container(tree_container, container, tree_container->children.count);
 }
 
 // Removes a container from a tree container.
