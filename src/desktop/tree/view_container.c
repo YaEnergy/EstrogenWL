@@ -48,6 +48,11 @@ static void e_view_container_impl_arrange(struct e_container* container, struct 
     //TODO: view container impl arrange
 }
 
+static void e_view_container_impl_commit(struct e_container* container)
+{
+    //TODO: view container impl commit
+}
+
 static void e_view_container_impl_destroy(struct e_container* container)
 {
     assert(container);
@@ -65,6 +70,7 @@ static void e_view_container_impl_destroy(struct e_container* container)
 
 static const struct e_container_impl view_container_impl = {
     .arrange = e_view_container_impl_arrange,
+    .commit = e_view_container_impl_commit,
     .destroy = e_view_container_impl_destroy
 };
 

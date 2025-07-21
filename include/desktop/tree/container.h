@@ -24,6 +24,9 @@ struct e_container_impl
     // Arrange container within area.
     void (*arrange)(struct e_container* container, struct wlr_box area);
 
+    // Commit pending changed state to container.
+    void (*commit)(struct e_container* container);
+
     // Destroy the container and free its memory.
     void (*destroy)(struct e_container* container);
 };
@@ -45,12 +48,12 @@ struct e_container
 
     const struct e_container_impl* implementation;
 
-    // area container is taking in
-    struct wlr_box area;
+    // Area containing is taking in.
+    struct wlr_box current, pending;
     // percentage of space this container takes up within parent container
     float percentage;
 
-    // parent of this container, NULL if root container.
+    // Parent of this container, NULL if root container or floating container.
     // May be NULL.
     struct e_tree_container* parent;
 };
@@ -108,6 +111,12 @@ bool e_container_set_parent(struct e_container* container, struct e_tree_contain
 
 // Arrange container within area.
 void e_container_arrange(struct e_container* container, struct wlr_box area);
+
+// Rearrange container within pending area.
+void e_container_rearrange(struct e_container* container);
+
+// Commit pending changes to container.
+void e_container_commit(struct e_container* container);
 
 // Destroy the container and free its memory.
 void e_container_destroy(struct e_container* container);

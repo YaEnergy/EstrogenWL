@@ -8,7 +8,6 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
-#include <wlr/types/wlr_scene.h>
 #include <wlr/util/box.h>
 
 #include "util/list.h"
@@ -21,6 +20,9 @@ bool e_container_init(struct e_container* container, const struct e_container_im
     container->type = type;
     container->data = data;
     container->implementation = implementation;
+
+    container->current = (struct wlr_box){0, 0, 0, 0};
+    container->pending = (struct wlr_box){0, 0, 0, 0};
 
     return true;
 }
@@ -76,6 +78,24 @@ void e_container_arrange(struct e_container* container, struct wlr_box area)
         e_log_error("e_container_arrange: not implemented!");
 }
 
+void e_container_rearrange(struct e_container* container)
+{
+    assert(container);
+
+    e_container_arrange(container, container->pending);
+}
+
+// Commit pending changes to container.
+void e_container_commit(struct e_container* container)
+{
+    assert(container);
+
+    if (container->implementation->commit != NULL)
+        container->implementation->commit(container);
+    else
+        e_log_error("e_container_commit: not implemented!");
+}
+
 void e_container_destroy(struct e_container* container)
 {
     assert(container);
@@ -102,6 +122,27 @@ static void e_tree_container_impl_arrange(struct e_container* container, struct 
     e_tree_container_arrange(tree_container, area);
 }
 
+static void e_tree_container_impl_commit(struct e_container* container)
+{
+    assert(container);
+
+    if (container == NULL)
+    {
+        e_log_error("e_tree_container_impl_commit: container is NULL!");
+        return;
+    }
+
+    struct e_tree_container* tree_container = wl_container_of(container, tree_container, base);
+
+    for (int i = 0; i < tree_container->children.count; i++)
+    {
+        struct e_container* container = e_list_at(&tree_container->children, i);
+
+        if (container != NULL)
+            e_container_commit(container);
+    }
+}
+
 static void e_tree_container_impl_destroy(struct e_container* container)
 {
     assert(container);
@@ -118,6 +159,7 @@ static void e_tree_container_impl_destroy(struct e_container* container)
 
 static const struct e_container_impl tree_impl = {
     .arrange = e_tree_container_impl_arrange,
+    .commit = e_tree_container_impl_commit,
     .destroy = e_tree_container_impl_destroy
 };
 
@@ -129,7 +171,7 @@ struct e_tree_container* e_tree_container_create(enum e_tiling_mode tiling_mode)
 
     if (tree_container == NULL)
     {
-        e_log_error("failed to alloc tree_container");
+        e_log_error("e_tree_container_create: failed to alloc tree_container");
         return NULL;
     }
 
@@ -169,7 +211,9 @@ bool e_tree_container_insert_container(struct e_tree_container* tree_container, 
     for (int i = 0; i < tree_container->children.count; i++)
     {
         struct e_container* container = e_list_at(&tree_container->children, i);
-        container->percentage = 1.0f / tree_container->children.count;
+
+        if (container != NULL)
+            container->percentage = 1.0f / tree_container->children.count;
     }
 
     return true;
@@ -225,23 +269,27 @@ void e_tree_container_arrange(struct e_tree_container* tree_container, struct wl
     e_log_info("tree container arrange");
     #endif
 
-    tree_container->base.area = area;
+    tree_container->base.pending = area;
 
     float percentageStart = 0.0f;
 
     for (int i = 0; i < tree_container->children.count; i++)
     {
         struct e_container* child_container = e_list_at(&tree_container->children, i);
-        struct wlr_box child_area = {tree_container->base.area.x, tree_container->base.area.y, tree_container->base.area.width, tree_container->base.area.height};
+
+        if (child_container == NULL)
+            continue;
+
+        struct wlr_box child_area = {area.x, area.y, area.width, area.height};
 
         switch (tree_container->tiling_mode)
         {
             case E_TILING_MODE_HORIZONTAL:
-                child_area.x += tree_container->base.area.width * percentageStart;
+                child_area.x += area.width * percentageStart;
                 child_area.width *= child_container->percentage;
                 break;
             case E_TILING_MODE_VERTICAL:
-                child_area.y += tree_container->base.area.height * percentageStart;
+                child_area.y += area.height * percentageStart;
                 child_area.height *= child_container->percentage;
                 break;
             default:
