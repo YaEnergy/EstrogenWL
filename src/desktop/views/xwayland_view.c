@@ -16,7 +16,6 @@
 #include <xcb/xcb_icccm.h>
 #include <xcb/xproto.h>
 
-#include "desktop/desktop.h"
 #include "desktop/tree/node.h"
 #include "desktop/views/view.h"
 
@@ -65,12 +64,10 @@ static struct wlr_scene_tree* e_view_xwayland_create_content_tree(struct e_view*
 }
 
 // Sets the view's current geometry to that of the xwayland surface.
-static void e_xwayland_view_update_current_geometry(struct e_xwayland_view* xwayland_view)
+static void update_view_geometry(struct e_xwayland_view* xwayland_view)
 {
     assert(xwayland_view);
 
-    xwayland_view->base.geometry.x = xwayland_view->xwayland_surface->x;
-    xwayland_view->base.geometry.y = xwayland_view->xwayland_surface->y;
     xwayland_view->base.geometry.width = xwayland_view->xwayland_surface->width;
     xwayland_view->base.geometry.height = xwayland_view->xwayland_surface->height;
 }
@@ -84,7 +81,7 @@ static void e_xwayland_view_map_request(struct wl_listener* listener, void* data
     e_log_info("xwayland view map request");
     #endif
 
-    e_xwayland_view_update_current_geometry(xwayland_view);
+    update_view_geometry(xwayland_view);
 
     e_view_configure(&xwayland_view->base, xwayland_view->xwayland_surface->x, xwayland_view->xwayland_surface->y, xwayland_view->xwayland_surface->width, xwayland_view->xwayland_surface->height);
 }
@@ -94,7 +91,7 @@ static void e_xwayland_view_commit(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, commit);
 
-    e_xwayland_view_update_current_geometry(xwayland_view);
+    update_view_geometry(xwayland_view);
 
     wl_signal_emit_mutable(&xwayland_view->base.events.commit, NULL);
 }
@@ -243,7 +240,7 @@ static void e_xwayland_view_associate(struct wl_listener* listener, void* data)
 
     xwayland_view->base.surface = xwayland_view->xwayland_surface->surface;
 
-    e_xwayland_view_update_current_geometry(xwayland_view);
+    update_view_geometry(xwayland_view);
 
     // events
 
