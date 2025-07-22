@@ -89,6 +89,9 @@ struct e_view_container
 
     struct e_view* view;
 
+    // View's pending & current area.
+    struct wlr_box view_current, view_pending;
+
     // Holds view's tree.
     struct wlr_scene_tree* tree;
 

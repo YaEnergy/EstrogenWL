@@ -61,7 +61,25 @@ static void e_view_container_impl_set_workspace(struct e_container* container, s
 
 static void e_view_container_impl_arrange(struct e_container* container, struct wlr_box area)
 {
-    //TODO: view container impl arrange
+    assert(container);
+
+    if (container == NULL)
+    {
+        e_log_error("e_view_container_impl_arrange: container is NULL");
+        return;
+    }
+
+    struct e_view_container* view_container = wl_container_of(container, view_container, base);
+
+    view_container->base.pending = area;
+
+    //TODO: fullscreen
+    view_container->view_pending = (struct wlr_box){
+        .x = area.x,
+        .y = area.y,
+        .width = (area.width > 0) ? area.width : 1,
+        .height = (area.height > 0) ? area.height : 1
+    };
 }
 
 static void e_view_container_impl_commit(struct e_container* container)
@@ -129,6 +147,7 @@ struct e_view_container* e_view_container_create(struct e_server* server, struct
 
     if (view_container->tree == NULL)
     {
+        e_container_fini(&view_container->base);
         free(view_container);
         return NULL;
     }
