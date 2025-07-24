@@ -13,6 +13,8 @@
 #include "desktop/tree/workspace.h"
 #include "desktop/views/view.h"
 
+#include "server.h"
+
 #include "util/wl_macros.h"
 #include "util/list.h"
 #include "util/log.h"
