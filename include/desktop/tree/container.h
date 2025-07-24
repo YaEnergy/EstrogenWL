@@ -16,28 +16,15 @@
 struct e_server;
 
 struct e_workspace;
-struct e_container;
-struct e_tree_container;
 struct e_view;
-
-struct e_container_impl
-{
-    void (*set_workspace)(struct e_container* container, struct e_workspace* workspace);
-
-    // Arrange container within area.
-    void (*arrange)(struct e_container* container, struct wlr_box area);
-
-    // Commit pending changed state to container.
-    void (*commit)(struct e_container* container);
-
-    // Destroy the container and free its memory.
-    void (*destroy)(struct e_container* container);
-};
+struct e_container;
+struct e_view_container;
+struct e_tree_container;
 
 enum e_container_type
 {
-    E_CONTAINER_TREE = 1,
-    E_CONTAINER_VIEW = 2
+    E_CONTAINER_TREE = 1, //tree_container
+    E_CONTAINER_VIEW = 2 //view_container
 };
 
 // A container for autoconfiguring data by its ancestor containers.
@@ -45,14 +32,16 @@ struct e_container
 {
     enum e_container_type type;
 
-    // Data of this container, usually the struct implementing a container type.
+    // Container implementation, see type (e_container_type).
     // May be NULL.
-    void* data;
-
-    const struct e_container_impl* implementation;
+    union
+    {
+        struct e_tree_container* tree_container;
+        struct e_view_container* view_container;
+    };
 
     // Area containing is taking in.
-    struct wlr_box current, pending;
+    struct wlr_box area;
     // percentage of space this container takes up within parent container
     float percentage;
 
@@ -106,7 +95,7 @@ struct e_view_container
 };
 
 // Returns true on success, false on fail.
-bool e_container_init(struct e_container* container, const struct e_container_impl* implementation, enum e_container_type type, void* data);
+bool e_container_init(struct e_container* container, enum e_container_type type);
 
 void e_container_fini(struct e_container* container);
 
@@ -124,9 +113,6 @@ void e_container_arrange(struct e_container* container, struct wlr_box area);
 
 // Rearrange container within pending area.
 void e_container_rearrange(struct e_container* container);
-
-// Commit pending changes to container.
-void e_container_commit(struct e_container* container);
 
 // Destroy the container and free its memory.
 void e_container_destroy(struct e_container* container);
@@ -148,12 +134,6 @@ bool e_tree_container_add_container(struct e_tree_container* tree_container, str
 // Removes a container from a tree container.
 // Returns true on success, false on fail.
 bool e_tree_container_remove_container(struct e_tree_container* tree_container, struct e_container* container);
-
-// Arranges a tree container's children to fit within given area.
-void e_tree_container_arrange(struct e_tree_container* tree_container, struct wlr_box area);
-
-// Destroy a tree container and free its memory.
-void e_tree_container_destroy(struct e_tree_container* tree_container);
 
 // View container functions
 

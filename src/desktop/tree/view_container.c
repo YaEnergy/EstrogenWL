@@ -20,95 +20,6 @@
 
 #include "server.h"
 
-static void e_view_container_destroy(struct e_view_container* view_container)
-{
-    assert(view_container);
-
-    if (view_container == NULL)
-    {
-        e_log_error("e_view_container_destroy: view_container is NULL!");
-        return;
-    }
-
-    wl_list_remove(&view_container->link);
-
-    //reparent view node before destroying container node, so we don't destroy the view's tree aswell
-    wlr_scene_node_reparent(&view_container->view->tree->node, view_container->server->pending);
-    wlr_scene_node_destroy(&view_container->tree->node);
-
-    SIGNAL_DISCONNECT(view_container->map);
-    SIGNAL_DISCONNECT(view_container->unmap);
-    
-    SIGNAL_DISCONNECT(view_container->destroy);
-
-    e_container_fini(&view_container->base);
-
-    free(view_container);
-}
-
-static void e_view_container_impl_set_workspace(struct e_container* container, struct e_workspace* workspace)
-{
-    assert(container);
-
-    if (container == NULL)
-    {
-        e_log_error("e_view_container_impl_set_workspace: container is NULL");
-        return;
-    }
-
-    container->workspace = workspace;
-}
-
-static void e_view_container_impl_arrange(struct e_container* container, struct wlr_box area)
-{
-    assert(container);
-
-    if (container == NULL)
-    {
-        e_log_error("e_view_container_impl_arrange: container is NULL");
-        return;
-    }
-
-    struct e_view_container* view_container = wl_container_of(container, view_container, base);
-
-    view_container->base.pending = area;
-
-    //TODO: fullscreen
-    view_container->view_pending = (struct wlr_box){
-        .x = area.x,
-        .y = area.y,
-        .width = (area.width > 0) ? area.width : 1,
-        .height = (area.height > 0) ? area.height : 1
-    };
-}
-
-static void e_view_container_impl_commit(struct e_container* container)
-{
-    //TODO: view container impl commit
-}
-
-static void e_view_container_impl_destroy(struct e_container* container)
-{
-    assert(container);
-
-    if (container == NULL)
-    {
-        e_log_error("e_view_container_impl_destroy: container is NULL");
-        return;
-    }
-
-    struct e_view_container* view_container = wl_container_of(container, view_container, base);
-
-    e_view_container_destroy(view_container);
-}
-
-static const struct e_container_impl view_container_impl = {
-    .set_workspace = e_view_container_impl_set_workspace,
-    .arrange = e_view_container_impl_arrange,
-    .commit = e_view_container_impl_commit,
-    .destroy = e_view_container_impl_destroy
-};
-
 static void e_view_container_handle_view_map(struct wl_listener* listener, void* data)
 {
     //TODO: e_view_container_handle_view_map
@@ -123,7 +34,7 @@ static void e_view_container_handle_view_destroy(struct wl_listener* listener, v
 {
     struct e_view_container* view_container = wl_container_of(listener, view_container, destroy);
 
-    e_view_container_destroy(view_container);
+    e_container_destroy(&view_container->base);
 }
 
 // Create a view container.
@@ -137,12 +48,15 @@ struct e_view_container* e_view_container_create(struct e_server* server, struct
 
     struct e_view_container* view_container = calloc(1, sizeof(*view_container));
 
-    if (!e_container_init(&view_container->base, &view_container_impl, E_CONTAINER_VIEW, view_container))
+    if (!e_container_init(&view_container->base, E_CONTAINER_VIEW))
     {
         free(view_container);
         return NULL;
     }
 
+    view_container->base.view_container = view_container;
+
+    view_container->server = server;
     view_container->tree = wlr_scene_tree_create(server->pending);
 
     if (view_container->tree == NULL)
@@ -155,11 +69,11 @@ struct e_view_container* e_view_container_create(struct e_server* server, struct
     if (e_node_desc_create(&view_container->tree->node, E_NODE_DESC_VIEW_CONTAINER, view_container) == NULL)
     {
         wlr_scene_node_destroy(&view_container->tree->node);
+        e_container_fini(&view_container->base);
         free(view_container);
         return NULL;
     }
 
-    view_container->server = server;
     view_container->view = view;
 
     wlr_scene_node_reparent(&view->tree->node, view_container->tree);

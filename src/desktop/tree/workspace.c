@@ -80,7 +80,7 @@ struct e_workspace* e_workspace_create(struct e_output* output)
 
     if (workspace->cosmic_handle == NULL)
     {
-        e_tree_container_destroy(workspace->root_tiling_container);
+        e_container_destroy(&workspace->root_tiling_container->base);
         free(workspace);
         
         e_log_error("e_workspace_create: failed to create cosmic workspace handle!");
@@ -93,7 +93,7 @@ struct e_workspace* e_workspace_create(struct e_output* output)
 
     if (workspace->ext_handle == NULL)
     {
-        e_tree_container_destroy(workspace->root_tiling_container);
+        e_container_destroy(&workspace->root_tiling_container->base);
         e_cosmic_workspace_remove(workspace->cosmic_handle);
         free(workspace);
         
@@ -261,7 +261,7 @@ void e_workspace_destroy(struct e_workspace* workspace)
     SIGNAL_DISCONNECT(workspace->ext_request_activate);
     e_ext_workspace_remove(workspace->ext_handle);
 
-    e_tree_container_destroy(workspace->root_tiling_container);
+    e_container_destroy(&workspace->root_tiling_container->base);
     workspace->root_tiling_container = NULL;
 
     // Destroy workspace layer trees
