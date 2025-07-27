@@ -66,7 +66,7 @@ struct e_workspace* e_workspace_create(struct e_output* output)
     workspace->output = output;
     workspace->fullscreen_view = NULL;
 
-    workspace->root_tiling_container = e_tree_container_create(E_TILING_MODE_HORIZONTAL);
+    workspace->root_tiling_container = e_tree_container_create(output->server, E_TILING_MODE_HORIZONTAL);
 
     if (workspace->root_tiling_container == NULL)
     {

@@ -118,10 +118,10 @@ void e_desktop_focus_view_container(struct e_view_container* view_container)
         return;
     }
 
-    if (e_seat_focus_surface(view_container->server->seat, view_container->view->surface, false))
+    if (e_seat_focus_surface(view_container->base.server->seat, view_container->view->surface, false))
     {
         e_view_set_activated(view_container->view, true);
-        e_view_container_raise_to_top(view_container);
+        e_container_raise_to_top(&view_container->base);
     }
 }
 
