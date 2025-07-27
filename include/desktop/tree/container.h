@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stdbool.h>
-
 #include <stdint.h>
+
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
@@ -54,6 +54,11 @@ struct e_container
     // Parent of this container, NULL if root container or floating container.
     // May be NULL.
     struct e_tree_container* parent;
+
+    struct
+    {
+        struct wl_signal destroy;
+    } events;
 };
 
 enum e_tiling_mode

@@ -44,6 +44,8 @@ bool e_container_init(struct e_container* container, enum e_container_type type,
 
     container->area = (struct wlr_box){0, 0, 0, 0};
 
+    wl_signal_init(&container->events.destroy);
+
     return true;
 }
 
@@ -389,6 +391,8 @@ static void e_tree_container_destroy(struct e_tree_container* tree_container)
 
     tree_container->destroying = true;
 
+    wl_signal_emit_mutable(&tree_container->base.events.destroy, NULL);
+
     e_tree_container_clear_children(tree_container);
 
     e_list_fini(&tree_container->children);
@@ -407,6 +411,8 @@ static void e_view_container_destroy(struct e_view_container* view_container)
         e_log_error("e_view_container_destroy: view_container is NULL!");
         return;
     }
+
+    wl_signal_emit_mutable(&view_container->base.events.destroy, NULL);
 
     wl_list_remove(&view_container->link);
 
