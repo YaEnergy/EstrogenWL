@@ -84,9 +84,9 @@ struct e_output* e_desktop_hovered_output(struct e_server* server)
     return output;
 }
 
-// Returns view container currently hovered by cursor.
-// Returns NULL if no view container is being hovered.
-struct e_view_container* e_desktop_hovered_view_container(struct e_server* server)
+// Returns container currently hovered by cursor.
+// Returns NULL if no container is being hovered.
+struct e_container* e_desktop_hovered_container(struct e_server* server)
 {
     assert(server);
 
@@ -98,7 +98,7 @@ struct e_view_container* e_desktop_hovered_view_container(struct e_server* serve
 
     struct e_cursor* cursor = server->seat->cursor;
 
-    return e_view_container_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
+    return e_container_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
 }
 
 /* focus */

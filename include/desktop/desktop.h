@@ -14,7 +14,8 @@ struct e_server;
 struct e_output;
 struct e_seat;
 
-struct e_view_container;
+struct e_container;
+struct e_view_container; //TODO: remove, only use e_container here
 struct e_layer_surface;
 
 // Functions for
@@ -35,9 +36,9 @@ struct wlr_scene_surface* e_desktop_scene_surface_at(struct wlr_scene_node* node
 // Returns NULL if no output is being hovered.
 struct e_output* e_desktop_hovered_output(struct e_server* server);
 
-// Returns view container currently hovered by cursor.
-// Returns NULL if no view container is being hovered.
-struct e_view_container* e_desktop_hovered_view_container(struct e_server* server);
+// Returns container currently hovered by cursor.
+// Returns NULL if no container is being hovered.
+struct e_container* e_desktop_hovered_container(struct e_server* server);
 
 /* focus */
 

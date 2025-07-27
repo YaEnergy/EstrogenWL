@@ -11,6 +11,7 @@
 #include <wlr/util/box.h>
 
 #include "desktop/tree/workspace.h"
+#include "desktop/tree/node.h"
 #include "desktop/views/view.h"
 
 #include "server.h"
@@ -19,9 +20,22 @@
 #include "util/list.h"
 #include "util/log.h"
 
-bool e_container_init(struct e_container* container, enum e_container_type type)
+bool e_container_init(struct e_container* container, enum e_container_type type, struct e_server* server)
 {
     assert(container);
+
+    container->server = server;
+
+    container->tree = wlr_scene_tree_create(server->pending);
+
+    if (container->tree == NULL)
+        return false;
+
+    if (e_node_desc_create(&container->tree->node, E_NODE_DESC_CONTAINER, container) == NULL)
+    {
+        wlr_scene_node_destroy(&container->tree->node);
+        return false;
+    }
 
     container->type = type;
 
@@ -39,6 +53,9 @@ void e_container_fini(struct e_container* container)
 
     if (container->parent != NULL)
         e_tree_container_remove_container(container->parent, container);
+
+    wlr_scene_node_destroy(&container->tree->node);
+    container->tree = NULL;
 }
 
 bool e_container_is_tiled(struct e_container* container)
@@ -173,11 +190,74 @@ void e_container_rearrange(struct e_container* container)
     e_container_arrange(container, container->area);
 }
 
+void e_container_raise_to_top(struct e_container* container)
+{
+    assert(container);
+
+    wlr_scene_node_raise_to_top(&container->tree->node);
+}
+
+// Returns NULL on fail.
+static struct e_container* e_container_try_from_node(struct wlr_scene_node* node)
+{
+    if (node == NULL)
+        return NULL;
+
+    //data is either NULL or e_node_desc
+    if (node->data == NULL)
+        return NULL;
+
+    struct e_node_desc* node_desc = node->data;
+
+    return e_container_try_from_e_node_desc(node_desc);
+}
+
+// Returns NULL on fail.
+struct e_container* e_container_try_from_node_ancestors(struct wlr_scene_node* node)
+{
+    if (node == NULL)
+        return NULL;
+
+    struct e_container* container = e_container_try_from_node(node);
+
+    if (container != NULL)
+        return container;
+
+    //keep going upwards in the tree until we find a view container (in which case we return it), or reach the root of the tree (no parent)
+    while (node->parent != NULL)
+    {
+        //go to parent node
+        node = &node->parent->node;
+
+        container = e_container_try_from_node(node);
+
+        if (container != NULL)
+            return container;
+    }
+
+    return NULL;
+}
+
+// Finds the container at the specified layout coords in given scene graph.
+// Returns NULL on fail.
+struct e_container* e_container_at(struct wlr_scene_node* node, double lx, double ly)
+{
+    if (node == NULL)
+        return NULL;
+
+    struct wlr_scene_node* node_at = wlr_scene_node_at(node, lx, ly, NULL, NULL);
+    
+    if (node_at != NULL)
+        return e_container_try_from_node_ancestors(node_at);
+    else
+        return NULL;
+}
+
 // Tree container functions
 
 // Creates a tree container.
 // Returns NULL on fail.
-struct e_tree_container* e_tree_container_create(enum e_tiling_mode tiling_mode)
+struct e_tree_container* e_tree_container_create(struct e_server* server, enum e_tiling_mode tiling_mode)
 {
     struct e_tree_container* tree_container = calloc(1, sizeof(*tree_container));
 
@@ -187,9 +267,14 @@ struct e_tree_container* e_tree_container_create(enum e_tiling_mode tiling_mode)
         return NULL;
     }
 
-    e_list_init(&tree_container->children, 5);
+    if (!e_container_init(&tree_container->base, E_CONTAINER_TREE, server))
+    {
+        e_log_error("e_tree_container_create: failed to init container");
+        free(tree_container);
+        return NULL;
+    }
 
-    e_container_init(&tree_container->base, E_CONTAINER_TREE);
+    e_list_init(&tree_container->children, 5);
 
     tree_container->base.tree_container = tree_container;
     tree_container->tiling_mode = tiling_mode;
@@ -326,8 +411,7 @@ static void e_view_container_destroy(struct e_view_container* view_container)
     wl_list_remove(&view_container->link);
 
     //reparent view node before destroying container node, so we don't destroy the view's tree aswell
-    wlr_scene_node_reparent(&view_container->view->tree->node, view_container->server->pending);
-    wlr_scene_node_destroy(&view_container->tree->node);
+    wlr_scene_node_reparent(&view_container->view->tree->node, view_container->base.server->pending);
 
     SIGNAL_DISCONNECT(view_container->map);
     SIGNAL_DISCONNECT(view_container->unmap);

@@ -30,6 +30,8 @@ enum e_container_type
 // A container for autoconfiguring data by its ancestor containers.
 struct e_container
 {
+    struct e_server* server;
+
     enum e_container_type type;
 
     // Container implementation, see type (e_container_type).
@@ -44,6 +46,8 @@ struct e_container
     struct wlr_box area;
     // percentage of space this container takes up within parent container
     float percentage;
+
+    struct wlr_scene_tree* tree;
 
     struct e_workspace* workspace;
 
@@ -74,15 +78,10 @@ struct e_tree_container
 // A container that contains a single view.
 struct e_view_container
 {
-    struct e_server* server;
-
     struct e_view* view;
 
     // View's pending & current area.
     struct wlr_box view_current, view_pending;
-
-    // Holds view's tree.
-    struct wlr_scene_tree* tree;
 
     struct e_container base;
 
@@ -95,7 +94,7 @@ struct e_view_container
 };
 
 // Returns true on success, false on fail.
-bool e_container_init(struct e_container* container, enum e_container_type type);
+bool e_container_init(struct e_container* container, enum e_container_type type, struct e_server* server);
 
 void e_container_fini(struct e_container* container);
 
@@ -114,6 +113,15 @@ void e_container_arrange(struct e_container* container, struct wlr_box area);
 // Rearrange container within pending area.
 void e_container_rearrange(struct e_container* container);
 
+void e_container_raise_to_top(struct e_container* container);
+
+// Returns NULL on fail.
+struct e_container* e_container_try_from_node_ancestors(struct wlr_scene_node* node);
+
+// Finds the view container at the specified layout coords in given scene graph.
+// Returns NULL on fail.
+struct e_container* e_container_at(struct wlr_scene_node* node, double lx, double ly);
+
 // Destroy the container and free its memory.
 void e_container_destroy(struct e_container* container);
 
@@ -121,7 +129,7 @@ void e_container_destroy(struct e_container* container);
 
 // Creates a tree container.
 // Returns NULL on fail.
-struct e_tree_container* e_tree_container_create(enum e_tiling_mode tiling_mode);
+struct e_tree_container* e_tree_container_create(struct e_server* server, enum e_tiling_mode tiling_mode);
 
 // Inserts a container in tree container at given index.
 // Returns true on success, false on fail.
@@ -140,16 +148,6 @@ bool e_tree_container_remove_container(struct e_tree_container* tree_container, 
 // Create a view container.
 // Returns NULL on fail.
 struct e_view_container* e_view_container_create(struct e_server* server, struct e_view* view);
-
-// Raise view container to the top of its layer. (floating, tiled & fullscreen but only matters for floating)
-void e_view_container_raise_to_top(struct e_view_container* view_container);
-
-// Returns NULL on fail.
-struct e_view_container* e_view_container_try_from_node_ancestors(struct wlr_scene_node* node);
-
-// Finds the view container at the specified layout coords in given scene graph.
-// Returns NULL on fail.
-struct e_view_container* e_view_container_at(struct wlr_scene_node* node, double lx, double ly);
 
 // Finds the view container which has this surface as its view's main surface.
 // Returns NULL on fail.
