@@ -169,6 +169,8 @@ static void arrange_tree_children(struct e_tree_container* tree_container, struc
         if (child_container == NULL)
             continue;
 
+        wlr_scene_node_reparent(&child_container->tree->node, tree_container->base.tree);
+
         struct wlr_box child_area = {area.x, area.y, area.width, area.height};
 
         switch (tree_container->tiling_mode)

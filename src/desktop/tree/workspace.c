@@ -169,12 +169,16 @@ void e_workspace_arrange(struct e_workspace* workspace, struct wlr_box full_area
     workspace->full_area = full_area;
     workspace->tiled_area = tiled_area;
 
-    //TODO: move trees, don't use x y in configure
-
-    if (workspace->fullscreen_view != NULL)
-        e_view_configure(workspace->fullscreen_view, full_area.x, full_area.y, full_area.width, full_area.height);
-
+    //TODO: fullscreen container
     e_container_arrange(&workspace->root_tiling_container->base, tiled_area);
+
+    for (int i = 0; i < workspace->floating_containers.count; i++)
+    {
+        struct e_container* container = e_list_at(&workspace->floating_containers, i);
+
+        if (container != NULL)
+            wlr_scene_node_reparent(&container->tree->node, workspace->layers.floating);
+    }
 }
 
 // Update visiblity of workspace trees.
