@@ -67,6 +67,26 @@ bool e_container_is_tiled(struct e_container* container)
     return container->parent != NULL;
 }
 
+void e_container_leave(struct e_container* container)
+{
+    assert(container);
+    
+    if (container->workspace != NULL)
+    {
+        int index = e_list_find_index(&container->workspace->floating_containers, container);
+
+        if (index != -1)
+            e_list_remove_index(&container->workspace->floating_containers, index);
+        
+        e_container_set_workspace(container, NULL);
+    }
+
+    if (container->parent != NULL)
+        e_container_set_parent(container, NULL);
+
+    wlr_scene_node_reparent(&container->tree->node, container->server->pending);
+}
+
 // Set container tiled state.
 void e_container_set_tiled(struct e_container* container, bool tiled)
 {
@@ -74,6 +94,18 @@ void e_container_set_tiled(struct e_container* container, bool tiled)
 
     if (container->type == E_CONTAINER_VIEW)
         e_view_set_tiled(container->view_container->view, tiled);
+}
+
+// Tile or float container within its current workspace.
+// Workspace must be arranged.
+void e_container_change_tiling(struct e_container* container, bool tiled)
+{
+    assert(container && container->workspace);
+
+    if (tiled)
+        e_workspace_add_tiled_container(container->workspace, container);
+    else
+        e_workspace_add_floating_container(container->workspace, container);
 }
 
 void e_container_set_workspace(struct e_container* container, struct e_workspace* workspace)

@@ -111,7 +111,10 @@ struct e_workspace* e_workspace_create(struct e_output* output)
     NEW_SCENE_TREE(workspace->layers.tiling, output->layers.tiling, E_NODE_DESC_WORKSPACE, workspace);
     NEW_SCENE_TREE(workspace->layers.fullscreen, output->layers.overlay, E_NODE_DESC_WORKSPACE, workspace);
 
-    e_list_init(&workspace->floating_views, 10);
+    e_list_init(&workspace->floating_containers, 10);
+
+    e_container_set_workspace(&workspace->root_tiling_container->base, workspace);
+    wlr_scene_node_reparent(&workspace->root_tiling_container->base.tree->node, workspace->layers.tiling);
 
     e_workspace_set_activated(workspace, false);
 
@@ -199,6 +202,34 @@ void e_workspace_update_tree_visibility(struct e_workspace* workspace)
     }
 }
 
+// Adds container as tiled to workspace.
+// Workspace must be arranged.
+void e_workspace_add_tiled_container(struct e_workspace* workspace, struct e_container* container)
+{
+    assert(workspace && container);
+
+    if (container->workspace != NULL)
+        e_container_leave(container);
+    
+    e_container_set_workspace(container, workspace);
+    e_container_set_tiled(container, true);
+    e_container_set_parent(container, workspace->root_tiling_container);
+}
+
+// Adds container as floating to workspace.
+// Workspace must be arranged.
+void e_workspace_add_floating_container(struct e_workspace* workspace, struct e_container* container)
+{
+    assert(workspace && container);
+
+    if (container->workspace != NULL)
+        e_container_leave(container);
+
+    e_container_set_workspace(container, workspace);
+    e_container_set_tiled(container, false);
+    e_list_add(&workspace->floating_containers, container);
+}
+
 // Returns NULL on fail.
 static struct e_workspace* e_workspace_try_from_node(struct wlr_scene_node* node)
 {
@@ -263,13 +294,15 @@ void e_workspace_destroy(struct e_workspace* workspace)
 
     e_container_destroy(&workspace->root_tiling_container->base);
     workspace->root_tiling_container = NULL;
+    
+    //TODO: destroy all containers in floating containers list
 
     // Destroy workspace layer trees
     wlr_scene_node_destroy(&workspace->layers.floating->node);
     wlr_scene_node_destroy(&workspace->layers.tiling->node);
     wlr_scene_node_destroy(&workspace->layers.fullscreen->node);
 
-    e_list_fini(&workspace->floating_views);
+    e_list_fini(&workspace->floating_containers);
 
     free(workspace);
 }

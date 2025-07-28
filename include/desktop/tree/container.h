@@ -122,6 +122,14 @@ void e_container_arrange(struct e_container* container, struct wlr_box area);
 // Rearrange container within pending area.
 void e_container_rearrange(struct e_container* container);
 
+// Leave workspace & parent.
+void e_container_leave(struct e_container* container);
+
+// Tile or float container within its current workspace.
+// Workspace must be arranged.
+void e_container_change_tiling(struct e_container* container, bool tiled);
+
+// Raise container to the top of its current parent tree.
 void e_container_raise_to_top(struct e_container* container);
 
 // Returns NULL on fail.

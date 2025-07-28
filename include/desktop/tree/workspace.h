@@ -45,7 +45,7 @@ struct e_workspace
     //container for tiled containers
     struct e_tree_container* root_tiling_container;
 
-    struct e_list floating_views; //struct e_view*
+    struct e_list floating_containers; //struct e_container*
 
     struct e_cosmic_workspace* cosmic_handle;
 
@@ -71,6 +71,14 @@ void e_workspace_arrange(struct e_workspace* workspace, struct wlr_box full_area
 
 // Update visibility of workspace trees.
 void e_workspace_update_tree_visibility(struct e_workspace* workspace);
+
+// Adds container as tiled to workspace.
+// Workspace must be arranged.
+void e_workspace_add_tiled_container(struct e_workspace* workspace, struct e_container* container);
+
+// Adds container as floating to workspace.
+// Workspace must be arranged.
+void e_workspace_add_floating_container(struct e_workspace* workspace, struct e_container* container);
 
 // Get workspace from node ancestors.
 // Returns NULL on fail.
