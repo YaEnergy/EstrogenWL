@@ -15,7 +15,6 @@
 
 #include "config.h"
 
-struct e_desktop;
 struct e_seat;
 
 struct wlr_xdg_shell;
