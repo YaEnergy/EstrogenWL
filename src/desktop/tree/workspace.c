@@ -181,6 +181,14 @@ void e_workspace_arrange(struct e_workspace* workspace, struct wlr_box full_area
     }
 }
 
+// Rearrange workspace within its current area.
+void e_workspace_rearrange(struct e_workspace* workspace)
+{
+    assert(workspace);
+
+    e_workspace_arrange(workspace, workspace->full_area, workspace->tiled_area);
+}
+
 // Update visiblity of workspace trees.
 void e_workspace_update_tree_visibility(struct e_workspace* workspace)
 {

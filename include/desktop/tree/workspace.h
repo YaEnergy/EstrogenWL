@@ -69,6 +69,9 @@ void e_workspace_set_activated(struct e_workspace* workspace, bool activated);
 // Arranges a workspace's children to fit within the given area.
 void e_workspace_arrange(struct e_workspace* workspace, struct wlr_box full_area, struct wlr_box tiled_area);
 
+// Rearrange workspace within its current area.
+void e_workspace_rearrange(struct e_workspace* workspace);
+
 // Update visibility of workspace trees.
 void e_workspace_update_tree_visibility(struct e_workspace* workspace);
 
