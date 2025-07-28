@@ -93,6 +93,8 @@ struct e_view_container
     struct wl_listener map;
     struct wl_listener unmap;
 
+    struct wl_listener commit;
+
     struct wl_listener destroy;
 
     struct wl_list link; //e_server::view_containers

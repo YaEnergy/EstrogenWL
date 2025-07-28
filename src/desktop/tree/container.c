@@ -465,6 +465,8 @@ static void e_view_container_destroy(struct e_view_container* view_container)
     SIGNAL_DISCONNECT(view_container->map);
     SIGNAL_DISCONNECT(view_container->unmap);
 
+    SIGNAL_DISCONNECT(view_container->commit);
+
     SIGNAL_DISCONNECT(view_container->destroy);
 
     e_container_fini(&view_container->base);
