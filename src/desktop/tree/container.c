@@ -67,6 +67,15 @@ bool e_container_is_tiled(struct e_container* container)
     return container->parent != NULL;
 }
 
+// Set container tiled state.
+void e_container_set_tiled(struct e_container* container, bool tiled)
+{
+    assert(container);
+
+    if (container->type == E_CONTAINER_VIEW)
+        e_view_set_tiled(container->view_container->view, tiled);
+}
+
 void e_container_set_workspace(struct e_container* container, struct e_workspace* workspace)
 {
     assert(container);

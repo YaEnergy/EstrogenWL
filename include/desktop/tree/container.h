@@ -105,6 +105,10 @@ void e_container_fini(struct e_container* container);
 
 bool e_container_is_tiled(struct e_container* container);
 
+// Set container tiled state.
+void e_container_set_tiled(struct e_container* container, bool tiled);
+
+// Set container workspace state.
 void e_container_set_workspace(struct e_container* container, struct e_workspace* workspace);
 
 // Sets the parent of a container.
