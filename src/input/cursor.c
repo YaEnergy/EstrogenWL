@@ -46,50 +46,48 @@ static void e_cursor_frame(struct wl_listener* listener, void* data)
     wlr_seat_pointer_notify_frame(cursor->seat->wlr_seat);
 }
 
-static void start_grab_resize_focused_view(struct e_cursor* cursor)
+//TODO: e_container instead of e_view_container
+static void start_grab_resize_focused_view_container(struct e_cursor* cursor)
 {
     assert(cursor);
 
-    /*
-    struct e_view* focused_view = e_desktop_focused_view(cursor->seat->server);
-
-    if (focused_view == NULL)
+    struct e_view_container* focused_view_container = e_desktop_focused_view_container(cursor->seat->server);
+    
+    if (focused_view_container == NULL)
         return;
 
-    //enum wlr_edges edges = WLR_EDGE_NONE;
+    struct e_container* focused_container = &focused_view_container->base;
+
+    enum wlr_edges edges = WLR_EDGE_NONE;
 
     //get closest edges to cursor
 
-    
-    double mid_x = (double)focused_view->current.x + (double)focused_view->current.width / 2.0;
+    double mid_x = (double)focused_container->area.x + (double)focused_container->area.width / 2.0;
     
     if (cursor->wlr_cursor->x < mid_x)
         edges = WLR_EDGE_LEFT;
     else
         edges = WLR_EDGE_RIGHT;
 
-    double mid_y = (double)focused_view->current.y + (double)focused_view->current.height / 2.0;
+    double mid_y = (double)focused_container->area.y + (double)focused_container->area.height / 2.0;
 
     if (cursor->wlr_cursor->y < mid_y)
         edges |= WLR_EDGE_TOP;
     else
         edges |= WLR_EDGE_BOTTOM;
 
-    e_cursor_start_view_resize(cursor, focused_view, edges);
-
-    */
+    e_cursor_start_container_resize(cursor, focused_container, edges);
 }
 
-static void start_grab_move_focused_view(struct e_cursor* cursor)
+//TODO: e_container instead of e_view_container
+static void start_grab_move_focused_view_container(struct e_cursor* cursor)
 {
     assert(cursor);
 
-    /*
-    struct e_view* focused_view = e_desktop_focused_view(cursor->seat->server);
+    struct e_view_container* focused_view_container = e_desktop_focused_view_container(cursor->seat->server);
 
-    if (focused_view != NULL)
-        e_cursor_start_view_move(cursor, focused_view);
-    */
+    if (focused_view_container != NULL)
+        e_cursor_start_container_move(cursor, &focused_view_container->base);
 }
 
 //mouse button presses
@@ -103,18 +101,18 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
     struct wlr_keyboard* keyboard = wlr_seat_get_keyboard(cursor->seat->wlr_seat);
 
     //is ALT modifier is pressed on keyboard? (for both cases within here, cursor mode should be in default mode)
-    if (keyboard != NULL && (wlr_keyboard_get_modifiers(keyboard) & WLR_MODIFIER_ALT) && cursor->mode == E_CURSOR_MODE_DEFAULT)
+    if (keyboard != NULL && (wlr_keyboard_get_modifiers(keyboard) & WLR_MODIFIER_LOGO) && cursor->mode == E_CURSOR_MODE_DEFAULT)
     {
         //right click is held, start resizing the focussed view
         if (event->button == E_POINTER_BUTTON_RIGHT && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
         {
-            start_grab_resize_focused_view(cursor);
+            start_grab_resize_focused_view_container(cursor);
             handled = true;
         }
         //middle click is held, start moving the focussed view
         else if (event->button == E_POINTER_BUTTON_MIDDLE && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
         {
-            start_grab_move_focused_view(cursor);
+            start_grab_move_focused_view_container(cursor);
             handled = true;
         }
     }
