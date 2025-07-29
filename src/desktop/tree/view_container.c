@@ -12,12 +12,16 @@
 #include <wlr/types/wlr_output.h>
 
 #include <wlr/util/box.h>
+#include <wlr/util/edges.h>
 
 #include "desktop/tree/node.h"
 #include "desktop/views/view.h"
 #include "desktop/tree/workspace.h"
 #include "desktop/desktop.h"
 #include "desktop/output.h"
+
+#include "input/seat.h"
+#include "input/cursor.h"
 
 #include "util/log.h"
 #include "util/wl_macros.h"
@@ -106,6 +110,21 @@ static void e_view_container_handle_view_commit(struct wl_listener* listener, vo
     e_view_set_popup_space(view_container->view, toplevel_popup_space);
 }
 
+static void e_view_container_handle_view_request_move(struct wl_listener* listener, void* data)
+{
+    struct e_view_container* view_container = wl_container_of(listener, view_container, request_move);
+
+    e_cursor_start_container_move(view_container->base.server->seat->cursor, &view_container->base);
+}
+
+static void e_view_container_handle_view_request_resize(struct wl_listener* listener, void* data)
+{
+    struct e_view_container* view_container = wl_container_of(listener, view_container, request_resize);
+    struct e_view_request_resize_event* event = data;
+
+    e_cursor_start_container_resize(view_container->base.server->seat->cursor, &view_container->base, event->edges);
+}
+
 static void e_view_container_handle_view_request_configure(struct wl_listener* listener, void* data)
 {
     struct e_view_container* view_container = wl_container_of(listener, view_container, request_configure);
@@ -154,6 +173,8 @@ struct e_view_container* e_view_container_create(struct e_server* server, struct
 
     SIGNAL_CONNECT(view->events.commit, view_container->commit, e_view_container_handle_view_commit);
 
+    SIGNAL_CONNECT(view->events.request_move, view_container->request_move, e_view_container_handle_view_request_move);
+    SIGNAL_CONNECT(view->events.request_resize, view_container->request_resize, e_view_container_handle_view_request_resize);
     SIGNAL_CONNECT(view->events.request_configure, view_container->request_configure, e_view_container_handle_view_request_configure);
 
     SIGNAL_CONNECT(view->events.destroy, view_container->destroy, e_view_container_handle_view_destroy);
