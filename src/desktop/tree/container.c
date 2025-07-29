@@ -126,7 +126,9 @@ void e_container_set_workspace(struct e_container* container, struct e_workspace
             }
             break;
         case E_CONTAINER_VIEW:
-            //TODO: update view output & layering
+            if (workspace != NULL)
+                e_view_set_output(container->view_container->view, workspace->output);
+
             break;
     }
 }
