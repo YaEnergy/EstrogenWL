@@ -9,6 +9,8 @@
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_scene.h>
 
+//TODO: interactive container action functions here instead of in cursor, #include <wlr/util/edges.h>
+
 struct e_server;
 
 struct e_output;
@@ -61,3 +63,14 @@ struct e_view_container* e_desktop_focused_view_container(struct e_server* serve
 struct e_view_container* e_desktop_prev_focused_view_container(struct e_server* server);
 
 void e_desktop_clear_focus(struct e_server* server);
+
+/* interactive */
+
+// Starts an interactive container resize action.
+//TODO: void e_desktop_start_interactive_container_resize(struct e_container* container, uint32_t edges);
+
+// Starts an interactive container move action.
+//TODO: void e_desktop_start_interactive_container_move(struct e_container* container);
+
+// Ends the current interactive action.
+//TODO: void e_desktop_end_interactive(struct e_server* server);
