@@ -95,6 +95,8 @@ struct e_view_container
 
     struct wl_listener commit;
 
+    struct wl_listener request_move;
+    struct wl_listener request_resize;
     struct wl_listener request_configure;
 
     struct wl_listener destroy;
