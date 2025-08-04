@@ -111,6 +111,10 @@ void e_container_fini(struct e_container* container);
 
 bool e_container_is_tiled(struct e_container* container);
 
+// Returns whether container has the given ancestor.
+// False if not, including when ancestor is container.
+bool e_container_has_ancestor(struct e_container* container, struct e_container* ancenstor);
+
 // Set container tiled state.
 void e_container_set_tiled(struct e_container* container, bool tiled);
 

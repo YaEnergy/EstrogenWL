@@ -67,6 +67,23 @@ bool e_container_is_tiled(struct e_container* container)
     return container->parent != NULL;
 }
 
+// Returns whether container has the given ancestor.
+// False if not, including when ancestor is container.
+bool e_container_has_ancestor(struct e_container* container, struct e_container* ancenstor)
+{
+    assert(container && ancenstor);
+    
+    while (container->parent != NULL)
+    {
+        container = &container->parent->base;
+
+        if (container == ancenstor)
+            return true;
+    }
+
+    return false;
+}
+
 void e_container_leave(struct e_container* container)
 {
     assert(container);
