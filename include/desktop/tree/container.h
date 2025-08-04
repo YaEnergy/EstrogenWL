@@ -142,6 +142,10 @@ void e_container_change_tiling(struct e_container* container, bool tiled);
 // Raise container to the top of its current parent tree.
 void e_container_raise_to_top(struct e_container* container);
 
+// Move container to a different workspace.
+// Old & new workspace must be arranged.
+void e_container_move_to_workspace(struct e_container* container, struct e_workspace* workspace);
+
 // Returns NULL on fail.
 struct e_container* e_container_try_from_node_ancestors(struct wlr_scene_node* node);
 

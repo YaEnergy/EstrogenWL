@@ -261,6 +261,24 @@ void e_container_raise_to_top(struct e_container* container)
     wlr_scene_node_raise_to_top(&container->tree->node);
 }
 
+// Move container to a different workspace.
+// Old & new workspace must be arranged.
+void e_container_move_to_workspace(struct e_container* container, struct e_workspace* workspace)
+{
+    assert(workspace && workspace);
+
+    //TODO: fullscreen updates
+
+    bool was_tiled = e_container_is_tiled(container);
+
+    e_container_leave(container);
+
+    if (was_tiled)
+        e_workspace_add_tiled_container(workspace, container);
+    else
+        e_workspace_add_floating_container(workspace, container);
+}
+
 // Returns NULL on fail.
 static struct e_container* e_container_try_from_node(struct wlr_scene_node* node)
 {
