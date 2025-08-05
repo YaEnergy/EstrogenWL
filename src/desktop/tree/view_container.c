@@ -53,9 +53,9 @@ static void e_view_container_handle_view_map(struct wl_listener* listener, void*
         return;
     }
 
-    //TODO: fullscreen
-
     e_log_info("map container wants fullscreen: %i", event->fullscreen);
+    
+    e_container_set_fullscreen(&view_container->base, event->fullscreen);
     
     if (!event->wants_floating)
         e_workspace_add_tiled_container(workspace, &view_container->base);
