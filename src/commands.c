@@ -86,21 +86,30 @@ static void e_commands_switch_tiling_mode(struct e_server* server)
     */
 }
 
-static void e_commands_toggle_fullscreen_focused_view(struct e_server* server)
+static void e_commands_toggle_fullscreen(struct e_server* server)
 {
-    /*
-    struct e_view* view = e_desktop_focused_view(server);
+    struct e_view_container* view_container = e_desktop_focused_view_container(server);
 
-    if (view != NULL)
+    if (view_container == NULL)
+        return;
+
+    struct e_container* container = &view_container->base;
+
+    if (container->workspace != NULL)
     {
-        e_view_set_fullscreen(view, !view->fullscreen);
-        e_log_info("toggle fullscreen mode of view, fullscreen: %i, title: %s", view->fullscreen, view->title);
+        if (container->workspace->fullscreen_container != container)
+            e_workspace_change_fullscreen_container(container->workspace, container);
+        else
+            e_workspace_change_fullscreen_container(container->workspace, NULL);
+
+        e_workspace_rearrange(container->workspace);
+        
+        e_log_info("toggle fullscreen mode of container, fullscreen: %i", container->fullscreen);
     }
     else 
     {
-        e_log_error("e_commands_toggle_fullscreen_focused_view: failed to toggle fullscreen mode of view!");
+        e_log_error("e_commands_toggle_fullscreen: failed to toggle fullscreen mode of container!");
     }
-    */
 }
 
 static void e_commands_exec_as_new_process(const char* command)
@@ -168,7 +177,7 @@ void e_commands_parse(struct e_server* server, const char* command)
     //TODO: toggle_fullscreen & toggle_tiling are currently placeholders
     else if (strcmp(argument, "toggle_fullscreen") == 0)
     {
-        e_commands_toggle_fullscreen_focused_view(server);
+        e_commands_toggle_fullscreen(server);
     }
     else if (strcmp(argument, "toggle_tiling") == 0)
     {
