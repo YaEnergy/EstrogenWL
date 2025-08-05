@@ -47,22 +47,26 @@ static void e_commands_kill_focused_view(struct e_server* server)
         */
 }
 
-static void e_commands_toggle_tiling_focused_view(struct e_server* server)
+static void e_commands_toggle_tiled(struct e_server* server)
 {
-    /*
-    struct e_view* view = e_desktop_focused_view(server);
+    struct e_view_container* view_container = e_desktop_focused_view_container(server);
 
-    if (view != NULL)
+    if (view_container == NULL)
+        return;
+
+    struct e_container* container = &view_container->base;
+
+    if (container->workspace != NULL)
     {
-        e_view_set_tiled(view, !view->tiled);
+        e_container_change_tiling(container, !e_container_is_tiled(container));
+        e_workspace_rearrange(container->workspace);
 
-        e_log_info("setted tiling of view, title: %s", view->title == NULL ? "no name" : view->title);
+        e_log_info("toggled tiled of focused container");
     }
     else 
     {
-        e_log_info("failed to set tiling of focused view");
+        e_log_info("failed to toggled tiled of focused container");
     }
-        */
 }
 
 static void e_commands_switch_tiling_mode(struct e_server* server)
@@ -174,14 +178,14 @@ void e_commands_parse(struct e_server* server, const char* command)
     {
         e_commands_kill_focused_view(server);
     }
-    //TODO: toggle_fullscreen & toggle_tiling are currently placeholders
+    //TODO: toggle_fullscreen & toggle_tiled are currently placeholders
     else if (strcmp(argument, "toggle_fullscreen") == 0)
     {
         e_commands_toggle_fullscreen(server);
     }
-    else if (strcmp(argument, "toggle_tiling") == 0)
+    else if (strcmp(argument, "toggle_tiled") == 0)
     {
-        e_commands_toggle_tiling_focused_view(server);
+        e_commands_toggle_tiled(server);
     }
     //TODO: switch_tiling_mode is a placeholder name
     else if (strcmp(argument, "switch_tiling_mode") == 0)
