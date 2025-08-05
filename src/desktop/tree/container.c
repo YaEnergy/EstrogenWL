@@ -20,6 +20,8 @@
 #include "util/list.h"
 #include "util/log.h"
 
+struct e_output;
+
 bool e_container_init(struct e_container* container, enum e_container_type type, struct e_server* server)
 {
     assert(container);
@@ -92,10 +94,17 @@ void e_container_leave(struct e_container* container)
     
     if (container->workspace != NULL)
     {
-        int index = e_list_find_index(&container->workspace->floating_containers, container);
+        struct e_workspace* workspace = container->workspace;
+
+        //remove workspace's fullscreen if it is leaving container or a child of leaving container
+        //doesn't actually unfullscreen the container
+        if (container->fullscreen || (workspace->fullscreen_container != NULL && e_container_has_ancestor(workspace->fullscreen_container, container)))
+            workspace->fullscreen_container = NULL;
+
+        int index = e_list_find_index(&workspace->floating_containers, container);
 
         if (index != -1)
-            e_list_remove_index(&container->workspace->floating_containers, index);
+            e_list_remove_index(&workspace->floating_containers, index);
         
         e_container_set_workspace(container, NULL);
     }
@@ -116,15 +125,19 @@ void e_container_set_tiled(struct e_container* container, bool tiled)
 }
 
 // Tile or float container within its current workspace.
-// Workspace must be arranged.
+// Workspace must be arranged after.
 void e_container_change_tiling(struct e_container* container, bool tiled)
 {
     assert(container && container->workspace);
 
+    struct e_workspace* workspace = container->workspace;
+
+    e_container_leave(container);
+
     if (tiled)
-        e_workspace_add_tiled_container(container->workspace, container);
+        e_workspace_add_tiled_container(workspace, container);
     else
-        e_workspace_add_floating_container(container->workspace, container);
+        e_workspace_add_floating_container(workspace, container);
 }
 
 void e_container_set_workspace(struct e_container* container, struct e_workspace* workspace)
@@ -229,7 +242,6 @@ static void arrange_view(struct e_view_container* view_container, struct wlr_box
 {
     assert(view_container);
 
-    //TODO: fullscreen
     view_container->view_pending = (struct wlr_box){
         .x = area.x,
         .y = area.y,
@@ -273,13 +285,33 @@ void e_container_raise_to_top(struct e_container* container)
     wlr_scene_node_raise_to_top(&container->tree->node);
 }
 
+// Call when container has been added to a new workspace.
+// Workspace must be arranged after.
+void e_container_reparented_workspace(struct e_container* container)
+{
+    assert(container && container->workspace);
+
+    if (container->fullscreen)
+    {
+        e_workspace_change_fullscreen_container(container->workspace, container);
+    }
+    else if (container->type == E_CONTAINER_TREE)
+    {
+        for (int  i = 0; i < container->tree_container->children.count; i++)
+        {
+            struct e_container* child = e_list_at(&container->tree_container->children, i);
+
+            if (child != NULL)
+                e_container_reparented_workspace(container);
+        }
+    }
+}
+
 // Move container to a different workspace.
 // Old & new workspace must be arranged.
 void e_container_move_to_workspace(struct e_container* container, struct e_workspace* workspace)
 {
     assert(container && workspace);
-
-    //TODO: fullscreen updates
 
     bool was_tiled = e_container_is_tiled(container);
 

@@ -64,7 +64,7 @@ struct e_workspace* e_workspace_create(struct e_output* output)
     }
 
     workspace->output = output;
-    workspace->fullscreen_view = NULL;
+    workspace->fullscreen_container = NULL;
 
     workspace->root_tiling_container = e_tree_container_create(output->server, E_TILING_MODE_HORIZONTAL);
 
@@ -169,16 +169,25 @@ void e_workspace_arrange(struct e_workspace* workspace, struct wlr_box full_area
     workspace->full_area = full_area;
     workspace->tiled_area = tiled_area;
 
-    //TODO: fullscreen container
-    e_container_arrange(&workspace->root_tiling_container->base, tiled_area);
-
-    for (int i = 0; i < workspace->floating_containers.count; i++)
+    if (workspace->fullscreen_container != NULL)
     {
-        struct e_container* container = e_list_at(&workspace->floating_containers, i);
-
-        if (container != NULL)
-            wlr_scene_node_reparent(&container->tree->node, workspace->layers.floating);
+        wlr_scene_node_reparent(&workspace->fullscreen_container->tree->node, workspace->layers.fullscreen);
+        e_container_arrange(workspace->fullscreen_container, full_area);
     }
+    else 
+    {
+        e_container_arrange(&workspace->root_tiling_container->base, tiled_area);
+
+        for (int i = 0; i < workspace->floating_containers.count; i++)
+        {
+            struct e_container* container = e_list_at(&workspace->floating_containers, i);
+
+            if (container != NULL)
+                wlr_scene_node_reparent(&container->tree->node, workspace->layers.floating);
+        }
+    }
+
+    e_workspace_update_tree_visibility(workspace);
 }
 
 // Rearrange workspace within its current area.
@@ -200,7 +209,7 @@ void e_workspace_update_tree_visibility(struct e_workspace* workspace)
 
     if (workspace->active)
     {
-        bool fullscreen = (workspace->fullscreen_view != NULL);
+        bool fullscreen = (workspace->fullscreen_container != NULL);
 
         wlr_scene_node_set_enabled(&workspace->layers.floating->node, !fullscreen);
         wlr_scene_node_set_enabled(&workspace->layers.tiling->node, !fullscreen);
@@ -215,31 +224,45 @@ void e_workspace_update_tree_visibility(struct e_workspace* workspace)
 }
 
 // Adds container as tiled to workspace.
-// Workspace must be arranged.
+// Workspace must be arranged after.
 void e_workspace_add_tiled_container(struct e_workspace* workspace, struct e_container* container)
 {
-    assert(workspace && container);
+    assert(workspace && container && container->workspace == NULL);
 
-    if (container->workspace != NULL)
-        e_container_leave(container);
-    
     e_container_set_workspace(container, workspace);
     e_container_set_tiled(container, true);
     e_container_set_parent(container, workspace->root_tiling_container);
+    
+    e_container_reparented_workspace(container);
 }
 
 // Adds container as floating to workspace.
-// Workspace must be arranged.
+// Workspace must be arranged after.
 void e_workspace_add_floating_container(struct e_workspace* workspace, struct e_container* container)
 {
-    assert(workspace && container);
-
-    if (container->workspace != NULL)
-        e_container_leave(container);
+    assert(workspace && container && container->workspace == NULL);
 
     e_container_set_workspace(container, workspace);
     e_container_set_tiled(container, false);
     e_list_add(&workspace->floating_containers, container);
+
+    e_container_reparented_workspace(container);
+}
+
+// Sets fullscreen container of workspace and fullscreen mode of containers.
+// Workspace must be arranged after.
+// Container is allowed to be NULL.
+void e_workspace_change_fullscreen_container(struct e_workspace* workspace, struct e_container* container)
+{
+    assert(workspace);
+
+    if (workspace->fullscreen_container != NULL)
+        e_container_set_fullscreen(workspace->fullscreen_container, false);
+
+    workspace->fullscreen_container = container;
+
+    if (container != NULL)
+        e_container_set_fullscreen(container, true);
 }
 
 // Returns NULL on fail.

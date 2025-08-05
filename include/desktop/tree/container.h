@@ -138,17 +138,22 @@ void e_container_arrange(struct e_container* container, struct wlr_box area);
 void e_container_rearrange(struct e_container* container);
 
 // Leave workspace & parent.
+// Workspace (or just parent if none) must be arranged after.
 void e_container_leave(struct e_container* container);
 
 // Tile or float container within its current workspace.
-// Workspace must be arranged.
+// Workspace must be arranged after.
 void e_container_change_tiling(struct e_container* container, bool tiled);
 
 // Raise container to the top of its current parent tree.
 void e_container_raise_to_top(struct e_container* container);
 
+// Call when container has been added to a new workspace.
+// Workspace must be arranged after.
+void e_container_reparented_workspace(struct e_container* container);
+
 // Move container to a different workspace.
-// Old & new workspace must be arranged.
+// Old & new workspace must be arranged after.
 void e_container_move_to_workspace(struct e_container* container, struct e_workspace* workspace);
 
 // Returns NULL on fail.

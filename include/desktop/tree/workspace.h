@@ -39,8 +39,8 @@ struct e_workspace
     struct wlr_box full_area;
     struct wlr_box tiled_area;
     
-    // View currently in fullscreen mode.
-    struct e_view* fullscreen_view;
+    // Container currently in fullscreen mode.
+    struct e_container* fullscreen_container;
 
     //container for tiled containers
     struct e_tree_container* root_tiling_container;
@@ -76,12 +76,17 @@ void e_workspace_rearrange(struct e_workspace* workspace);
 void e_workspace_update_tree_visibility(struct e_workspace* workspace);
 
 // Adds container as tiled to workspace.
-// Workspace must be arranged.
+// Workspace must be arranged after.
 void e_workspace_add_tiled_container(struct e_workspace* workspace, struct e_container* container);
 
 // Adds container as floating to workspace.
-// Workspace must be arranged.
+// Workspace must be arranged after.
 void e_workspace_add_floating_container(struct e_workspace* workspace, struct e_container* container);
+
+// Sets fullscreen container of workspace and fullscreen mode of containers.
+// Workspace must be arranged after.
+// Container is allowed to be NULL.
+void e_workspace_change_fullscreen_container(struct e_workspace* workspace, struct e_container* container);
 
 // Get workspace from node ancestors.
 // Returns NULL on fail.
