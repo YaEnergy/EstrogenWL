@@ -566,8 +566,12 @@ void e_cursor_start_container_resize(struct e_cursor* cursor, struct e_container
 
     if (container == NULL)
         return;
-    
-    //TODO: fullscreen
+
+    if (container->fullscreen)
+    {
+        e_log_error("e_cursor_start_container_resize: can't resize containers in fullscreen mode!");
+        return;
+    }
 
     cursor->grab_edges = edges;
 
@@ -583,7 +587,11 @@ void e_cursor_start_container_move(struct e_cursor* cursor, struct e_container* 
     if (container == NULL)
         return;
 
-    //TODO: fullscreen
+    if (container->fullscreen)
+    {
+        e_log_error("e_cursor_start_container_move: can't move containers in fullscreen mode!");
+        return;
+    }
 
     e_cursor_start_grab_container_mode(cursor, container, E_CURSOR_MODE_MOVE);
 }
