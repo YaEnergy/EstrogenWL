@@ -31,20 +31,18 @@
 
 static void e_commands_kill_focused_view(struct e_server* server)
 {
-    /*
-    struct e_view* view = e_desktop_focused_view(server);
+    struct e_view_container* view_container = e_desktop_focused_view_container(server);
 
-    if (view != NULL)
+    if (view_container != NULL)
     {
-        e_view_send_close(view);
+        e_view_send_close(view_container->view);
 
-        e_log_info("asked to close view, title: %s", view->title == NULL ? "no name" : view->title);
+        e_log_info("asked to close view, title: %s", view_container->view->title == NULL ? "no name" : view_container->view->title);
     }
     else 
     {
         e_log_info("failed to close focused view");
     }
-        */
 }
 
 static void e_commands_toggle_tiled(struct e_server* server)
