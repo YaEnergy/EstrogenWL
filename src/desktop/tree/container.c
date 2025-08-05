@@ -265,7 +265,7 @@ void e_container_raise_to_top(struct e_container* container)
 // Old & new workspace must be arranged.
 void e_container_move_to_workspace(struct e_container* container, struct e_workspace* workspace)
 {
-    assert(workspace && workspace);
+    assert(container && workspace);
 
     //TODO: fullscreen updates
 
@@ -387,7 +387,10 @@ bool e_tree_container_insert_container(struct e_tree_container* tree_container, 
         return false;
 
     container->parent = tree_container;
-    e_container_set_workspace(container, tree_container->base.workspace);
+    e_container_set_tiled(container, true);
+    
+    if (container->workspace != tree_container->base.workspace)
+        e_container_set_workspace(container, tree_container->base.workspace);
 
     //TODO: allow having containers of different percentages
     for (int i = 0; i < tree_container->children.count; i++)
@@ -426,6 +429,8 @@ bool e_tree_container_remove_container(struct e_tree_container* tree_container, 
 
     container->parent = NULL;
     e_list_remove(&tree_container->children, container);
+
+    e_container_set_tiled(container, false);
 
     //distribute container's percentage evenly across remaining children
 
