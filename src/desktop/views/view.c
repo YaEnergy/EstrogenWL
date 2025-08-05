@@ -44,7 +44,9 @@ void e_view_init(struct e_view* view, enum e_view_type type, void* data, const s
     view->tree = wlr_scene_tree_create(parent);
     e_node_desc_create(&view->tree->node, E_NODE_DESC_VIEW, view);
 
-    view->geometry = (struct wlr_box){0, 0, 0, 0};
+    view->root_geometry = (struct wlr_box){0, 0, 0, 0};
+    view->width = 0;
+    view->height = 0;
 
     view->content_tree = NULL;
 

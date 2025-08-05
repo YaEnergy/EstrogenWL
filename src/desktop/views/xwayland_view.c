@@ -64,12 +64,15 @@ static struct wlr_scene_tree* e_view_xwayland_create_content_tree(struct e_view*
 }
 
 // Sets the view's current geometry to that of the xwayland surface.
-static void update_view_geometry(struct e_xwayland_view* xwayland_view)
+static void xwayland_view_update_geometry(struct e_xwayland_view* xwayland_view)
 {
     assert(xwayland_view);
 
-    xwayland_view->base.geometry.width = xwayland_view->xwayland_surface->width;
-    xwayland_view->base.geometry.height = xwayland_view->xwayland_surface->height;
+    xwayland_view->base.root_geometry.width = xwayland_view->xwayland_surface->width;
+    xwayland_view->base.root_geometry.height = xwayland_view->xwayland_surface->height;
+
+    xwayland_view->base.width = xwayland_view->xwayland_surface->width;
+    xwayland_view->base.height = xwayland_view->xwayland_surface->height;
 }
 
 // Xwayland surface wants to be mapped.
@@ -81,7 +84,10 @@ static void e_xwayland_view_map_request(struct wl_listener* listener, void* data
     e_log_info("xwayland view map request");
     #endif
 
-    update_view_geometry(xwayland_view);
+    //TODO: add signal
+    //TODO: init fullscreen view size if requested
+
+    xwayland_view_update_geometry(xwayland_view);
 
     e_view_configure(&xwayland_view->base, xwayland_view->xwayland_surface->x, xwayland_view->xwayland_surface->y, xwayland_view->xwayland_surface->width, xwayland_view->xwayland_surface->height);
 }
@@ -91,7 +97,7 @@ static void e_xwayland_view_commit(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, commit);
 
-    update_view_geometry(xwayland_view);
+    xwayland_view_update_geometry(xwayland_view);
 
     wl_signal_emit_mutable(&xwayland_view->base.events.commit, NULL);
 }
@@ -100,6 +106,8 @@ static void e_xwayland_view_commit(struct wl_listener* listener, void* data)
 static void e_xwayland_view_map(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, map);
+
+    xwayland_view_update_geometry(xwayland_view);
     
     // According to labwc, map and unmap can change the surface used
     SIGNAL_CONNECT(xwayland_view->xwayland_surface->surface->events.commit, xwayland_view->commit, e_xwayland_view_commit);
@@ -240,7 +248,7 @@ static void e_xwayland_view_associate(struct wl_listener* listener, void* data)
 
     xwayland_view->base.surface = xwayland_view->xwayland_surface->surface;
 
-    update_view_geometry(xwayland_view);
+    xwayland_view_update_geometry(xwayland_view);
 
     // events
 

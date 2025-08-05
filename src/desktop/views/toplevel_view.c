@@ -45,8 +45,8 @@ static void xdg_popup_unconstrain(struct e_xdg_popup* popup)
         return;
 
     struct wlr_box toplevel_popup_space = popup->view->popup_space;
-    toplevel_popup_space.x -= popup->view->geometry.x;
-    toplevel_popup_space.y -= popup->view->geometry.y;
+    toplevel_popup_space.x -= popup->view->root_geometry.x;
+    toplevel_popup_space.y -= popup->view->root_geometry.y;
 
     wlr_xdg_popup_unconstrain_from_box(popup->xdg_popup, &toplevel_popup_space);
 }
@@ -143,12 +143,22 @@ static struct wlr_scene_tree* e_view_toplevel_create_content_tree(struct e_view*
     return tree;
 }
 
+static void toplevel_view_update_geometry(struct e_toplevel_view* toplevel_view)
+{
+    assert(toplevel_view);
+
+    toplevel_view->base.root_geometry = toplevel_view->xdg_toplevel->base->geometry;
+    toplevel_view->base.width = toplevel_view->xdg_toplevel->current.width;
+    toplevel_view->base.height = toplevel_view->xdg_toplevel->current.height;
+}
+
 //surface is ready to be displayed
 static void e_toplevel_view_map(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, map);
 
     wlr_xdg_toplevel_set_wm_capabilities(toplevel_view->xdg_toplevel, WLR_XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
+    toplevel_view_update_geometry(toplevel_view);
     
     if (toplevel_view->xdg_toplevel->requested.fullscreen)
     {
@@ -191,7 +201,7 @@ static void e_toplevel_view_commit(struct wl_listener* listener, void* data)
         return;
     }
 
-    toplevel_view->base.geometry = toplevel_view->xdg_toplevel->base->geometry;
+    toplevel_view_update_geometry(toplevel_view);
 
     wl_signal_emit_mutable(&toplevel_view->base.events.commit, NULL);
 }
