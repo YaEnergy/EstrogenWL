@@ -55,6 +55,8 @@ struct e_container
     // May be NULL.
     struct e_tree_container* parent;
 
+    bool fullscreen;
+
     struct
     {
         struct wl_signal destroy;
@@ -120,6 +122,9 @@ void e_container_set_tiled(struct e_container* container, bool tiled);
 
 // Set container workspace state.
 void e_container_set_workspace(struct e_container* container, struct e_workspace* workspace);
+
+// Set container fullscreen state.
+void e_container_set_fullscreen(struct e_container* container, bool fullscreen);
 
 // Sets the parent of a container.
 // Parent may be NULL.

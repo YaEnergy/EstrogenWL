@@ -44,6 +44,8 @@ bool e_container_init(struct e_container* container, enum e_container_type type,
 
     container->area = (struct wlr_box){0, 0, 0, 0};
 
+    container->fullscreen = false;
+
     wl_signal_init(&container->events.destroy);
 
     return true;
@@ -148,6 +150,16 @@ void e_container_set_workspace(struct e_container* container, struct e_workspace
 
             break;
     }
+}
+
+void e_container_set_fullscreen(struct e_container* container, bool fullscreen)
+{
+    assert(container);
+
+    container->fullscreen = fullscreen;
+
+    if (container->type == E_CONTAINER_VIEW)
+        e_view_set_fullscreen(container->view_container->view, fullscreen);
 }
 
 // Sets the parent of a container.
