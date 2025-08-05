@@ -160,7 +160,7 @@ static void e_xwayland_view_request_fullscreen(struct wl_listener* listener, voi
 
     struct e_view_request_fullscreen_event view_event = {
         .view = &xwayland_view->base,
-        .fullscreen = !xwayland_view->xwayland_surface->fullscreen,
+        .fullscreen = xwayland_view->xwayland_surface->fullscreen,
         .output = NULL
     };
 
