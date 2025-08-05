@@ -135,7 +135,7 @@ static void e_view_container_handle_view_request_configure(struct wl_listener* l
     if (!e_container_is_tiled(&view_container->base)) //floating
         e_container_arrange(&view_container->base, (struct wlr_box){event->x, event->y, event->width, event->height});
     else //tiled
-        e_view_configure(view_container->view, view_container->view_pending.x, view_container->view_pending.y, view_container->view->geometry.width, view_container->view->geometry.height);
+        e_view_configure(view_container->view, view_container->view_pending.x, view_container->view_pending.y, view_container->view_pending.width, view_container->view_pending.height);
 }
 
 static void e_view_container_handle_view_destroy(struct wl_listener* listener, void* data)
