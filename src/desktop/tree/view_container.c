@@ -138,6 +138,47 @@ static void e_view_container_handle_view_request_configure(struct wl_listener* l
         e_view_configure(view_container->view, view_container->view_pending.x, view_container->view_pending.y, view_container->view_pending.width, view_container->view_pending.height);
 }
 
+static void e_view_container_handle_view_request_fullscreen(struct wl_listener* listener, void* data)
+{
+    struct e_view_container* view_container = wl_container_of(listener, view_container, request_fullscreen);
+    struct e_view_request_fullscreen_event* event = data;
+
+    //TODO: respect output if not mapped?
+    //TODO: init initial output geometry?
+    if (!view_container->view->mapped)
+    {
+        e_container_set_fullscreen(&view_container->base, event->fullscreen);
+        return;
+    }
+
+    struct e_workspace* old_workspace = view_container->base.workspace;
+    struct e_workspace* new_workspace = view_container->base.workspace;
+    
+    if (event->fullscreen && event->output != NULL && event->output->active_workspace != NULL)
+        new_workspace = event->output->active_workspace;
+
+    //just set fullscreen mode
+    if (old_workspace == NULL && new_workspace == NULL)
+    {
+        e_log_error("e_view_container_handle_view_request_fullscreen: old & new workspace are somehow NULL.");
+        e_container_set_fullscreen(&view_container->base, event->fullscreen);
+        return;
+    }
+
+    if (old_workspace != new_workspace)
+        e_container_move_to_workspace(&view_container->base, new_workspace);
+    
+    if (event->fullscreen && !view_container->base.fullscreen)
+        e_workspace_change_fullscreen_container(new_workspace, &view_container->base);
+    else if (!event->fullscreen && view_container->base.fullscreen)
+        e_workspace_change_fullscreen_container(new_workspace, NULL);
+
+    e_workspace_rearrange(old_workspace);
+    
+    if (old_workspace != new_workspace)
+        e_workspace_rearrange(new_workspace);
+}
+
 static void e_view_container_handle_view_destroy(struct wl_listener* listener, void* data)
 {
     struct e_view_container* view_container = wl_container_of(listener, view_container, destroy);
@@ -176,6 +217,7 @@ struct e_view_container* e_view_container_create(struct e_server* server, struct
     SIGNAL_CONNECT(view->events.request_move, view_container->request_move, e_view_container_handle_view_request_move);
     SIGNAL_CONNECT(view->events.request_resize, view_container->request_resize, e_view_container_handle_view_request_resize);
     SIGNAL_CONNECT(view->events.request_configure, view_container->request_configure, e_view_container_handle_view_request_configure);
+    SIGNAL_CONNECT(view->events.request_fullscreen, view_container->request_fullscreen, e_view_container_handle_view_request_fullscreen);
 
     SIGNAL_CONNECT(view->events.destroy, view_container->destroy, e_view_container_handle_view_destroy);
 
