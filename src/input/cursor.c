@@ -240,6 +240,8 @@ static void e_cursor_resize_floating(struct e_cursor* cursor)
 
     struct e_container_size_hints size_hints = e_container_get_size_hints(cursor->grab_container);
 
+    //TODO: account for size increment hints (width_inc & height_inc)
+
     int left = cursor->grab_start_cbox.x;
     int right = cursor->grab_start_cbox.x + cursor->grab_start_cbox.width;
     int top = cursor->grab_start_cbox.y;
