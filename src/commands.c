@@ -220,28 +220,36 @@ void e_commands_parse(struct e_server* server, const char* command)
     //TODO: testing only, remove
     else if (strcmp(argument, "move_to_next_workspace") == 0)
     {
-        /*
-        struct e_view* focused_view = e_desktop_focused_view(server);
+        struct e_view_container* focused_view_container = e_desktop_focused_view_container(server);
 
-        if (focused_view == NULL)
+        if (focused_view_container == NULL)
             return;
 
-        struct e_output* output = e_desktop_hovered_output(server);
+        struct e_container* container = &focused_view_container->base;
 
-        struct e_workspace* workspace = output->active_workspace;
+        struct e_workspace* old_workspace = container->workspace;
 
-        if (workspace == NULL)
+        if (old_workspace == NULL)
         {
-            e_log_error("no workspace");
+            e_log_error("e_commands_parse: container has no workspace");
             return;
         }
 
-        int i = e_list_find_index(&output->workspace_group.workspaces, workspace);
+        struct e_output* output = old_workspace->output;
 
-        //e_view_move_to_workspace(focused_view, e_list_at(&output->workspace_group.workspaces, (i + 1) % output->workspace_group.workspaces.count));
+        int i = e_list_find_index(&output->workspace_group.workspaces, old_workspace);
+
+        struct e_workspace* new_workspace = e_list_at(&output->workspace_group.workspaces, (i + 1) % output->workspace_group.workspaces.count);
+
+        e_container_move_to_workspace(container, new_workspace);
+
+        e_workspace_rearrange(old_workspace);
+
+        if (new_workspace != old_workspace)
+            e_workspace_rearrange(new_workspace);
+
         e_cursor_set_focus_hover(server->seat->cursor);
-        e_log_info("view workspace index: %i", (i + 1) % output->workspace_group.workspaces.count);
-        */
+        e_log_info("container workspace index: %i", (i + 1) % output->workspace_group.workspaces.count);
     }
     else 
     {
