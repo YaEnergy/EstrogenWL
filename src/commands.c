@@ -71,21 +71,24 @@ static void e_commands_switch_tiling_mode(struct e_server* server)
 {
     assert(server);
 
-    //struct e_view* view = e_desktop_focused_view(server);
-    /*
+    struct e_view_container* view_container = e_desktop_focused_view_container(server);
 
-    if (view == NULL || view->container.parent == NULL)
+    if (view_container == NULL)
         return;
 
-    struct e_tree_container* parent_container = view->container.parent;
+    struct e_container* container = &view_container->base;
+
+    if (container->parent == NULL)
+        return;
+
+    struct e_tree_container* parent_container = container->parent;
 
     if (parent_container->tiling_mode == E_TILING_MODE_HORIZONTAL)
         parent_container->tiling_mode = E_TILING_MODE_VERTICAL;
     else
         parent_container->tiling_mode = E_TILING_MODE_HORIZONTAL;
 
-    e_tree_container_arrange(parent_container);
-    */
+    e_container_rearrange(&parent_container->base);
 }
 
 static void e_commands_toggle_fullscreen(struct e_server* server)
