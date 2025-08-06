@@ -1,5 +1,6 @@
 #include "desktop/tree/container.h"
 
+#include <limits.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -69,6 +70,50 @@ bool e_container_is_tiled(struct e_container* container)
     assert(container);
 
     return container->parent != NULL;
+}
+
+
+// Returns container's size hints, usually only respected for floating containers.
+struct e_container_size_hints e_container_get_size_hints(struct e_container* container)
+{
+    assert(container);
+
+    //TODO: improve? there's lots of copying here
+
+    struct e_container_size_hints size_hints = {
+        .min_width = 1, 
+        .min_height = 1, 
+        .max_width = INT_MAX, 
+        .max_height = INT_MAX, 
+        .width_inc = 0, 
+        .height_inc = 0
+    };
+
+    switch (container->type)
+    {
+        case E_CONTAINER_TREE:
+        {
+            //TODO: tree container size hints
+            break;
+        }
+        case E_CONTAINER_VIEW:
+        {
+            struct e_view_size_hints view_size_hints = e_view_get_size_hints(container->view_container->view);
+
+            size_hints = (struct e_container_size_hints){
+                .min_width = view_size_hints.min_width,
+                .min_height = view_size_hints.min_height,
+                .max_width = view_size_hints.max_width,
+                .max_height = view_size_hints.max_height,
+                .width_inc = view_size_hints.width_inc,
+                .height_inc = view_size_hints.height_inc
+            };
+
+            break;
+        }
+    }
+
+    return size_hints;
 }
 
 // Returns whether container has the given ancestor.

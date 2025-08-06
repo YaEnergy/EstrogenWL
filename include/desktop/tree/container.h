@@ -27,6 +27,15 @@ enum e_container_type
     E_CONTAINER_VIEW = 2 //view_container
 };
 
+// 0 or lower means hint isn't set.
+struct e_container_size_hints
+{
+    int min_width, min_height;
+    int max_width, max_height;
+
+    int width_inc, height_inc; //size incremenets
+};
+
 // A container for autoconfiguring data by its ancestor containers.
 struct e_container
 {
@@ -113,6 +122,9 @@ bool e_container_init(struct e_container* container, enum e_container_type type,
 void e_container_fini(struct e_container* container);
 
 bool e_container_is_tiled(struct e_container* container);
+
+// Returns container's size hints, usually only respected for floating containers.
+struct e_container_size_hints e_container_get_size_hints(struct e_container* container);
 
 // Returns whether container has the given ancestor.
 // False if not, including when ancestor is container.
