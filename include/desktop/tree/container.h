@@ -97,6 +97,7 @@ struct e_view_container
     struct e_view* view;
 
     // View's pending & current area.
+    // Pending area should match current area when no configures are pending.
     struct wlr_box view_current, view_pending;
 
     struct e_container base;
