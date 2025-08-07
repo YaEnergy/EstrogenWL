@@ -94,8 +94,12 @@ static void e_view_container_handle_view_commit(struct wl_listener* listener, vo
 {
     struct e_view_container* view_container = wl_container_of(listener, view_container, commit);
 
-    //TODO: view tree node position needs to be updated immediately if only position is changed, but after a geometry update (not just a commit) if size was also changed
+    //TODO: view tree node position needs to be updated immediately if only position is changed (not after a commit, like currently), but after a geometry update (not just a commit) if size was also changed
+    //FIXME: anchor edges opposite the grabbed ones during interactive resizes, as view may not commit requested sizes
+    //TODO: center view if container is tiled?
 
+    view_container->view_pending.width = view_container->view->width;
+    view_container->view_pending.height = view_container->view->height;
     view_container->view_current = view_container->view_pending;
     view_container_set_content_position(view_container, view_container->view_current.x, view_container->view_current.y);
 
