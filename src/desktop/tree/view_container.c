@@ -69,6 +69,7 @@ static void e_view_container_handle_view_map(struct wl_listener* listener, void*
     else
         e_workspace_add_floating_container(workspace, &view_container->base);
 
+    view_container_set_content_position(view_container, view_container->view_pending.x, view_container->view_pending.y);
 
     e_workspace_rearrange(workspace);
     
