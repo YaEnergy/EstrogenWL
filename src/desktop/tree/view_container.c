@@ -35,6 +35,36 @@ static void view_container_set_content_position(struct e_view_container* view_co
     wlr_scene_node_set_position(&view_container->view->tree->node, x, y);
 }
 
+// Container must be arranged after. (Rearranged in this case)
+static void view_container_set_size_from_view(struct e_view_container* view_container)
+{
+    assert(view_container);
+
+    view_container->view_pending.width = view_container->view->width;
+    view_container->view_pending.height = view_container->view->height;
+
+    view_container->view_current.width = view_container->view->width;
+    view_container->view_current.height = view_container->view->height;
+
+    view_container->base.area.width = view_container->view->width;
+    view_container->base.area.height = view_container->view->height;
+}
+
+// Centers view container in current output
+// Container must be arranged after. (Rearranged in this case)
+static void view_container_center_in_output(struct e_view_container* view_container)
+{
+    assert(view_container && view_container->base.workspace && view_container->base.workspace->output);
+
+    struct e_output* output = view_container->base.workspace->output;
+
+    int ow, oh;
+    wlr_output_effective_resolution(output->wlr_output, &ow, &oh);
+
+    view_container->base.area.x = (ow - view_container->base.area.width) / 2;
+    view_container->base.area.y = (oh - view_container->base.area.height) / 2;
+}
+
 static void e_view_container_handle_view_map(struct wl_listener* listener, void* data)
 {
     struct e_view_container* view_container = wl_container_of(listener, view_container, map);
@@ -60,21 +90,38 @@ static void e_view_container_handle_view_map(struct wl_listener* listener, void*
         return;
     }
 
+    //TODO: xwayland views may want to specify their position through their size hints
+
     e_log_info("map container wants fullscreen: %i", event->fullscreen);
     
     e_container_set_fullscreen(&view_container->base, event->fullscreen);
     
     if (!event->wants_floating)
+    {
         e_workspace_add_tiled_container(workspace, &view_container->base);
+    }
     else
+    {
         e_workspace_add_floating_container(workspace, &view_container->base);
+        
+        // If container hasn't been arranged yet (for ex. from a configure request), then do so 
+        bool arranged = (!wlr_box_empty(&view_container->base.area)
+            && !wlr_box_empty(&view_container->view_current) 
+            && !wlr_box_empty(&view_container->view_pending));
 
+        if (!arranged)
+        {
+            view_container_set_size_from_view(view_container);
+            view_container_center_in_output(view_container);
+        }
+    }
+
+    //set to pending position immediately, so we're not at (0,0)
     view_container_set_content_position(view_container, view_container->view_pending.x, view_container->view_pending.y);
 
     e_workspace_rearrange(workspace);
     
     //TODO: tiled -> parent to previously focused tiled container
-    //TODO: floating -> set container area from view geometry and center
 
     e_desktop_focus_view_container(view_container);
 }
