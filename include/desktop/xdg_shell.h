@@ -34,8 +34,6 @@ struct e_toplevel_view
 
     //xdg_toplevel got destroyed
     struct wl_listener destroy;
-
-    //TODO: request resize, fullscreen, ... events
 };
 
 // Temporary surface for toplevel views.
