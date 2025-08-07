@@ -183,7 +183,10 @@ void e_workspace_arrange(struct e_workspace* workspace, struct wlr_box full_area
             struct e_container* container = e_list_at(&workspace->floating_containers, i);
 
             if (container != NULL)
+            {
                 wlr_scene_node_reparent(&container->tree->node, workspace->layers.floating);
+                e_container_rearrange(container);
+            }
         }
     }
 
