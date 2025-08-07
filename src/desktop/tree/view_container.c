@@ -28,6 +28,13 @@
 
 #include "server.h"
 
+static void view_container_set_content_position(struct e_view_container* view_container, int x, int y)
+{
+    assert(view_container);
+
+    wlr_scene_node_set_position(&view_container->view->tree->node, x, y);
+}
+
 static void e_view_container_handle_view_map(struct wl_listener* listener, void* data)
 {
     struct e_view_container* view_container = wl_container_of(listener, view_container, map);
@@ -90,7 +97,7 @@ static void e_view_container_handle_view_commit(struct wl_listener* listener, vo
     //TODO: view tree node position needs to be updated immediately if only position is changed, but after a geometry update (not just a commit) if size was also changed
 
     view_container->view_current = view_container->view_pending;
-    wlr_scene_node_set_position(&view_container->view->tree->node, view_container->view_current.x, view_container->view_current.y);
+    view_container_set_content_position(view_container, view_container->view_current.x, view_container->view_current.y);
 
     struct e_output* output = view_container->view->output;
 
