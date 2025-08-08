@@ -133,33 +133,6 @@ bool e_container_has_ancestor(struct e_container* container, struct e_container*
     return false;
 }
 
-void e_container_leave(struct e_container* container)
-{
-    assert(container);
-    
-    if (container->workspace != NULL)
-    {
-        struct e_workspace* workspace = container->workspace;
-
-        //remove workspace's fullscreen if it is leaving container or a child of leaving container
-        //doesn't actually unfullscreen the container
-        if (container->fullscreen || (workspace->fullscreen_container != NULL && e_container_has_ancestor(workspace->fullscreen_container, container)))
-            workspace->fullscreen_container = NULL;
-
-        int index = e_list_find_index(&workspace->floating_containers, container);
-
-        if (index != -1)
-            e_list_remove_index(&workspace->floating_containers, index);
-        
-        e_container_set_workspace(container, NULL);
-    }
-
-    if (container->parent != NULL)
-        e_container_set_parent(container, NULL);
-
-    wlr_scene_node_reparent(&container->tree->node, container->server->pending);
-}
-
 // Set container tiled state.
 void e_container_set_tiled(struct e_container* container, bool tiled)
 {
@@ -167,22 +140,6 @@ void e_container_set_tiled(struct e_container* container, bool tiled)
 
     if (container->type == E_CONTAINER_VIEW)
         e_view_set_tiled(container->view_container->view, tiled);
-}
-
-// Tile or float container within its current workspace.
-// Workspace must be arranged after.
-void e_container_change_tiling(struct e_container* container, bool tiled)
-{
-    assert(container && container->workspace);
-
-    struct e_workspace* workspace = container->workspace;
-
-    e_container_leave(container);
-
-    if (tiled)
-        e_workspace_add_tiled_container(workspace, container);
-    else
-        e_workspace_add_floating_container(workspace, container);
 }
 
 void e_container_set_workspace(struct e_container* container, struct e_workspace* workspace)
@@ -321,6 +278,49 @@ void e_container_rearrange(struct e_container* container)
     assert(container);
 
     e_container_arrange(container, container->area);
+}
+
+void e_container_leave(struct e_container* container)
+{
+    assert(container);
+    
+    if (container->workspace != NULL)
+    {
+        struct e_workspace* workspace = container->workspace;
+
+        //remove workspace's fullscreen if it is leaving container or a child of leaving container
+        //doesn't actually unfullscreen the container
+        if (container->fullscreen || (workspace->fullscreen_container != NULL && e_container_has_ancestor(workspace->fullscreen_container, container)))
+            workspace->fullscreen_container = NULL;
+
+        int index = e_list_find_index(&workspace->floating_containers, container);
+
+        if (index != -1)
+            e_list_remove_index(&workspace->floating_containers, index);
+        
+        e_container_set_workspace(container, NULL);
+    }
+
+    if (container->parent != NULL)
+        e_container_set_parent(container, NULL);
+
+    wlr_scene_node_reparent(&container->tree->node, container->server->pending);
+}
+
+// Tile or float container within its current workspace.
+// Workspace must be arranged after.
+void e_container_change_tiling(struct e_container* container, bool tiled)
+{
+    assert(container && container->workspace);
+
+    struct e_workspace* workspace = container->workspace;
+
+    e_container_leave(container);
+
+    if (tiled)
+        e_workspace_add_tiled_container(workspace, container);
+    else
+        e_workspace_add_floating_container(workspace, container);
 }
 
 void e_container_raise_to_top(struct e_container* container)
