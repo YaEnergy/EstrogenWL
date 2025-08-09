@@ -16,8 +16,6 @@ struct e_toplevel_view
 
     struct wlr_xdg_toplevel* xdg_toplevel;
 
-    int32_t scheduled_x, scheduled_y;
-
     //surface is ready to be displayed
     struct wl_listener map;
     //surface no longer wants to be displayed
@@ -36,8 +34,6 @@ struct e_toplevel_view
 
     //xdg_toplevel got destroyed
     struct wl_listener destroy;
-
-    //TODO: request resize, fullscreen, ... events
 };
 
 // Temporary surface for toplevel views.
@@ -54,6 +50,6 @@ struct e_xdg_popup
     struct wl_listener destroy;
 };
 
-// Creates new toplevel view for server.
+// Creates new toplevel view.
 // Returns NULL on fail.
-struct e_toplevel_view* e_toplevel_view_create(struct e_server* server, struct wlr_xdg_toplevel* xdg_toplevel);
+struct e_toplevel_view* e_toplevel_view_create(struct wlr_xdg_toplevel* xdg_toplevel, struct wlr_scene_tree* pending);

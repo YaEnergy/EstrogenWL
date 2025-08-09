@@ -95,3 +95,14 @@ struct e_workspace* e_workspace_try_from_e_node_desc(struct e_node_desc* node_de
 
     return (struct e_workspace*)node_desc->data;
 }
+
+// Returns NULL on fail.
+struct e_container* e_container_try_from_e_node_desc(struct e_node_desc* node_desc)
+{
+    assert(node_desc);
+
+    if (node_desc->type != E_NODE_DESC_CONTAINER)
+        return NULL;
+
+    return (struct e_container*)node_desc->data;
+}

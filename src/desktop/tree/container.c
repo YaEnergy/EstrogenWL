@@ -1,5 +1,6 @@
 #include "desktop/tree/container.h"
 
+#include <limits.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -8,22 +9,48 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
-#include <wlr/types/wlr_scene.h>
 #include <wlr/util/box.h>
 
+#include "desktop/tree/workspace.h"
 #include "desktop/tree/node.h"
+#include "desktop/views/view.h"
+#include "desktop/output.h"
+
+#include "server.h"
+
+#include "util/wl_macros.h"
 #include "util/list.h"
 #include "util/log.h"
 
-bool e_container_init(struct e_container* container, enum e_container_type type, void* data)
+struct e_output;
+
+bool e_container_init(struct e_container* container, enum e_container_type type, struct e_server* server)
 {
-    assert(container && data);
+    assert(container);
+
+    container->server = server;
+
+    container->tree = wlr_scene_tree_create(server->pending);
+
+    if (container->tree == NULL)
+        return false;
+
+    if (e_node_desc_create(&container->tree->node, E_NODE_DESC_CONTAINER, container) == NULL)
+    {
+        wlr_scene_node_destroy(&container->tree->node);
+        return false;
+    }
 
     container->type = type;
-    container->data = data;
 
-    container->implementation.configure = NULL;
-    container->implementation.destroy = NULL;
+    container->workspace = NULL;
+    container->parent = NULL;
+
+    container->area = (struct wlr_box){0, 0, 0, 0};
+
+    container->fullscreen = false;
+
+    wl_signal_init(&container->events.destroy);
 
     return true;
 }
@@ -35,7 +62,120 @@ void e_container_fini(struct e_container* container)
     if (container->parent != NULL)
         e_tree_container_remove_container(container->parent, container);
 
-    container->implementation.configure = NULL;
+    wlr_scene_node_destroy(&container->tree->node);
+    container->tree = NULL;
+}
+
+bool e_container_is_tiled(struct e_container* container)
+{
+    assert(container);
+
+    return container->parent != NULL;
+}
+
+
+// Returns container's size hints, usually only respected for floating containers.
+struct e_container_size_hints e_container_get_size_hints(struct e_container* container)
+{
+    assert(container);
+
+    //TODO: improve? there's lots of copying here
+
+    struct e_container_size_hints size_hints = {
+        .min_width = 1, 
+        .min_height = 1, 
+        .max_width = INT_MAX, 
+        .max_height = INT_MAX, 
+        .width_inc = 0, 
+        .height_inc = 0
+    };
+
+    switch (container->type)
+    {
+        case E_CONTAINER_TREE:
+        {
+            //TODO: tree container size hints
+            break;
+        }
+        case E_CONTAINER_VIEW:
+        {
+            struct e_view_size_hints view_size_hints = e_view_get_size_hints(container->view_container->view);
+
+            size_hints = (struct e_container_size_hints){
+                .min_width = view_size_hints.min_width,
+                .min_height = view_size_hints.min_height,
+                .max_width = view_size_hints.max_width,
+                .max_height = view_size_hints.max_height,
+                .width_inc = view_size_hints.width_inc,
+                .height_inc = view_size_hints.height_inc
+            };
+
+            break;
+        }
+    }
+
+    return size_hints;
+}
+
+// Returns whether container has the given ancestor.
+// False if not, including when ancestor is container.
+bool e_container_has_ancestor(struct e_container* container, struct e_container* ancenstor)
+{
+    assert(container && ancenstor);
+    
+    while (container->parent != NULL)
+    {
+        container = &container->parent->base;
+
+        if (container == ancenstor)
+            return true;
+    }
+
+    return false;
+}
+
+// Set container tiled state.
+void e_container_set_tiled(struct e_container* container, bool tiled)
+{
+    assert(container);
+
+    if (container->type == E_CONTAINER_VIEW)
+        e_view_set_tiled(container->view_container->view, tiled);
+}
+
+void e_container_set_workspace(struct e_container* container, struct e_workspace* workspace)
+{
+    assert(container);
+
+    container->workspace = workspace;
+
+    switch (container->type)
+    {
+        case E_CONTAINER_TREE:
+            for (int i = 0; i < container->tree_container->children.count; i++)
+            {
+                struct e_container* child = e_list_at(&container->tree_container->children, i);
+                
+                if (child != NULL)
+                    e_container_set_workspace(child, workspace);
+            }
+            break;
+        case E_CONTAINER_VIEW:
+            if (workspace != NULL)
+                e_view_set_output(container->view_container->view, workspace->output);
+
+            break;
+    }
+}
+
+void e_container_set_fullscreen(struct e_container* container, bool fullscreen)
+{
+    assert(container);
+
+    container->fullscreen = fullscreen;
+
+    if (container->type == E_CONTAINER_VIEW && container->view_container->view->mapped)
+        e_view_set_fullscreen(container->view_container->view, fullscreen);
 }
 
 // Sets the parent of a container.
@@ -63,67 +203,265 @@ bool e_container_set_parent(struct e_container* container, struct e_tree_contain
         return true;
 }
 
-// Configure the container.
-void e_container_configure(struct e_container* container, int x, int y, int width, int height)
+static void arrange_tree_children(struct e_tree_container* tree_container)
 {
-    assert(container);
+    assert(tree_container);
 
-    if (container->implementation.configure != NULL)
-        container->implementation.configure(container, x, y, width, height);
-    else
-        e_log_error("e_container_configure: not implemented!");
+    float percentageStart = 0.0f;
+    struct wlr_box* area = &tree_container->base.area;
+
+    for (int i = 0; i < tree_container->children.count; i++)
+    {
+        struct e_container* child_container = e_list_at(&tree_container->children, i);
+
+        if (child_container == NULL)
+            continue;
+
+        wlr_scene_node_reparent(&child_container->tree->node, tree_container->base.tree);
+
+        struct wlr_box child_area = {area->x, area->y, area->width, area->height};
+
+        switch (tree_container->tiling_mode)
+        {
+            case E_TILING_MODE_HORIZONTAL:
+                child_area.x += area->width * percentageStart;
+                child_area.width *= child_container->percentage;
+                break;
+            case E_TILING_MODE_VERTICAL:
+                child_area.y += area->height * percentageStart;
+                child_area.height *= child_container->percentage;
+                break;
+            default:
+                e_log_error("arrange_tree_children: unknown container tiling mode!");
+                continue;
+        }
+
+        percentageStart += child_container->percentage;
+
+        child_container->area = child_area;
+        e_container_arrange(child_container);
+    }
 }
 
-void e_container_destroy(struct e_container* container)
+static void arrange_view(struct e_view_container* view_container)
+{
+    assert(view_container);
+
+    struct wlr_box* area = &view_container->base.area;
+
+    view_container->view_pending = (struct wlr_box){
+        .x = area->x,
+        .y = area->y,
+        .width = (area->width > 0) ? area->width : 1,
+        .height = (area->height > 0) ? area->height : 1
+    };
+
+    if (view_container->view != NULL)
+        e_view_configure(view_container->view, view_container->view_pending.x, view_container->view_pending.y, view_container->view_pending.width, view_container->view_pending.height);
+}
+
+// Arrange container's content within its area.
+void e_container_arrange(struct e_container* container)
 {
     assert(container);
 
-    if (container->implementation.destroy != NULL)
-        container->implementation.destroy(container);
+    switch (container->type)
+    {
+        case E_CONTAINER_TREE:
+            arrange_tree_children(container->tree_container);
+            break;
+        case E_CONTAINER_VIEW:
+            arrange_view(container->view_container);
+            break;
+    }
+}
+
+void e_container_leave(struct e_container* container)
+{
+    assert(container);
+    
+    if (container->workspace != NULL)
+    {
+        struct e_workspace* workspace = container->workspace;
+
+        //remove workspace's fullscreen if it is leaving container or a child of leaving container
+        //doesn't actually unfullscreen the container
+        if (container->fullscreen || (workspace->fullscreen_container != NULL && e_container_has_ancestor(workspace->fullscreen_container, container)))
+            workspace->fullscreen_container = NULL;
+
+        int index = e_list_find_index(&workspace->floating_containers, container);
+
+        if (index != -1)
+            e_list_remove_index(&workspace->floating_containers, index);
+        
+        e_container_set_workspace(container, NULL);
+    }
+
+    if (container->parent != NULL)
+        e_container_set_parent(container, NULL);
+
+    wlr_scene_node_reparent(&container->tree->node, container->server->pending);
+}
+
+// Tile or float container within its current workspace.
+// Workspace must be arranged after.
+void e_container_change_tiling(struct e_container* container, bool tiled)
+{
+    assert(container && container->workspace);
+
+    struct e_workspace* workspace = container->workspace;
+
+    e_container_leave(container);
+
+    if (tiled)
+        e_workspace_add_tiled_container(workspace, container);
+    else
+        e_workspace_add_floating_container(workspace, container);
+}
+
+void e_container_raise_to_top(struct e_container* container)
+{
+    assert(container);
+
+    wlr_scene_node_raise_to_top(&container->tree->node);
+}
+
+// Center container inside of current output.
+// Container must be arranged after.
+void e_container_center_in_output(struct e_container* container)
+{
+    assert(container && container->workspace && container->workspace->output);
+
+    struct e_output* output = container->workspace->output;
+
+    int ow, oh;
+    wlr_output_effective_resolution(output->wlr_output, &ow, &oh);
+
+    container->area.x = (ow - container->area.width) / 2;
+    container->area.y = (oh - container->area.height) / 2;
+}
+
+// Call when container has been added to a new workspace.
+// Workspace must be arranged after.
+void e_container_reparented_workspace(struct e_container* container)
+{
+    assert(container && container->workspace);
+
+    if (container->fullscreen)
+    {
+        e_workspace_change_fullscreen_container(container->workspace, container);
+    }
+    else if (container->type == E_CONTAINER_TREE)
+    {
+        for (int  i = 0; i < container->tree_container->children.count; i++)
+        {
+            struct e_container* child = e_list_at(&container->tree_container->children, i);
+
+            if (child != NULL)
+                e_container_reparented_workspace(container);
+        }
+    }
+}
+
+// Move container to a different workspace.
+// Old & new workspace must be arranged.
+void e_container_move_to_workspace(struct e_container* container, struct e_workspace* workspace)
+{
+    assert(container && workspace);
+
+    bool was_tiled = e_container_is_tiled(container);
+
+    e_container_leave(container);
+
+    if (was_tiled)
+        e_workspace_add_tiled_container(workspace, container);
+    else
+        e_workspace_add_floating_container(workspace, container);
+}
+
+// Returns NULL on fail.
+static struct e_container* e_container_try_from_node(struct wlr_scene_node* node)
+{
+    if (node == NULL)
+        return NULL;
+
+    //data is either NULL or e_node_desc
+    if (node->data == NULL)
+        return NULL;
+
+    struct e_node_desc* node_desc = node->data;
+
+    return e_container_try_from_e_node_desc(node_desc);
+}
+
+// Returns NULL on fail.
+struct e_container* e_container_try_from_node_ancestors(struct wlr_scene_node* node)
+{
+    if (node == NULL)
+        return NULL;
+
+    struct e_container* container = e_container_try_from_node(node);
+
+    if (container != NULL)
+        return container;
+
+    //keep going upwards in the tree until we find a view container (in which case we return it), or reach the root of the tree (no parent)
+    while (node->parent != NULL)
+    {
+        //go to parent node
+        node = &node->parent->node;
+
+        container = e_container_try_from_node(node);
+
+        if (container != NULL)
+            return container;
+    }
+
+    return NULL;
+}
+
+// Finds the container at the specified layout coords in given scene graph.
+// Returns NULL on fail.
+struct e_container* e_container_at(struct wlr_scene_node* node, double lx, double ly)
+{
+    if (node == NULL)
+        return NULL;
+
+    struct wlr_scene_node* node_at = wlr_scene_node_at(node, lx, ly, NULL, NULL);
+    
+    if (node_at != NULL)
+        return e_container_try_from_node_ancestors(node_at);
+    else
+        return NULL;
 }
 
 // Tree container functions
 
-static void e_container_configure_tree_container(struct e_container* container, int x, int y, int width, int height)
-{
-    assert(container);
-
-    container->area = (struct wlr_box){x, y, width, height};
-
-    struct e_tree_container* tree_container = container->data;
-    e_tree_container_arrange(tree_container);
-}
-
-static void e_container_destroy_tree_container(struct e_container* container)
-{
-    assert(container);
-
-    e_tree_container_destroy(container->data);
-}
-
 // Creates a tree container.
 // Returns NULL on fail.
-struct e_tree_container* e_tree_container_create(enum e_tiling_mode tiling_mode)
+struct e_tree_container* e_tree_container_create(struct e_server* server, enum e_tiling_mode tiling_mode)
 {
     struct e_tree_container* tree_container = calloc(1, sizeof(*tree_container));
 
     if (tree_container == NULL)
     {
-        e_log_error("failed to alloc tree_container");
+        e_log_error("e_tree_container_create: failed to alloc tree_container");
+        return NULL;
+    }
+
+    if (!e_container_init(&tree_container->base, E_CONTAINER_TREE, server))
+    {
+        e_log_error("e_tree_container_create: failed to init container");
+        free(tree_container);
         return NULL;
     }
 
     e_list_init(&tree_container->children, 5);
 
-    e_container_init(&tree_container->base, E_CONTAINER_TREE, tree_container);
+    tree_container->base.tree_container = tree_container;
     tree_container->tiling_mode = tiling_mode;
 
     tree_container->destroying = false;
-
-    //implementation
-    
-    tree_container->base.implementation.configure = e_container_configure_tree_container;
-    tree_container->base.implementation.destroy = e_container_destroy_tree_container;
 
     return tree_container;
 }
@@ -149,12 +487,18 @@ bool e_tree_container_insert_container(struct e_tree_container* tree_container, 
         return false;
 
     container->parent = tree_container;
+    e_container_set_tiled(container, true);
+    
+    if (container->workspace != tree_container->base.workspace)
+        e_container_set_workspace(container, tree_container->base.workspace);
 
     //TODO: allow having containers of different percentages
     for (int i = 0; i < tree_container->children.count; i++)
     {
         struct e_container* container = e_list_at(&tree_container->children, i);
-        container->percentage = 1.0f / tree_container->children.count;
+
+        if (container != NULL)
+            container->percentage = 1.0f / tree_container->children.count;
     }
 
     return true;
@@ -164,36 +508,10 @@ bool e_tree_container_insert_container(struct e_tree_container* tree_container, 
 // Returns true on success, false on fail.
 bool e_tree_container_add_container(struct e_tree_container* tree_container, struct e_container* container)
 {
-    assert(tree_container && container);
-
-    #if E_VERBOSE
-    e_log_info("tree container add container");
-    #endif
-
-    if (container->parent != NULL)
-    {
-        e_log_error("container is already inside a tree container!");
-        return false;
-    }
-
-    //add to children, return false on fail
-    if (!e_list_add(&tree_container->children, container))
-        return false;
-
-    container->parent = tree_container;
-
-    //TODO: allow having containers of different percentages
-    for (int i = 0; i < tree_container->children.count; i++)
-    {
-        struct e_container* container = e_list_at(&tree_container->children, i);
-        container->percentage = 1.0f / tree_container->children.count;
-    }
-
-    return true;
+    return e_tree_container_insert_container(tree_container, container, tree_container->children.count);
 }
 
 // Removes a container from a tree container.
-// Tree container is destroyed when no children are left and has a parent.
 // Returns true on success, false on fail.
 bool e_tree_container_remove_container(struct e_tree_container* tree_container, struct e_container* container)
 {
@@ -212,11 +530,7 @@ bool e_tree_container_remove_container(struct e_tree_container* tree_container, 
     container->parent = NULL;
     e_list_remove(&tree_container->children, container);
 
-    if (tree_container->children.count == 0 && tree_container->base.parent != NULL)
-    {
-        e_tree_container_destroy(tree_container);
-        return true;
-    }
+    e_container_set_tiled(container, false);
 
     //distribute container's percentage evenly across remaining children
 
@@ -231,43 +545,6 @@ bool e_tree_container_remove_container(struct e_tree_container* tree_container, 
     }
 
     return true;
-}
-
-// Arranges a tree container's children to fit within the container's area.
-void e_tree_container_arrange(struct e_tree_container* tree_container)
-{
-    assert(tree_container);
-
-    #if E_VERBOSE
-    e_log_info("tree container arrange");
-    #endif
-
-    float percentageStart = 0.0f;
-
-    for (int i = 0; i < tree_container->children.count; i++)
-    {
-        struct e_container* child_container = e_list_at(&tree_container->children, i);
-        struct wlr_box child_area = {tree_container->base.area.x, tree_container->base.area.y, tree_container->base.area.width, tree_container->base.area.height};
-
-        switch (tree_container->tiling_mode)
-        {
-            case E_TILING_MODE_HORIZONTAL:
-                child_area.x += tree_container->base.area.width * percentageStart;
-                child_area.width *= child_container->percentage;
-                break;
-            case E_TILING_MODE_VERTICAL:
-                child_area.y += tree_container->base.area.height * percentageStart;
-                child_area.height *= child_container->percentage;
-                break;
-            default:
-                e_log_error("e_tree_container_arrange: unknown container tiling mode!");
-                continue;
-        }
-
-        percentageStart += child_container->percentage;
-
-        e_container_configure(child_container, child_area.x, child_area.y, child_area.width, child_area.height);
-    }
 }
 
 static void e_tree_container_clear_children(struct e_tree_container* tree_container)
@@ -290,7 +567,7 @@ static void e_tree_container_clear_children(struct e_tree_container* tree_contai
     e_list_fini(&list);
 }
 
-void e_tree_container_destroy(struct e_tree_container* tree_container)
+static void e_tree_container_destroy(struct e_tree_container* tree_container)
 {
     assert(tree_container);
 
@@ -299,6 +576,8 @@ void e_tree_container_destroy(struct e_tree_container* tree_container)
 
     tree_container->destroying = true;
 
+    wl_signal_emit_mutable(&tree_container->base.events.destroy, NULL);
+
     e_tree_container_clear_children(tree_container);
 
     e_list_fini(&tree_container->children);
@@ -306,4 +585,53 @@ void e_tree_container_destroy(struct e_tree_container* tree_container)
     e_container_fini(&tree_container->base);
 
     free(tree_container);
+}
+
+static void e_view_container_destroy(struct e_view_container* view_container)
+{
+    assert(view_container);
+
+    if (view_container == NULL)
+    {
+        e_log_error("e_view_container_destroy: view_container is NULL!");
+        return;
+    }
+
+    wl_signal_emit_mutable(&view_container->base.events.destroy, NULL);
+
+    wl_list_remove(&view_container->link);
+
+    //reparent view node before destroying container node, so we don't destroy the view's tree aswell
+    wlr_scene_node_reparent(&view_container->view->tree->node, view_container->base.server->pending);
+
+    SIGNAL_DISCONNECT(view_container->map);
+    SIGNAL_DISCONNECT(view_container->unmap);
+
+    SIGNAL_DISCONNECT(view_container->commit);
+
+    SIGNAL_DISCONNECT(view_container->request_move);
+    SIGNAL_DISCONNECT(view_container->request_resize);
+    SIGNAL_DISCONNECT(view_container->request_configure);
+    SIGNAL_DISCONNECT(view_container->request_fullscreen);
+
+    SIGNAL_DISCONNECT(view_container->destroy);
+
+    e_container_fini(&view_container->base);
+
+    free(view_container);
+}
+
+void e_container_destroy(struct e_container* container)
+{
+    assert(container);
+
+    switch (container->type)
+    {
+        case E_CONTAINER_TREE:
+            e_tree_container_destroy(container->tree_container);
+            break;
+        case E_CONTAINER_VIEW:
+            e_view_container_destroy(container->view_container);    
+            break;
+    }
 }
