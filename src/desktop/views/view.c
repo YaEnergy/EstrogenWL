@@ -298,12 +298,15 @@ struct e_view* e_view_at(struct wlr_scene_node* node, double lx, double ly)
 {
     assert(node);
     
-    struct wlr_scene_surface* scene_surface = e_desktop_scene_surface_at(node, lx, ly, NULL, NULL);
-
-    if (scene_surface == NULL)
+    if (node == NULL)
         return NULL;
 
-    return e_view_try_from_node_ancestors(&scene_surface->buffer->node);
+    struct wlr_scene_node* node_at = wlr_scene_node_at(node, lx, ly, NULL, NULL);
+    
+    if (node_at != NULL)
+        return e_view_try_from_node_ancestors(node_at);
+    else
+        return NULL;
 }
 
 void e_view_send_close(struct e_view* view)

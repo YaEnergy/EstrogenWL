@@ -421,6 +421,16 @@ static void e_cursor_handle_grab_container_destroy(struct wl_listener* listener,
     e_cursor_reset_mode(cursor);
 }
 
+static const char* get_xcursor_theme_name(void)
+{
+    const char* name = getenv("XCURSOR_THEME");
+    
+    if (name == NULL)
+        name = "default";
+
+    return name;
+}
+
 struct e_cursor* e_cursor_create(struct e_seat* seat, struct wlr_output_layout* output_layout)
 {
     assert(seat && output_layout);
@@ -444,7 +454,7 @@ struct e_cursor* e_cursor_create(struct e_seat* seat, struct wlr_output_layout* 
     wlr_cursor_attach_output_layout(cursor->wlr_cursor, output_layout);
 
     //load xcursor theme
-    cursor->xcursor_manager = wlr_xcursor_manager_create(NULL, 24);
+    cursor->xcursor_manager = wlr_xcursor_manager_create(get_xcursor_theme_name(), 24);
     wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
 
     // events
