@@ -88,7 +88,7 @@ static void e_commands_switch_tiling_mode(struct e_server* server)
     else
         parent_container->tiling_mode = E_TILING_MODE_HORIZONTAL;
 
-    e_container_rearrange(&parent_container->base);
+    e_container_arrange(&parent_container->base);
 }
 
 static void e_commands_toggle_fullscreen(struct e_server* server)

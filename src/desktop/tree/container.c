@@ -202,11 +202,12 @@ bool e_container_set_parent(struct e_container* container, struct e_tree_contain
         return true;
 }
 
-static void arrange_tree_children(struct e_tree_container* tree_container, struct wlr_box area)
+static void arrange_tree_children(struct e_tree_container* tree_container)
 {
     assert(tree_container);
 
     float percentageStart = 0.0f;
+    struct wlr_box* area = &tree_container->base.area;
 
     for (int i = 0; i < tree_container->children.count; i++)
     {
@@ -217,67 +218,61 @@ static void arrange_tree_children(struct e_tree_container* tree_container, struc
 
         wlr_scene_node_reparent(&child_container->tree->node, tree_container->base.tree);
 
-        struct wlr_box child_area = {area.x, area.y, area.width, area.height};
+        struct wlr_box child_area = {area->x, area->y, area->width, area->height};
 
         switch (tree_container->tiling_mode)
         {
             case E_TILING_MODE_HORIZONTAL:
-                child_area.x += area.width * percentageStart;
+                child_area.x += area->width * percentageStart;
                 child_area.width *= child_container->percentage;
                 break;
             case E_TILING_MODE_VERTICAL:
-                child_area.y += area.height * percentageStart;
+                child_area.y += area->height * percentageStart;
                 child_area.height *= child_container->percentage;
                 break;
             default:
-                e_log_error("e_tree_container_arrange: unknown container tiling mode!");
+                e_log_error("arrange_tree_children: unknown container tiling mode!");
                 continue;
         }
 
         percentageStart += child_container->percentage;
 
-        e_container_arrange(child_container, child_area);
+        child_container->area = child_area;
+        e_container_arrange(child_container);
     }
 }
 
-static void arrange_view(struct e_view_container* view_container, struct wlr_box area)
+static void arrange_view(struct e_view_container* view_container)
 {
     assert(view_container);
 
+    struct wlr_box* area = &view_container->base.area;
+
     view_container->view_pending = (struct wlr_box){
-        .x = area.x,
-        .y = area.y,
-        .width = (area.width > 0) ? area.width : 1,
-        .height = (area.height > 0) ? area.height : 1
+        .x = area->x,
+        .y = area->y,
+        .width = (area->width > 0) ? area->width : 1,
+        .height = (area->height > 0) ? area->height : 1
     };
 
     if (view_container->view != NULL)
         e_view_configure(view_container->view, view_container->view_pending.x, view_container->view_pending.y, view_container->view_pending.width, view_container->view_pending.height);
 }
 
-// Arrange container within given area.
-void e_container_arrange(struct e_container* container, struct wlr_box area)
+// Arrange container's content within its area.
+void e_container_arrange(struct e_container* container)
 {
     assert(container);
-
-    container->area = area;
 
     switch (container->type)
     {
         case E_CONTAINER_TREE:
-            arrange_tree_children(container->tree_container, area);
+            arrange_tree_children(container->tree_container);
             break;
         case E_CONTAINER_VIEW:
-            arrange_view(container->view_container, area);
+            arrange_view(container->view_container);
             break;
     }
-}
-
-void e_container_rearrange(struct e_container* container)
-{
-    assert(container);
-
-    e_container_arrange(container, container->area);
 }
 
 void e_container_leave(struct e_container* container)

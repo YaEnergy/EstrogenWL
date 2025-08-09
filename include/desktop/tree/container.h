@@ -145,11 +145,8 @@ void e_container_set_fullscreen(struct e_container* container, bool fullscreen);
 // Returns true on success, false on fail.
 bool e_container_set_parent(struct e_container* container, struct e_tree_container* parent);
 
-// Arrange container within area.
-void e_container_arrange(struct e_container* container, struct wlr_box area);
-
-// Rearrange container within pending area.
-void e_container_rearrange(struct e_container* container);
+// Arrange container's content within its area.
+void e_container_arrange(struct e_container* container);
 
 // Leave workspace & parent.
 // Workspace (or just parent if none) must be arranged after.

@@ -192,9 +192,14 @@ static void e_view_container_handle_view_request_configure(struct wl_listener* l
     //only respect configure request if container is floating, otherwise respond with our pending size
 
     if (!e_container_is_tiled(&view_container->base)) //floating
-        e_container_arrange(&view_container->base, (struct wlr_box){event->x, event->y, event->width, event->height});
+    {
+        view_container->base.area = (struct wlr_box){event->x, event->y, event->width, event->height};
+        e_container_arrange(&view_container->base);
+    }
     else //tiled
+    {
         e_view_configure(view_container->view, view_container->view_pending.x, view_container->view_pending.y, view_container->view_pending.width, view_container->view_pending.height);
+    }
 }
 
 static void e_view_container_handle_view_request_fullscreen(struct wl_listener* listener, void* data)

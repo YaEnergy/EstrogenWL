@@ -182,11 +182,11 @@ static void swap_tiled_containers(struct e_container* a, struct e_container* b)
 
     //rearrange tree containers
 
-    e_container_rearrange(&a->parent->base);
+    e_container_arrange(&a->parent->base);
 
     //only rearrange once if both views have the same parent container
     if (b->parent != a->parent)
-        e_container_rearrange(&b->parent->base);
+        e_container_arrange(&b->parent->base);
 }
 
 static void e_cursor_handle_mode_move(struct e_cursor* cursor)
@@ -217,7 +217,9 @@ static void e_cursor_handle_mode_move(struct e_cursor* cursor)
     {
         float delta_x = cursor->wlr_cursor->x - cursor->grab_start_x;
         float delta_y = cursor->wlr_cursor->y - cursor->grab_start_y;
-        e_container_arrange(cursor->grab_container, (struct wlr_box){cursor->grab_start_cbox.x + delta_x, cursor->grab_start_cbox.y + delta_y, cursor->grab_start_cbox.width, cursor->grab_start_cbox.height});
+
+        cursor->grab_container->area = (struct wlr_box){cursor->grab_start_cbox.x + delta_x, cursor->grab_start_cbox.y + delta_y, cursor->grab_start_cbox.width, cursor->grab_start_cbox.height};
+        e_container_arrange(cursor->grab_container);
     }
 }
 
@@ -323,7 +325,8 @@ static void e_cursor_resize_floating(struct e_cursor* cursor)
             bottom = top + 1;
     }
 
-    e_container_arrange(cursor->grab_container, (struct wlr_box){left, top, right - left, bottom - top});
+    cursor->grab_container->area = (struct wlr_box){left, top, right - left, bottom - top};
+    e_container_arrange(cursor->grab_container);
 }
 
 static void e_cursor_handle_mode_resize(struct e_cursor* cursor)

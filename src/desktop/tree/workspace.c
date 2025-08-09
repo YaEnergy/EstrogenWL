@@ -172,11 +172,14 @@ void e_workspace_arrange(struct e_workspace* workspace, struct wlr_box full_area
     if (workspace->fullscreen_container != NULL)
     {
         wlr_scene_node_reparent(&workspace->fullscreen_container->tree->node, workspace->layers.fullscreen);
-        e_container_arrange(workspace->fullscreen_container, full_area);
+
+        workspace->fullscreen_container->area = full_area;
+        e_container_arrange(workspace->fullscreen_container);
     }
     else 
     {
-        e_container_arrange(&workspace->root_tiling_container->base, tiled_area);
+        workspace->root_tiling_container->base.area = tiled_area;
+        e_container_arrange(&workspace->root_tiling_container->base);
 
         for (int i = 0; i < workspace->floating_containers.count; i++)
         {
@@ -185,7 +188,7 @@ void e_workspace_arrange(struct e_workspace* workspace, struct wlr_box full_area
             if (container != NULL)
             {
                 wlr_scene_node_reparent(&container->tree->node, workspace->layers.floating);
-                e_container_rearrange(container);
+                e_container_arrange(container);
             }
         }
     }
