@@ -116,10 +116,10 @@ static void e_view_container_handle_view_map(struct wl_listener* listener, void*
         }
     }
 
+    e_workspace_rearrange(workspace);
+    
     //set to pending position immediately, so we're not at (0,0)
     view_container_set_content_position(view_container, view_container->view_pending.x, view_container->view_pending.y);
-
-    e_workspace_rearrange(workspace);
     
     //TODO: tiled -> parent to previously focused tiled container
 
