@@ -316,6 +316,26 @@ struct e_workspace* e_workspace_try_from_node_ancestors(struct wlr_scene_node* n
     return NULL;
 }
 
+static void workspace_destroy_all_floating_containers(struct e_workspace* workspace)
+{
+    assert(workspace);
+
+    //nothing to destroy
+    if (workspace->floating_containers.count == 0)
+        return;
+
+    struct e_list list = { 0 }; //struct e_container*
+    e_list_init(&list, workspace->floating_containers.count);
+
+    for (int i = 0; i < workspace->floating_containers.count; i++)
+        e_list_add(&list, e_list_at(&workspace->floating_containers, i));
+
+    for (int i = 0; i < list.count; i++)
+        e_container_destroy(e_list_at(&list, i));
+
+    e_list_fini(&list);
+}
+
 // Destroy the workspace.
 void e_workspace_destroy(struct e_workspace* workspace)
 {
@@ -336,7 +356,7 @@ void e_workspace_destroy(struct e_workspace* workspace)
     e_container_destroy(&workspace->root_tiling_container->base);
     workspace->root_tiling_container = NULL;
     
-    //TODO: destroy all containers in floating containers list
+    workspace_destroy_all_floating_containers(workspace);
 
     // Destroy workspace layer trees
     wlr_scene_node_destroy(&workspace->layers.floating->node);
