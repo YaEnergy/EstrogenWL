@@ -174,7 +174,7 @@ void e_container_set_fullscreen(struct e_container* container, bool fullscreen)
 
     container->fullscreen = fullscreen;
 
-    if (container->type == E_CONTAINER_VIEW)
+    if (container->type == E_CONTAINER_VIEW && container->view_container->view->mapped)
         e_view_set_fullscreen(container->view_container->view, fullscreen);
 }
 
