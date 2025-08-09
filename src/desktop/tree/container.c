@@ -14,6 +14,7 @@
 #include "desktop/tree/workspace.h"
 #include "desktop/tree/node.h"
 #include "desktop/views/view.h"
+#include "desktop/output.h"
 
 #include "server.h"
 
@@ -323,6 +324,21 @@ void e_container_raise_to_top(struct e_container* container)
     assert(container);
 
     wlr_scene_node_raise_to_top(&container->tree->node);
+}
+
+// Center container inside of current output.
+// Container must be arranged after.
+void e_container_center_in_output(struct e_container* container)
+{
+    assert(container && container->workspace && container->workspace->output);
+
+    struct e_output* output = container->workspace->output;
+
+    int ow, oh;
+    wlr_output_effective_resolution(output->wlr_output, &ow, &oh);
+
+    container->area.x = (ow - container->area.width) / 2;
+    container->area.y = (oh - container->area.height) / 2;
 }
 
 // Call when container has been added to a new workspace.

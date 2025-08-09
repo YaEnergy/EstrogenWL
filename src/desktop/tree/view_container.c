@@ -50,21 +50,6 @@ static void view_container_set_size_from_view(struct e_view_container* view_cont
     view_container->base.area.height = view_container->view->height;
 }
 
-// Centers view container in current output
-// Container must be arranged after. (Rearranged in this case)
-static void view_container_center_in_output(struct e_view_container* view_container)
-{
-    assert(view_container && view_container->base.workspace && view_container->base.workspace->output);
-
-    struct e_output* output = view_container->base.workspace->output;
-
-    int ow, oh;
-    wlr_output_effective_resolution(output->wlr_output, &ow, &oh);
-
-    view_container->base.area.x = (ow - view_container->base.area.width) / 2;
-    view_container->base.area.y = (oh - view_container->base.area.height) / 2;
-}
-
 static void e_view_container_handle_view_map(struct wl_listener* listener, void* data)
 {
     struct e_view_container* view_container = wl_container_of(listener, view_container, map);
@@ -112,7 +97,7 @@ static void e_view_container_handle_view_map(struct wl_listener* listener, void*
         if (!arranged)
         {
             view_container_set_size_from_view(view_container);
-            view_container_center_in_output(view_container);
+            e_container_center_in_output(&view_container->base);
         }
     }
 

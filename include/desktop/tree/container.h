@@ -159,6 +159,10 @@ void e_container_change_tiling(struct e_container* container, bool tiled);
 // Raise container to the top of its current parent tree.
 void e_container_raise_to_top(struct e_container* container);
 
+// Center container inside of current output.
+// Container must be arranged after.
+void e_container_center_in_output(struct e_container* container);
+
 // Call when container has been added to a new workspace.
 // Workspace must be arranged after.
 void e_container_reparented_workspace(struct e_container* container);
