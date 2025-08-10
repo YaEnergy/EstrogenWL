@@ -31,13 +31,13 @@
 
 static void e_commands_kill_focused_view(struct e_server* server)
 {
-    struct e_view* view = e_desktop_focused_view(server);
+    struct e_view_container* view_container = e_desktop_focused_view_container(server);
 
-    if (view != NULL)
+    if (view_container != NULL)
     {
-        e_view_send_close(view);
+        e_view_send_close(view_container->view);
 
-        e_log_info("asked to close view, title: %s", view->title == NULL ? "no name" : view->title);
+        e_log_info("asked to close view, title: %s", view_container->view->title == NULL ? "no name" : view_container->view->title);
     }
     else 
     {
@@ -45,19 +45,25 @@ static void e_commands_kill_focused_view(struct e_server* server)
     }
 }
 
-static void e_commands_toggle_tiling_focused_view(struct e_server* server)
+static void e_commands_toggle_tiled(struct e_server* server)
 {
-    struct e_view* view = e_desktop_focused_view(server);
+    struct e_view_container* view_container = e_desktop_focused_view_container(server);
 
-    if (view != NULL)
+    if (view_container == NULL)
+        return;
+
+    struct e_container* container = &view_container->base;
+
+    if (container->workspace != NULL)
     {
-        e_view_set_tiled(view, !view->tiled);
+        e_container_change_tiling(container, !e_container_is_tiled(container));
+        e_workspace_rearrange(container->workspace);
 
-        e_log_info("setted tiling of view, title: %s", view->title == NULL ? "no name" : view->title);
+        e_log_info("toggled tiled of focused container");
     }
     else 
     {
-        e_log_info("failed to set tiling of focused view");
+        e_log_info("failed to toggled tiled of focused container");
     }
 }
 
@@ -65,33 +71,49 @@ static void e_commands_switch_tiling_mode(struct e_server* server)
 {
     assert(server);
 
-    struct e_view* view = e_desktop_focused_view(server);
+    struct e_view_container* view_container = e_desktop_focused_view_container(server);
 
-    if (view == NULL || view->container.parent == NULL)
+    if (view_container == NULL)
         return;
 
-    struct e_tree_container* parent_container = view->container.parent;
+    struct e_container* container = &view_container->base;
+
+    if (container->parent == NULL)
+        return;
+
+    struct e_tree_container* parent_container = container->parent;
 
     if (parent_container->tiling_mode == E_TILING_MODE_HORIZONTAL)
         parent_container->tiling_mode = E_TILING_MODE_VERTICAL;
     else
         parent_container->tiling_mode = E_TILING_MODE_HORIZONTAL;
 
-    e_tree_container_arrange(parent_container);
+    e_container_arrange(&parent_container->base);
 }
 
-static void e_commands_toggle_fullscreen_focused_view(struct e_server* server)
+static void e_commands_toggle_fullscreen(struct e_server* server)
 {
-    struct e_view* view = e_desktop_focused_view(server);
+    struct e_view_container* view_container = e_desktop_focused_view_container(server);
 
-    if (view != NULL)
+    if (view_container == NULL)
+        return;
+
+    struct e_container* container = &view_container->base;
+
+    if (container->workspace != NULL)
     {
-        e_view_set_fullscreen(view, !view->fullscreen);
-        e_log_info("toggle fullscreen mode of view, fullscreen: %i, title: %s", view->fullscreen, view->title);
+        if (container->workspace->fullscreen_container != container)
+            e_workspace_change_fullscreen_container(container->workspace, container);
+        else
+            e_workspace_change_fullscreen_container(container->workspace, NULL);
+
+        e_workspace_rearrange(container->workspace);
+        
+        e_log_info("toggle fullscreen mode of container, fullscreen: %i", container->fullscreen);
     }
     else 
     {
-        e_log_error("e_commands_toggle_fullscreen_focused_view: failed to toggle fullscreen mode of view!");
+        e_log_error("e_commands_toggle_fullscreen: failed to toggle fullscreen mode of container!");
     }
 }
 
@@ -157,14 +179,14 @@ void e_commands_parse(struct e_server* server, const char* command)
     {
         e_commands_kill_focused_view(server);
     }
-    //TODO: toggle_fullscreen & toggle_tiling are currently placeholders
+    //TODO: toggle_fullscreen & toggle_tiled are currently placeholders
     else if (strcmp(argument, "toggle_fullscreen") == 0)
     {
-        e_commands_toggle_fullscreen_focused_view(server);
+        e_commands_toggle_fullscreen(server);
     }
-    else if (strcmp(argument, "toggle_tiling") == 0)
+    else if (strcmp(argument, "toggle_tiled") == 0)
     {
-        e_commands_toggle_tiling_focused_view(server);
+        e_commands_toggle_tiled(server);
     }
     //TODO: switch_tiling_mode is a placeholder name
     else if (strcmp(argument, "switch_tiling_mode") == 0)
@@ -198,26 +220,36 @@ void e_commands_parse(struct e_server* server, const char* command)
     //TODO: testing only, remove
     else if (strcmp(argument, "move_to_next_workspace") == 0)
     {
-        struct e_view* focused_view = e_desktop_focused_view(server);
+        struct e_view_container* focused_view_container = e_desktop_focused_view_container(server);
 
-        if (focused_view == NULL)
+        if (focused_view_container == NULL)
             return;
 
-        struct e_output* output = e_desktop_hovered_output(server);
+        struct e_container* container = &focused_view_container->base;
 
-        struct e_workspace* workspace = output->active_workspace;
+        struct e_workspace* old_workspace = container->workspace;
 
-        if (workspace == NULL)
+        if (old_workspace == NULL)
         {
-            e_log_error("no workspace");
+            e_log_error("e_commands_parse: container has no workspace");
             return;
         }
 
-        int i = e_list_find_index(&output->workspace_group.workspaces, workspace);
+        struct e_output* output = old_workspace->output;
 
-        e_view_move_to_workspace(focused_view, e_list_at(&output->workspace_group.workspaces, (i + 1) % output->workspace_group.workspaces.count));
+        int i = e_list_find_index(&output->workspace_group.workspaces, old_workspace);
+
+        struct e_workspace* new_workspace = e_list_at(&output->workspace_group.workspaces, (i + 1) % output->workspace_group.workspaces.count);
+
+        e_container_move_to_workspace(container, new_workspace);
+
+        e_workspace_rearrange(old_workspace);
+
+        if (new_workspace != old_workspace)
+            e_workspace_rearrange(new_workspace);
+
         e_cursor_set_focus_hover(server->seat->cursor);
-        e_log_info("view workspace index: %i", (i + 1) % output->workspace_group.workspaces.count);
+        e_log_info("container workspace index: %i", (i + 1) % output->workspace_group.workspaces.count);
     }
     else 
     {

@@ -1,56 +1,75 @@
 #pragma once
 
 #include <stdbool.h>
-
 #include <stdint.h>
+
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
+#include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_scene.h>
 
 #include <wlr/util/box.h>
 
 #include <util/list.h>
 
-//TODO: function for getting the preferred percentage of space a container that hasn't been added yet should take up
+struct e_server;
 
+struct e_workspace;
+struct e_view;
 struct e_container;
+struct e_view_container;
 struct e_tree_container;
-
-struct e_container_impl
-{
-    // Configure the container.
-    void (*configure)(struct e_container* container, int lx, int ly, int width, int height);
-
-    // Destroy the container and free its memory.
-    void (*destroy)(struct e_container* container);
-};
 
 enum e_container_type
 {
-    E_CONTAINER_TREE = 1,
-    E_CONTAINER_VIEW = 2
+    E_CONTAINER_TREE = 1, //tree_container
+    E_CONTAINER_VIEW = 2 //view_container
+};
+
+// 0 or lower means hint isn't set.
+struct e_container_size_hints
+{
+    int min_width, min_height;
+    int max_width, max_height;
+
+    int width_inc, height_inc; //size incremenets
 };
 
 // A container for autoconfiguring data by its ancestor containers.
 struct e_container
 {
+    struct e_server* server;
+
     enum e_container_type type;
 
-    // Data of this container, usually the struct implementing a container type.
+    // Container implementation, see type (e_container_type).
     // May be NULL.
-    void* data;
+    union
+    {
+        struct e_tree_container* tree_container;
+        struct e_view_container* view_container;
+    };
 
-    struct e_container_impl implementation;
-
-    // area container is taking in
+    // Area containing is taking in.
     struct wlr_box area;
     // percentage of space this container takes up within parent container
     float percentage;
 
-    // parent of this container, NULL if root container.
+    struct wlr_scene_tree* tree;
+
+    struct e_workspace* workspace;
+
+    // Parent of this container, NULL if root container or floating container.
     // May be NULL.
     struct e_tree_container* parent;
+
+    bool fullscreen;
+
+    struct
+    {
+        struct wl_signal destroy;
+    } events;
 };
 
 enum e_tiling_mode
@@ -60,7 +79,6 @@ enum e_tiling_mode
 };
 
 // A container that tiles its children containers.
-// Destroys itself if it has no parent when last child is removed.
 struct e_tree_container
 {
     // How this container should tile containers.
@@ -73,15 +91,91 @@ struct e_tree_container
     bool destroying;
 };
 
+// A container that contains a single view.
+struct e_view_container
+{
+    struct e_view* view;
+
+    // View's pending & current area.
+    // Pending area should match current area when no configures are pending.
+    struct wlr_box view_current, view_pending;
+
+    struct e_container base;
+
+    struct wl_listener map;
+    struct wl_listener unmap;
+
+    struct wl_listener commit;
+
+    struct wl_listener request_move;
+    struct wl_listener request_resize;
+    struct wl_listener request_configure;
+    struct wl_listener request_fullscreen;
+
+    struct wl_listener destroy;
+
+    struct wl_list link; //e_server::view_containers
+};
+
 // Returns true on success, false on fail.
-bool e_container_init(struct e_container* container, enum e_container_type type, void* data);
+bool e_container_init(struct e_container* container, enum e_container_type type, struct e_server* server);
 
 void e_container_fini(struct e_container* container);
+
+bool e_container_is_tiled(struct e_container* container);
+
+// Returns container's size hints, usually only respected for floating containers.
+struct e_container_size_hints e_container_get_size_hints(struct e_container* container);
+
+// Returns whether container has the given ancestor.
+// False if not, including when ancestor is container.
+bool e_container_has_ancestor(struct e_container* container, struct e_container* ancenstor);
+
+// Set container tiled state.
+void e_container_set_tiled(struct e_container* container, bool tiled);
+
+// Set container workspace state.
+void e_container_set_workspace(struct e_container* container, struct e_workspace* workspace);
+
+// Set container fullscreen state.
+void e_container_set_fullscreen(struct e_container* container, bool fullscreen);
 
 // Sets the parent of a container.
 // Parent may be NULL.
 // Returns true on success, false on fail.
 bool e_container_set_parent(struct e_container* container, struct e_tree_container* parent);
+
+// Arrange container's content within its area.
+void e_container_arrange(struct e_container* container);
+
+// Leave workspace & parent.
+// Workspace (or just parent if none) must be arranged after.
+void e_container_leave(struct e_container* container);
+
+// Tile or float container within its current workspace.
+// Workspace must be arranged after.
+void e_container_change_tiling(struct e_container* container, bool tiled);
+
+// Raise container to the top of its current parent tree.
+void e_container_raise_to_top(struct e_container* container);
+
+// Center container inside of current output.
+// Container must be arranged after.
+void e_container_center_in_output(struct e_container* container);
+
+// Call when container has been added to a new workspace.
+// Workspace must be arranged after.
+void e_container_reparented_workspace(struct e_container* container);
+
+// Move container to a different workspace.
+// Old & new workspace must be arranged after.
+void e_container_move_to_workspace(struct e_container* container, struct e_workspace* workspace);
+
+// Grow/shrink tiled container's percentage, keeping the percentage sum of the main container and a sibling container the same.
+// Sibling containers have the same parent container.
+// Returns if they were able to be resized.
+// Their parent container must be arranged after.
+bool e_container_resize_tiled(struct e_container* container, struct e_container* affected_sibling, float percentage);
 
 // Gets next sibling of container.
 // Returns NULL if none.
@@ -91,13 +185,12 @@ struct e_container* e_container_next_sibling(struct e_container* container);
 // Returns NULL if none.
 struct e_container* e_container_prev_sibling(struct e_container* container);
 
-// Configure the container.
-void e_container_configure(struct e_container* container, int x, int y, int width, int height);
+// Returns NULL on fail.
+struct e_container* e_container_try_from_node_ancestors(struct wlr_scene_node* node);
 
-// Grow/shrink tiled container's percentage, keeping the percentage sum of the main container and a sibling container the same.
-// Sibling containers have the same parent container.
-// Returns if they were able to be resized.
-bool e_container_resize_tiled(struct e_container* container, struct e_container* affected_sibling, float percentage);
+// Finds the view container at the specified layout coords in given scene graph.
+// Returns NULL on fail.
+struct e_container* e_container_at(struct wlr_scene_node* node, double lx, double ly);
 
 // Destroy the container and free its memory.
 void e_container_destroy(struct e_container* container);
@@ -106,7 +199,7 @@ void e_container_destroy(struct e_container* container);
 
 // Creates a tree container.
 // Returns NULL on fail.
-struct e_tree_container* e_tree_container_create(enum e_tiling_mode tiling_mode);
+struct e_tree_container* e_tree_container_create(struct e_server* server, enum e_tiling_mode tiling_mode);
 
 // Inserts a container in tree container at given index.
 // Returns true on success, false on fail.
@@ -117,12 +210,15 @@ bool e_tree_container_insert_container(struct e_tree_container* tree_container, 
 bool e_tree_container_add_container(struct e_tree_container* tree_container, struct e_container* container);
 
 // Removes a container from a tree container.
-// Tree container is destroyed when no children are left and has a parent.
 // Returns true on success, false on fail.
 bool e_tree_container_remove_container(struct e_tree_container* tree_container, struct e_container* container);
 
-// Arranges a tree container's children to fit within the container's area.
-void e_tree_container_arrange(struct e_tree_container* tree_container);
+// View container functions
 
-// Destroy a tree container and free its memory.
-void e_tree_container_destroy(struct e_tree_container* tree_container);
+// Create a view container.
+// Returns NULL on fail.
+struct e_view_container* e_view_container_create(struct e_server* server, struct e_view* view);
+
+// Finds the view container which has this surface as its view's main surface.
+// Returns NULL on fail.
+struct e_view_container* e_view_container_try_from_surface(struct e_server* server, struct wlr_surface* surface);

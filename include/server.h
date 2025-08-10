@@ -15,7 +15,6 @@
 
 #include "config.h"
 
-struct e_desktop;
 struct e_seat;
 
 struct wlr_xdg_shell;
@@ -115,7 +114,7 @@ struct e_server
     // nodes that are waiting to be reparented
     struct wlr_scene_tree* pending;
 
-    struct wl_list views; //struct e_view*
+    struct wl_list view_containers; //struct e_view_container*
 
     // collection & management of input devices: keyboard, mouse, ...
     struct e_seat* seat;

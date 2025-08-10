@@ -60,7 +60,7 @@ int main()
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F3, WLR_MODIFIER_LOGO, "exit");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F4, WLR_MODIFIER_LOGO, "kill");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F5, WLR_MODIFIER_LOGO, "toggle_fullscreen");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F6, WLR_MODIFIER_LOGO, "toggle_tiling");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F6, WLR_MODIFIER_LOGO, "toggle_tiled");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F7, WLR_MODIFIER_LOGO, "switch_tiling_mode");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F8, WLR_MODIFIER_LOGO, "next_workspace");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F9, WLR_MODIFIER_LOGO, "move_to_next_workspace");
