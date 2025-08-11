@@ -103,14 +103,14 @@ static void e_cursor_button(struct wl_listener* listener, void* data)
     //is ALT modifier is pressed on keyboard? (for both cases within here, cursor mode should be in default mode)
     if (keyboard != NULL && (wlr_keyboard_get_modifiers(keyboard) & WLR_MODIFIER_LOGO) && cursor->mode == E_CURSOR_MODE_DEFAULT)
     {
-        //right click is held, start resizing the focussed view
+        //right click is held, start resizing the focused container
         if (event->button == E_POINTER_BUTTON_RIGHT && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
         {
             start_grab_resize_focused_view_container(cursor);
             handled = true;
         }
-        //middle click is held, start moving the focussed view
-        else if (event->button == E_POINTER_BUTTON_MIDDLE && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
+        //left click is held, start moving the focused container
+        else if (event->button == E_POINTER_BUTTON_LEFT && event->state == WL_POINTER_BUTTON_STATE_PRESSED)
         {
             start_grab_move_focused_view_container(cursor);
             handled = true;
