@@ -45,8 +45,8 @@ static void xdg_popup_unconstrain(struct e_xdg_popup* popup)
         return;
 
     struct wlr_box toplevel_popup_space = popup->view->popup_space;
-    toplevel_popup_space.x -= popup->view->root_geometry.x;
-    toplevel_popup_space.y -= popup->view->root_geometry.y;
+    toplevel_popup_space.x += popup->view->root_geometry.x;
+    toplevel_popup_space.y += popup->view->root_geometry.y;
 
     wlr_xdg_popup_unconstrain_from_box(popup->xdg_popup, &toplevel_popup_space);
 }
