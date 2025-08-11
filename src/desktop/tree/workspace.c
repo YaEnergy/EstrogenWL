@@ -151,10 +151,7 @@ void e_workspace_set_activated(struct e_workspace* workspace, bool activated)
     e_workspace_update_tree_visibility(workspace);
 
     e_cosmic_workspace_set_active(workspace->cosmic_handle, activated);
-    e_cosmic_workspace_set_hidden(workspace->cosmic_handle, !activated);
-
     e_ext_workspace_set_active(workspace->ext_handle, activated);
-    e_ext_workspace_set_hidden(workspace->ext_handle, !activated);
 }
 
 // Arranges a workspace's children to fit within the given area.
