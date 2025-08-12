@@ -104,7 +104,7 @@ struct e_view_request_move_event
 struct e_view_request_resize_event
 {
     struct e_view* view;
-    uint32_t edges;
+    uint32_t edges; //bitmask enum wlr_edges
 };
 
 // View requests a specific configure.
