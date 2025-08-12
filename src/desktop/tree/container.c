@@ -385,25 +385,7 @@ void e_container_move_to_workspace(struct e_container* container, struct e_works
 // Their parent container must be arranged after.
 bool e_container_resize_tiled(struct e_container* container, struct e_container* affected_sibling, float percentage)
 {
-    assert(container && affected_sibling && container->parent == affected_sibling->parent);
-
-    if (container == NULL)
-    {
-        e_log_error("e_container_resize_tiled: container is NULL");
-        return false;
-    }
-
-    if (affected_sibling == NULL)
-    {
-        e_log_error("e_container_resize_tiled: affected_sibling is NULL");
-        return false;
-    }
-
-    if (container->parent != affected_sibling->parent)
-    {
-        e_log_error("e_container_resize_tiled: given containers are not siblings!");
-        return false;
-    }
+    assert(container && affected_sibling && container->parent == affected_sibling->parent && container->parent != NULL);
 
     float total_percentage = container->percentage + affected_sibling->percentage;
 
