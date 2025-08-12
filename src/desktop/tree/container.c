@@ -22,7 +22,7 @@
 #include "util/list.h"
 #include "util/log.h"
 
-struct e_output;
+#define CONTAINER_TILE_RESIZE_MIN_PERCENTAGE 0.05f
 
 bool e_container_init(struct e_container* container, enum e_container_type type, struct e_server* server)
 {
@@ -379,21 +379,6 @@ void e_container_move_to_workspace(struct e_container* container, struct e_works
         e_workspace_add_floating_container(workspace, container);
 }
 
-static float size_along_tiling_axis(struct e_container* container, enum e_tiling_mode tiling_mode)
-{
-    assert(container);
-
-    switch (tiling_mode)
-    {
-        case E_TILING_MODE_HORIZONTAL:
-            return container->area.width;
-        case E_TILING_MODE_VERTICAL:
-            return container->area.height;
-        default:
-            return 0.0f;
-    }
-}
-
 // Grow/shrink tiled container's percentage, keeping the percentage sum of the main container and a sibling container the same.
 // Sibling containers have the same parent container.
 // Returns if they were able to be resized.
@@ -422,22 +407,16 @@ bool e_container_resize_tiled(struct e_container* container, struct e_container*
 
     float total_percentage = container->percentage + affected_sibling->percentage;
 
-    //minimum percentage required for atleast two pixels, but forced to be atleast 5%
-    float min_percentage = 2.0f / size_along_tiling_axis(&container->parent->base, container->parent->tiling_mode);
-
-    if (min_percentage < 0.05f)
-        min_percentage = 0.05f;
-
     //can't resize without breaking limits
-    if (total_percentage < min_percentage * 2)
+    if (total_percentage < CONTAINER_TILE_RESIZE_MIN_PERCENTAGE * 2)
         return false;
 
     //limit size of affected container, keep min %
-    if (total_percentage - percentage < min_percentage)
-        percentage = total_percentage - min_percentage;
+    if (total_percentage - percentage < CONTAINER_TILE_RESIZE_MIN_PERCENTAGE)
+        percentage = total_percentage - CONTAINER_TILE_RESIZE_MIN_PERCENTAGE;
     //limit size of main container, keep min %
-    else if (percentage < min_percentage)
-        percentage = min_percentage;
+    else if (percentage < CONTAINER_TILE_RESIZE_MIN_PERCENTAGE)
+        percentage = CONTAINER_TILE_RESIZE_MIN_PERCENTAGE;
 
     container->percentage = percentage;
     affected_sibling->percentage  = total_percentage - percentage;
