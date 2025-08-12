@@ -1,7 +1,6 @@
 #include "desktop/views/view.h"
 
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdbool.h>
 #include <assert.h>
 
@@ -23,35 +22,14 @@
 
 #include "input/seat.h"
 
-#include "util/list.h"
 #include "util/log.h"
-
-static void e_container_configure_view(struct e_container* container, int lx, int ly, int width, int height)
-{
-    assert(container);
-
-    struct e_view* view = container->data;
-
-    e_view_configure(view, lx, ly, width, height);
-}
-
-static void e_container_destroy_view(struct e_container* container)
-{
-    assert(container);
-
-    struct e_view* view = container->data;
-
-    //TODO: doesn't destroy toplevel or xwayland data
-    e_view_fini(view);
-}
 
 //this function should only be called by the implementations of each view type. 
 //I mean it would be a bit weird to even call this function somewhere else.
-void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_type type, void* data, const struct e_view_impl* implementation)
+void e_view_init(struct e_view* view, enum e_view_type type, void* data, const struct e_view_impl* implementation, struct wlr_scene_tree* parent)
 {
-    assert(view && desktop && implementation);
+    assert(view && implementation && parent);
 
-    view->desktop = desktop;
     view->type = type;
     view->data = data;
 
@@ -63,19 +41,32 @@ void e_view_init(struct e_view* view, struct e_desktop* desktop, enum e_view_typ
 
     view->title = NULL;
     
-    view->tree = wlr_scene_tree_create(desktop->pending);
-    wlr_scene_node_set_enabled(&view->tree->node, false);
+    view->tree = wlr_scene_tree_create(parent);
     e_node_desc_create(&view->tree->node, E_NODE_DESC_VIEW, view);
+
+    view->root_geometry = (struct wlr_box){0, 0, 0, 0};
+    view->width = 0;
+    view->height = 0;
 
     view->content_tree = NULL;
 
     view->implementation = implementation;
 
-    e_container_init(&view->container, E_CONTAINER_VIEW, view);
-    view->container.implementation.configure = e_container_configure_view;
-    view->container.implementation.destroy = e_container_destroy_view;
+    view->output = NULL;
 
-    wl_list_init(&view->link);
+    // signals
+
+    wl_signal_init(&view->events.map);
+    wl_signal_init(&view->events.unmap);
+
+    wl_signal_init(&view->events.commit);
+
+    wl_signal_init(&view->events.request_fullscreen);
+    wl_signal_init(&view->events.request_move);
+    wl_signal_init(&view->events.request_resize);
+    wl_signal_init(&view->events.request_configure);
+
+    wl_signal_init(&view->events.destroy);
 }
 
 // Returns size hints of view.
@@ -98,119 +89,36 @@ struct e_view_size_hints e_view_get_size_hints(struct e_view* view)
     }
 }
 
-// Parent is allowed to be NULL.
-static void e_view_set_parent_container(struct e_view* view, struct e_tree_container* parent)
+// Sets output of view.
+// Output is allowed to be NULL.
+void e_view_set_output(struct e_view* view, struct e_output* output)
 {
     assert(view);
 
-    struct e_tree_container* previous_parent = view->container.parent;
-
-    //parent container remains unchanged
-    if (parent == previous_parent)
-    {
-        e_log_info("view parent remains unchanged");
-        return;
-    }
-
-    #if E_VERBOSE
-    e_log_info("setting view parent...");
-    #endif
-
-    //remove from & rearrange previous container
-    if (previous_parent != NULL)
-    {
-        e_tree_container_remove_container(previous_parent, &view->container);
-        e_tree_container_arrange(previous_parent);
-    }
-    
-    if (parent != NULL)
-    {
-        e_tree_container_add_container(parent, &view->container);
-        e_tree_container_arrange(parent);
-    }
-}
-
-// Sets workspace of view, but doesn't set parent container of view.
-// Workspace is allowed to be NULL.
-static void e_view_set_workspace(struct e_view* view, struct e_workspace* workspace)
-{
     if (view == NULL)
     {
-        e_log_error("e_view_set_workspace: view is NULL!");
+        e_log_error("e_view_set_output: view is NULL!");
         return;
     }
 
-    if (view->workspace != NULL)
-    {
-        //remove from old floating list if there
+    view->output = output;
 
-        int floating_index = e_list_find_index(&view->workspace->floating_views, view);
-
-        if (floating_index != -1)
-            e_list_remove_index(&view->workspace->floating_views, floating_index);
-
-        //reenable workspace trees if workspace is active and view was fullscreen
-        if (view->fullscreen)
-        {
-            view->workspace->fullscreen_view = NULL;
-            e_workspace_update_tree_visibility(view->workspace);
-        }
-    }
-    
-    if (workspace != NULL)
-    {
-        if (view->fullscreen)
-        {
-            if (workspace->fullscreen_view != NULL && workspace->fullscreen_view != view)
-                e_view_set_fullscreen(workspace->fullscreen_view, false);
-
-            workspace->fullscreen_view = view;
-            wlr_scene_node_reparent(&view->tree->node, workspace->layers.fullscreen);
-            e_workspace_update_tree_visibility(workspace);
-            e_workspace_arrange(workspace, workspace->full_area, workspace->tiled_area);
-        }
-        else if (view->tiled)
-        {
-            wlr_scene_node_reparent(&view->tree->node, workspace->layers.tiling);
-        }
-        else //floating 
-        {
-            wlr_scene_node_reparent(&view->tree->node, workspace->layers.floating);
-            e_list_add(&workspace->floating_views, view);
-        }
-    }
-    else 
-    {
-        wlr_scene_node_reparent(&view->tree->node, view->desktop->pending);
-    }
-
-    view->workspace = workspace;
+    //TODO: later, foreign toplevel output enter & leave
 }
 
-// Moves view to a different workspace, and updating its container parent.
-// If workspace is NULL, removes view from current workspace.
-void e_view_move_to_workspace(struct e_view* view, struct e_workspace* workspace)
-{
-    if (view == NULL)
-    {
-        e_log_error("e_view_set_workspace: view is NULL!");
-        return;
-    }
-
-    e_view_set_workspace(view, workspace);
-    
-    if (workspace != NULL && view->tiled && !view->fullscreen)
-        e_view_set_parent_container(view, workspace->root_tiling_container);
-    else //floating or NULL workspace or fullscreen
-        e_view_set_parent_container(view, NULL);
-}
-
-// Set pending layout position of view.
-void e_view_set_position(struct e_view* view, int lx, int ly)
+// Set space for popups relative to view.
+// Note: not relative to root toplevel surface, but to toplevels (0, 0) point. So no need to access view's geometry when setting this.
+void e_view_set_popup_space(struct e_view* view, struct wlr_box popup_space)
 {
     assert(view);
 
-    e_view_configure(view, lx, ly, view->pending.width, view->pending.height);
+    if (view == NULL)
+    {
+        e_log_error("e_view_set_popup_space: view is NULL!");
+        return;
+    }
+
+    view->popup_space = popup_space;
 }
 
 void e_view_configure(struct e_view* view, int lx, int ly, int width, int height)
@@ -233,24 +141,10 @@ void e_view_set_tiled(struct e_view* view, bool tiled)
 
     e_log_info("setting tiling mode of view to %d...", tiled);
 
-    if (view->tiled != tiled)
-    {
-        view->tiled = tiled;
-
-        if (view->implementation->notify_tiled != NULL)
-            view->implementation->notify_tiled(view, tiled);
-    }
-
-    struct e_workspace* workspace = view->workspace;
-
-    if (workspace != NULL && !view->fullscreen)
-    {
-        //TODO: tiled -> parent to previously focused tiled container
-        //TODO: floating -> return to natural geometry and center
-
-        e_view_set_parent_container(view, tiled ? workspace->root_tiling_container : NULL);
-        wlr_scene_node_reparent(&view->tree->node, tiled ? workspace->layers.tiling : workspace->layers.floating);
-    }
+    if (view->implementation->set_tiled != NULL)
+        view->implementation->set_tiled(view, tiled);
+    else
+        e_log_error("e_view_set_tiled: not implemented!");
 }
 
 void e_view_set_activated(struct e_view* view, bool activated)
@@ -263,63 +157,6 @@ void e_view_set_activated(struct e_view* view, bool activated)
         e_log_error("e_view_set_activated: not implemented!");
 }
 
-
-// Set view to fullscreen.
-void e_view_fullscreen(struct e_view* view)
-{
-    assert(view);
-
-    struct e_workspace* workspace = view->workspace;
-
-    if (workspace == NULL)
-    {
-        e_log_error("e_view_unfullscreen: workspace is NULL!");
-        return;
-    }
-
-    if (workspace->fullscreen_view == view)
-        return;
-
-    if (workspace->fullscreen_view != NULL)
-        e_view_set_fullscreen(workspace->fullscreen_view, false);
-
-    view->fullscreen = true;
-    workspace->fullscreen_view = view;
-    e_view_set_parent_container(view, NULL);
-
-    wlr_scene_node_reparent(&view->tree->node, workspace->layers.fullscreen);
-
-    e_workspace_update_tree_visibility(workspace);
-    e_workspace_arrange(workspace, workspace->full_area, workspace->tiled_area);
-}
-
-// Unfullscreen view.
-void e_view_unfullscreen(struct e_view* view)
-{
-    assert(view);
-
-    struct e_workspace* workspace = view->workspace;
-
-    if (workspace == NULL)
-    {
-        e_log_error("e_view_unfullscreen: workspace is NULL!");
-        return;
-    }
-
-    //this view must be the one that's in fullscreen mode
-    if (workspace->fullscreen_view != view)
-        return;
-
-    view->fullscreen = false;
-    workspace->fullscreen_view = NULL;
-    
-    e_view_set_tiled(view, view->tiled);
-
-    e_workspace_update_tree_visibility(workspace);
-    e_workspace_arrange(workspace, workspace->full_area, workspace->tiled_area);
-}
-
-
 // Set the fullscreen mode of the view.
 void e_view_set_fullscreen(struct e_view* view, bool fullscreen)
 {
@@ -329,32 +166,6 @@ void e_view_set_fullscreen(struct e_view* view, bool fullscreen)
         view->implementation->set_fullscreen(view, fullscreen);
     else
         e_log_error("e_view_set_fullscreen: set fullscreen not implemented!");
-}
-
-bool e_view_has_pending_changes(struct e_view* view)
-{
-    return !wlr_box_equal(&view->current, &view->pending) && !wlr_box_empty(&view->pending);
-}
-
-// Configure view using pending changes.
-void e_view_configure_pending(struct e_view* view)
-{
-    assert(view);
-
-    #if E_VERBOSE
-    e_log_info("view configure pending");
-    #endif
-
-    e_view_configure(view, view->pending.x, view->pending.y, view->pending.width, view->pending.height);
-}
-
-// Updates view's tree node to current position.
-// Should be called when view has moved. (Current x & y changed)
-void e_view_moved(struct e_view* view)
-{
-    assert(view);
-
-    wlr_scene_node_set_position(&view->tree->node, view->current.x, view->current.y);
 }
 
 // Create a scene tree displaying this view's surfaces and subsurfaces.
@@ -389,27 +200,14 @@ static bool e_view_wants_floating(struct e_view* view)
     }
 }
 
-// Display view.
-// Set fullscreen to true and set output if you want the view to be on a specific output immediately.
-// If output is NULL, searches for current hovered output instead.
-void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output)
+// Display view within view's tree & emit map signal.
+// Set fullscreen to true and set fullscreen_output if you want to request that the view should be on a specific output immediately.
+// Output is allowed to be NULL.
+void e_view_map(struct e_view* view, bool fullscreen, struct e_output* fullscreen_output)
 {
     assert(view);
 
     e_log_info("view map");
-
-    if (output == NULL || output->active_workspace == NULL)
-    {
-        output = e_desktop_hovered_output(view->desktop);
-
-        if (output == NULL || output->active_workspace == NULL)
-        {
-            e_log_error("e_view_map: unable to map view, no output with a workspace");
-            return;
-        }
-    }
-
-    wl_list_insert(&view->desktop->views, &view->link);
 
     view->content_tree = e_view_create_content_tree(view);
 
@@ -419,26 +217,18 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* output)
         return;
     }
 
-    wlr_scene_node_set_position(&view->tree->node, view->current.x, view->current.y);
-
     view->mapped = true;
 
-    e_view_set_workspace(view, output->active_workspace);
+    struct e_view_map_event view_event = {
+        .fullscreen = fullscreen,
+        .fullscreen_output = fullscreen_output,
+        .wants_floating = e_view_wants_floating(view)
+    };
 
-    if (fullscreen)
-        e_view_fullscreen(view);
-
-    bool wants_floating = e_view_wants_floating(view);
-    e_view_set_tiled(view, !wants_floating);
-
-    wlr_scene_node_set_enabled(&view->tree->node, true);
-
-    //set focus to this view
-    if (view->surface != NULL)
-        e_desktop_focus_view(view->desktop, view);
+    wl_signal_emit_mutable(&view->events.map, &view_event);
 }
 
-// Stop displaying view.
+// Stop displaying view within view's tree & emit unmap signal.
 void e_view_unmap(struct e_view* view)
 {   
     assert(view);
@@ -447,66 +237,15 @@ void e_view_unmap(struct e_view* view)
     e_log_info("view unmap");
     #endif
 
-    e_view_move_to_workspace(view, NULL);
-
     view->mapped = false;
-    wlr_scene_node_set_enabled(&view->tree->node, false);
-    wlr_scene_node_destroy(&view->content_tree->node);
-    view->content_tree = NULL;
 
-    if (view->container.parent != NULL)
+    if (view->content_tree != NULL)
     {
-        struct e_tree_container* parent = view->container.parent;
-    
-        e_tree_container_remove_container(parent, &view->container);
-        e_tree_container_arrange(parent);
+        wlr_scene_node_destroy(&view->content_tree->node);
+        view->content_tree = NULL;
     }
 
-    wl_list_remove(&view->link);
-}
-
-struct e_view* e_view_from_surface(struct e_desktop* desktop, struct wlr_surface* surface)
-{
-    assert(desktop);
-    
-    if (surface == NULL)
-        return NULL;
-
-    if (wl_list_empty(&desktop->views))
-        return NULL;
-
-    struct e_view* view;
-
-    wl_list_for_each(view, &desktop->views, link)
-    {
-        if (view->surface == NULL)
-            continue;
-        
-        //found view with given surface as main surface
-        if (view->surface == surface)
-            return view;
-    }
-
-    //none found
-    return NULL; 
-}
-
-// Raise view to the top of its parent tree.
-void e_view_raise_to_top(struct e_view* view)
-{
-    if (view == NULL)
-    {
-        e_log_error("e_view_raise_to_top: view is NULL!");
-        return;
-    }
-
-    if (view->tree == NULL)
-    {
-        e_log_error("e_view_raise_to_top: view has no tree!");
-        return;
-    }
-
-    wlr_scene_node_raise_to_top(&view->tree->node);
+    wl_signal_emit_mutable(&view->events.unmap, NULL);
 }
 
 // Returns NULL on fail.
@@ -559,12 +298,15 @@ struct e_view* e_view_at(struct wlr_scene_node* node, double lx, double ly)
 {
     assert(node);
     
-    struct wlr_scene_surface* scene_surface = e_desktop_scene_surface_at(node, lx, ly, NULL, NULL);
-
-    if (scene_surface == NULL)
+    if (node == NULL)
         return NULL;
 
-    return e_view_try_from_node_ancestors(&scene_surface->buffer->node);
+    struct wlr_scene_node* node_at = wlr_scene_node_at(node, lx, ly, NULL, NULL);
+    
+    if (node_at != NULL)
+        return e_view_try_from_node_ancestors(node_at);
+    else
+        return NULL;
 }
 
 void e_view_send_close(struct e_view* view)

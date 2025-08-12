@@ -1,6 +1,5 @@
 #include "desktop/desktop.h"
 
-#include <stdlib.h>
 #include <assert.h>
 
 #include <wayland-server-core.h>
@@ -13,89 +12,14 @@
 #include "input/cursor.h"
 
 #include "desktop/views/view.h"
+#include "desktop/tree/container.h"
 #include "desktop/tree/workspace.h"
 #include "desktop/layer_shell.h"
 #include "desktop/output.h"
 
 #include "util/log.h"
 
-// creates scene and scene layer trees
-static void e_desktop_init_scene(struct e_desktop* desktop)
-{
-    assert(desktop);
-
-    //handles all rendering & damage tracking, 
-    //use this to add renderable things to the scene graph 
-    //and then call wlr_scene_commit_output to render the frame
-    desktop->scene = wlr_scene_create();
-    desktop->scene_layout = wlr_scene_attach_output_layout(desktop->scene, desktop->output_layout);
-
-    desktop->unmanaged = wlr_scene_tree_create(&desktop->scene->tree);
-
-    desktop->pending = wlr_scene_tree_create(&desktop->scene->tree);
-    wlr_scene_node_set_enabled(&desktop->pending->node, false);
-}
-
-struct e_desktop* e_desktop_create(struct wl_display* display, struct wlr_compositor* compositor, struct e_config* config)
-{
-    assert(display && compositor && config);
-
-    struct e_desktop* desktop = calloc(1, sizeof(*desktop));
-
-    if (desktop == NULL)
-    {
-        e_log_error("failed to allocate desktop");
-        return NULL;
-    }
-    
-    desktop->display = display;
-    desktop->config = config;
-
-    wl_list_init(&desktop->outputs);
-
-    //wlroots utility for working with arrangement of screens in a physical layout
-    desktop->output_layout = wlr_output_layout_create(display);
-
-    e_desktop_init_scene(desktop);
-    
-    wl_list_init(&desktop->views);
-
-    desktop->seat = NULL;
-
-    return desktop;
-}
-
-void e_desktop_set_seat(struct e_desktop* desktop, struct e_seat* seat)
-{
-    assert(desktop);
-
-    desktop->seat = seat;
-}
-
-/* outputs */
-
-// Get output at specified index.
-// Returns NULL on fail.
-struct e_output* e_desktop_get_output(struct e_desktop* desktop, int index)
-{
-    assert(desktop);
-
-    if (wl_list_empty(&desktop->outputs))
-        return NULL;
-
-    if (index < 0 || index >= wl_list_length(&desktop->outputs))
-        return NULL;
-
-    struct wl_list* pos = desktop->outputs.next; //first output is in next, as desktop->outputs is contained in e_desktop (index 0)
-    
-    //go further in the list until we reach our destination
-    for (int i = 0; i < index; i++)
-        pos = desktop->outputs.next;
-
-    struct e_output* output = wl_container_of(pos, output, link);
-
-    return output;
-}
+#include "server.h"
 
 /* scene */
 
@@ -138,29 +62,19 @@ struct wlr_scene_surface* e_desktop_scene_surface_at(struct wlr_scene_node* node
 
 // Returns output currently hovered by cursor.
 // Returns NULL if no output is being hovered.
-struct e_output* e_desktop_hovered_output(struct e_desktop* desktop)
+struct e_output* e_desktop_hovered_output(struct e_server* server)
 {
-    if (desktop == NULL)
+    assert(server);
+
+    if (server == NULL)
     {
-        e_log_error("e_desktop_hovered_output: desktop is NULL!");
+        e_log_error("e_desktop_hovered_output: server is NULL!");
         return NULL;
     }
 
-    if (desktop->seat == NULL)
-    {
-        e_log_error("e_desktop_hovered_output: desktop has no seat!");
-        return NULL;
-    }
+    struct e_cursor* cursor = server->seat->cursor;
 
-    if (desktop->seat->cursor == NULL)
-    {
-        e_log_error("e_desktop_hovered_output: desktop's seat has no cursor!");
-        return NULL;
-    }
-
-    struct e_cursor* cursor = desktop->seat->cursor;
-
-    struct wlr_output* wlr_output = wlr_output_layout_output_at(desktop->output_layout, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
+    struct wlr_output* wlr_output = wlr_output_layout_output_at(server->output_layout, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
     
     if (wlr_output == NULL)
         return NULL;
@@ -170,99 +84,83 @@ struct e_output* e_desktop_hovered_output(struct e_desktop* desktop)
     return output;
 }
 
-// Returns view currently hovered by cursor.
-// Returns NULL if no view is being hovered.
-struct e_view* e_desktop_hovered_view(struct e_desktop* desktop)
+// Returns container currently hovered by cursor.
+// Returns NULL if no container is being hovered.
+struct e_container* e_desktop_hovered_container(struct e_server* server)
 {
-    if (desktop == NULL)
+    assert(server);
+
+    if (server == NULL)
     {
-        e_log_error("e_desktop_hovered_output: desktop is NULL!");
+        e_log_error("e_desktop_hovered_output: server is NULL!");
         return NULL;
     }
 
-    if (desktop->seat == NULL)
-    {
-        e_log_error("e_desktop_hovered_output: desktop has no seat!");
-        return NULL;
-    }
+    struct e_cursor* cursor = server->seat->cursor;
 
-    if (desktop->seat->cursor == NULL)
-    {
-        e_log_error("e_desktop_hovered_output: desktop's seat has no cursor!");
-        return NULL;
-    }
-
-    struct e_cursor* cursor = desktop->seat->cursor;
-
-    return e_view_at(&desktop->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
+    return e_container_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
 }
 
 /* focus */
 
-// Set seat focus on a view if possible, and does whatever is necessary to do so.
-void e_desktop_focus_view(struct e_desktop* desktop, struct e_view* view)
+// Set seat focus on a view container if possible, and does whatever is necessary to do so.
+void e_desktop_focus_view_container(struct e_view_container* view_container)
 {
-    assert(desktop && view);
+    assert(view_container);
 
     #if E_VERBOSE
-    e_log_info("desktop focus on view");
+    e_log_info("desktop focus on view container");
     #endif
 
-    if (desktop->seat == NULL)
+    if (view_container->view->surface == NULL)
     {
-        e_log_error("e_desktop_focus_view: desktop has no seat!");
+        e_log_error("e_desktop_focus_view_container: view has no surface!");
         return;
     }
 
-    if (view->surface == NULL)
+    if (e_seat_focus_surface(view_container->base.server->seat, view_container->view->surface, false))
     {
-        e_log_error("e_desktop_focus_view: view has no surface!");
-        return;
-    }
-
-    if (e_seat_focus_surface(desktop->seat, view->surface, false))
-    {
-        e_view_set_activated(view, true);
-        e_view_raise_to_top(view);
+        e_view_set_activated(view_container->view, true);
+        e_container_raise_to_top(&view_container->base);
     }
 }
 
 // Set seat focus on a layer surface if possible.
-void e_desktop_focus_layer_surface(struct e_desktop* desktop, struct e_layer_surface* layer_surface)
+void e_desktop_focus_layer_surface(struct e_layer_surface* layer_surface)
 {
-    assert(desktop && layer_surface);
+    assert(layer_surface);
 
-    if (desktop->seat == NULL)
-    {
-        e_log_error("e_desktop_focus_layer_surface: desktop has no seat!");
-        return;
-    }
-
-    e_seat_focus_layer_surface(desktop->seat, layer_surface->scene_layer_surface_v1->layer_surface);
+    e_seat_focus_layer_surface(layer_surface->server->seat, layer_surface->scene_layer_surface_v1->layer_surface);
 }
 
-// Gets the type of surface (view or layer surface) and sets seat focus.
+// Gets the type of surface (view container or layer surface) and sets seat focus.
 // This will do nothing if surface isn't of a type that should be focused on by the desktop's seat.
-void e_desktop_focus_surface(struct e_desktop* desktop, struct wlr_surface* surface)
+void e_desktop_focus_surface(struct e_server* server, struct wlr_surface* surface)
 {
-    assert(desktop && surface);
+    assert(server && surface);
 
-    if (desktop->seat == NULL)
+    if (server == NULL)
     {
-        e_log_error("e_desktop_focus_surface: desktop has no seat!");
+        e_log_error("e_desktop_focus_surface: server is NULL!");
         return;
     }
 
-    struct e_seat* seat = desktop->seat;
+    if (server == NULL)
+    {
+        e_log_error("e_desktop_focus_surface: surface is NULL!");
+        return;
+    }
 
-    //focus on views & windows
+    struct e_seat* seat = server->seat;
+
+    //focus on views containers
 
     struct wlr_surface* root_surface = wlr_surface_get_root_surface(surface);
-    struct e_view* view = e_view_from_surface(desktop, root_surface);
+    struct e_view_container* view_container = e_view_container_try_from_surface(server, root_surface);
 
-    if (view != NULL && !e_seat_has_focus(seat, view->surface))
+    if (view_container != NULL && !e_seat_has_focus(seat, view_container->view->surface))
     {
-        e_desktop_focus_view(desktop, view);
+        e_desktop_focus_view_container(view_container);
         return;
     }
 
@@ -280,67 +178,44 @@ void e_desktop_focus_surface(struct e_desktop* desktop, struct wlr_surface* surf
     }
 }
 
-// Returns view currently in focus.
-// Returns NULL if no view has focus.
-struct e_view* e_desktop_focused_view(struct e_desktop* desktop)
+// Returns view container currently in focus.
+// Returns NULL if no view container has focus.
+struct e_view_container* e_desktop_focused_view_container(struct e_server* server)
 {
-    assert(desktop);
+    assert(server);
 
-    if (desktop->seat == NULL || desktop->seat->focus_surface == NULL)
+    if (server->seat == NULL || server->seat->focus_surface == NULL)
         return NULL;
 
-    return e_view_from_surface(desktop, desktop->seat->focus_surface);
+    return e_view_container_try_from_surface(server, server->seat->focus_surface);
 }
 
-// Returns view previously in focus.
-// Returns NULL if no view had focus.
-struct e_view* e_desktop_prev_focused_view(struct e_desktop* desktop)
+// Returns view container previously in focus.
+// Returns NULL if no view container had focus.
+struct e_view_container* e_desktop_prev_focused_view_container(struct e_server* server)
 {
-    assert(desktop);
+    assert(server);
 
-    if (desktop->seat == NULL || desktop->seat->previous_focus_surface == NULL)
+    if (server->seat == NULL || server->seat->previous_focus_surface == NULL)
         return NULL;
 
-    return e_view_from_surface(desktop, desktop->seat->previous_focus_surface);
+    return e_view_container_try_from_surface(server, server->seat->previous_focus_surface);
 }
 
-void e_desktop_clear_focus(struct e_desktop* desktop)
+void e_desktop_clear_focus(struct e_server* server)
 {
-    assert(desktop);
+    assert(server);
 
-    if (desktop->seat == NULL)
+    if (server == NULL)
     {
-        e_log_error("e_desktop_clear_focus: desktop has no seat!");
+        e_log_error("e_desktop_clear_focus: server is NULL!");
         return;
     }
 
-    struct e_view* focused_view = e_desktop_focused_view(desktop);
+    struct e_view_container* focused_view_container = e_desktop_focused_view_container(server);
 
-    if (focused_view != NULL)
-        e_view_set_activated(focused_view, false);
+    if (focused_view_container != NULL)
+        e_view_set_activated(focused_view_container->view, false);
 
-    e_seat_clear_focus(desktop->seat);
-}
-
-/* destruction */
-
-void e_desktop_destroy(struct e_desktop* desktop)
-{
-    assert(desktop);
-
-    //disable & then remove outputs
-    struct e_output* output;
-    struct e_output* tmp;
-
-    wl_list_for_each_safe(output, tmp, &desktop->outputs, link)
-    {
-        e_output_destroy(output);
-    }
-    
-    //destroy root node
-    wlr_scene_node_destroy(&desktop->scene->tree.node);
-
-    wlr_output_layout_destroy(desktop->output_layout);
-
-    free(desktop);
+    e_seat_clear_focus(server->seat);
 }

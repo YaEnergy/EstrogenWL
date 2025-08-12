@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdbool.h>
 
 #include <wayland-server-core.h>
@@ -6,7 +5,6 @@
 #include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_keyboard.h>
-#include <wlr/util/log.h>
 
 #include <xkbcommon/xkbcommon-keysyms.h>
 
@@ -43,20 +41,9 @@ static void event_loop_handle_ready(void* data)
 // Entry point program
 int main()
 {
-    #if E_VERBOSE
-    wlr_log_init(WLR_DEBUG, NULL);
-    #else
-    wlr_log_init(WLR_ERROR, NULL);
-    #endif
+    e_log_init();
 
-    printf("Welcome to EstrogenWL!\n");
-
-    if (e_log_init() != 0)
-    {
-        printf("Log init failed...\n");
-
-        return 1;
-    }
+    e_log_info("Welcome to EstrogenWL!");
 
     e_session_init_env();
 
@@ -69,11 +56,11 @@ int main()
     //Important function: xkb_keysym_from_name (const char *name, enum xkb_keysym_flags flags)
     
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F1, WLR_MODIFIER_LOGO, "exec rofi -modi drun,run -show drun");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F2, WLR_MODIFIER_LOGO, "exec alacritty");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F2, WLR_MODIFIER_LOGO, "exec $TERM");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F3, WLR_MODIFIER_LOGO, "exit");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F4, WLR_MODIFIER_LOGO, "kill");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F5, WLR_MODIFIER_LOGO, "toggle_fullscreen");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F6, WLR_MODIFIER_LOGO, "toggle_tiling");
+    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F6, WLR_MODIFIER_LOGO, "toggle_tiled");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F7, WLR_MODIFIER_LOGO, "switch_tiling_mode");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F8, WLR_MODIFIER_LOGO, "next_workspace");
     bind_keybind(&config.keyboard.keybinds, XKB_KEY_F9, WLR_MODIFIER_LOGO, "move_to_next_workspace");
@@ -102,8 +89,6 @@ int main()
     e_server_fini(&server);
 
     e_config_fini(&config);
-
-    e_log_fini();
     
     return 0;
 }

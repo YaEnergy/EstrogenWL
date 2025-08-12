@@ -14,6 +14,9 @@
 struct e_server;
 struct e_desktop;
 
+struct e_cosmic_workspace_group;
+struct e_ext_workspace_group;
+
 //see: wlr-layer-shell-unstable-v1-protocol.h @ enum zwlr_layer_shell_v1_layer
 struct e_output_desktop_layers
 {
@@ -45,13 +48,20 @@ struct e_output
     // Area tiled views are allowed to use.
     struct wlr_box usable_area;
 
-    struct e_list workspaces; //struct e_workspace*
+    struct
+    {
+        struct e_cosmic_workspace_group* cosmic_handle;
+        struct e_ext_workspace_group* ext_handle;
+
+        struct e_list workspaces; //struct e_workspace*
+    } workspace_group;
     
     // Workspace that output is currently displaying, may be NULL.
     struct e_workspace* active_workspace;
 
     struct wlr_scene_tree* tree;
     struct e_output_desktop_layers layers;
+    struct wlr_scene_tree* layer_popup_tree;
 
     struct wl_list layer_surfaces; //struct e_layer_surface*
 

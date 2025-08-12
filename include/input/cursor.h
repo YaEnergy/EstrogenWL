@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 #include <wayland-server-core.h>
 
 #include <wlr/types/wlr_output_layout.h>
@@ -42,13 +44,14 @@ struct e_cursor
     //scrolling mouse wheel event
     struct wl_listener axis;
 
-    //grabbed view
-    struct e_view* grab_view;
-    struct wl_listener grab_view_unmap;
+    //grabbed container
+    struct e_container* grab_container;
+    struct wl_listener grab_container_destroy;
     double grab_start_x;
     double grab_start_y;
-    struct wlr_box grab_start_vbox;
-    enum wlr_edges grab_edges;
+    float grab_start_tile_percentage;
+    struct wlr_box grab_start_cbox;
+    uint32_t grab_edges; //bitmask enum wlr_edges 
 };
 
 // Returns NULL on fail.
@@ -59,11 +62,12 @@ void e_cursor_set_mode(struct e_cursor* cursor, enum e_cursor_mode mode);
 // Lets go of a possibly grabbed view, & sets cursor mode to default.
 void e_cursor_reset_mode(struct e_cursor* cursor);
 
-// Starts grabbing a view under the resize mode, resizing along specified edges/
-void e_cursor_start_view_resize(struct e_cursor* cursor, struct e_view* view, enum wlr_edges edges);
+// Starts grabbing a container under the resize mode, resizing along specified edges.
+// edges is bitmask of enum wlr_edges.
+void e_cursor_start_container_resize(struct e_cursor* cursor, struct e_container* container, uint32_t edges);
 
-// Starts grabbing a view under the move mode.
-void e_cursor_start_view_move(struct e_cursor* cursor, struct e_view* view);
+// Starts grabbing a container under the move mode.
+void e_cursor_start_container_move(struct e_cursor* cursor, struct e_container* container);
 
 // Sets seat focus to whatever surface is under cursor.
 // If nothing is under cursor, doesn't change seat focus.

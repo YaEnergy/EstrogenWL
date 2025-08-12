@@ -1,13 +1,13 @@
 #include "util/log.h"
 
-#include <errno.h>
-#include <stdlib.h>
+#include <assert.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include <stdarg.h>
 
-#include "util/filesystem.h"
+#include <wlr/util/log.h>
 
 #define LOG_DIR_PATH ".local/share/estrogenwl"
 #define LOG_FILE_PATH ".local/share/estrogenwl/estrogenwl.log"
@@ -15,173 +15,73 @@
 
 #define LOG_MSG_MAX_LENGTH 1024
 
-FILE* logFile = NULL;
+static const char* importance_colors[] = {
+    [WLR_SILENT] = "",
+    [WLR_ERROR] = "\x1B[1;31m",
+    [WLR_INFO] = "\x1B[1;34m",
+    [WLR_DEBUG] = "\x1B[1;90m"
+};
 
-static char* get_time_string(void)
+static const char* importance_names[] = {
+    [WLR_SILENT] = "",
+    [WLR_ERROR] = "ERROR",
+    [WLR_INFO] = "INFO",
+    [WLR_DEBUG] = "DEBUG"
+};
+
+static char* time_string(void)
 {
     time_t t;
     time(&t);
 
-    char* timeString = ctime(&t);
+    char* t_string = ctime(&t);
     
     //replace new line character with null-terminator
-    timeString[strlen(timeString) - 1] = '\0';
+    t_string[strlen(t_string) - 1] = '\0';
 
-    return timeString;
+    return t_string;
 }
 
-//returned char* must be freed on finish
-static char* get_path_in_home(const char* path)
+static void e_vlog(enum wlr_log_importance importance, const char* fmt, va_list args)
 {
-    int fileNameBufferLength = FILENAME_MAX < 1024 ? FILENAME_MAX : 1024;
-    
-    char* homePath = getenv("HOME");
+    if (importance >= WLR_LOG_IMPORTANCE_LAST || importance > wlr_log_get_verbosity())
+        return;
 
-    //no home path
-    if (homePath == NULL)
-        return NULL;
+    char msg[LOG_MSG_MAX_LENGTH]; //message buffer
 
-    char* fullPath = calloc(fileNameBufferLength, sizeof(char));
+    //print format with args into buffer, truncated if necessary
+    vsnprintf(msg, sizeof(char) * LOG_MSG_MAX_LENGTH, fmt, args);
 
-    //allocation fail
-    if (fullPath == NULL)
-        return NULL;
-    
-    //join strings together, returns supposed to written length
-    int length = snprintf(fullPath, sizeof(char) * fileNameBufferLength, "%s/%s", homePath, path);
-
-    //path was too long
-    if (length >= fileNameBufferLength)
-    {
-        free(fullPath);
-        return NULL;
-    }
-
-    return fullPath;
+    printf("%s[%s (%s)] %s\n", importance_colors[importance], importance_names[importance], time_string(), msg);
 }
 
-//TODO: add error codes for when logFile is NULL
-
-int e_log_init(void)
+void e_log_init(void)
 {
-    if (logFile != NULL)
-        return 1;
-    
-    char* logDirPath = get_path_in_home(LOG_DIR_PATH);
+    #if E_VERBOSE
+    wlr_log_init(WLR_DEBUG, e_vlog);
+    #else
+    wlr_log_init(WLR_ERROR, e_vlog);
+    #endif
 
-    if (logDirPath == NULL)
-        return 1;
-    
-    if (!e_directory_exists(logDirPath))
-    {
-        if (e_directory_create(logDirPath) != 0)
-        {
-            free(logDirPath);
-            return 1;
-        }
-    } 
-
-    free(logDirPath);
-
-    //open log file path for writing
-    char* logFilePath = get_path_in_home(LOG_FILE_PATH);
-
-    if (logFilePath == NULL)
-        return 1;
-
-    //rename previous log file if exists
-    if (e_file_exists(logFilePath))
-    {
-        char* prevLogFilePath = get_path_in_home(LOG_PREV_FILE_PATH);
-
-        if (prevLogFilePath == NULL)
-            return 1;
-
-        int renameResult = rename(logFilePath, prevLogFilePath);
-
-        if (renameResult != 0)
-            perror("failed to rename old log file\n");
-
-        free(prevLogFilePath);
-    }
-    
-    logFile = fopen(logFilePath, "w");
-
-    free(logFilePath);
-
-    if (logFile == NULL)
-    {
-        perror("failed to open log file\n");
-        return 1;
-    }
-
-    e_log_info("ESTROGENWL LOG START");
-    return 0;
+    e_log_info("-~- ESTROGENWL LOG START -~-");
 }
 
-void e_log_info(const char *format, ...)
+void e_log_info(const char* fmt, ...)
 {
     va_list args;
-    va_start(args, format);
+    va_start(args, fmt);
 
-    char message[LOG_MSG_MAX_LENGTH]; //message buffer
-
-    //print format with args into buffer
-    int length = vsnprintf(message, sizeof(char) * LOG_MSG_MAX_LENGTH, format, args);
-
-    if ((unsigned long)length >= sizeof(message))
-    {
-        e_log_error("Log message too long");
-        va_end(args);
-        return;
-    }
-
-    printf("[INFO (%s)] %s\n", get_time_string(), message);
-
-    if (logFile != NULL)
-    {
-        fprintf(logFile, "[INFO (%s)] %s\n", get_time_string(), message);
-        fflush(logFile);
-    }
+    e_vlog(WLR_INFO, fmt, args);
 
     va_end(args);
 }
 
-void e_log_error(const char *format, ...)
+void e_log_error(const char* fmt, ...)
 {
     va_list args;
-    va_start(args, format);
+    va_start(args, fmt);
 
-    char message[LOG_MSG_MAX_LENGTH]; //message buffer
-
-    //print format with args into buffer 
-    int length = vsnprintf(message, sizeof(char) * LOG_MSG_MAX_LENGTH, format, args);
-
-    if ((unsigned long)length >= sizeof(message))
-    {
-        e_log_error("Error message too long"); //this is so funny
-        va_end(args);
-        return;
-    }
-
-    fprintf(stderr, "[ERROR (%s)] %s, errno: %s\n", get_time_string(), message, strerror(errno));
-
-    if (logFile != NULL)
-    {
-        fprintf(logFile, "[ERROR (%s)] %s, errno: %s\n", get_time_string(), message, strerror(errno));
-        fflush(logFile);
-    }
+    e_vlog(WLR_ERROR, fmt, args);
 
     va_end(args);
-}
-
-void e_log_fini(void)
-{
-    e_log_info("Closing log...");
-
-    if (logFile == NULL)
-        return;
-
-    fflush(logFile);
-    fclose(logFile);
 }

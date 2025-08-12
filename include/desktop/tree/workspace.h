@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 
+#include <wayland-server-core.h>
 #include <wayland-util.h>
 
 #include <wlr/util/box.h>
@@ -14,6 +15,9 @@
 
 struct e_output;
 struct e_view;
+
+struct e_ext_workspace;
+struct e_cosmic_workspace;
 
 struct e_workspace_layers
 {
@@ -35,18 +39,29 @@ struct e_workspace
     struct wlr_box full_area;
     struct wlr_box tiled_area;
     
-    // View currently in fullscreen mode.
-    struct e_view* fullscreen_view;
+    // Container currently in fullscreen mode.
+    struct e_container* fullscreen_container;
 
     //container for tiled containers
     struct e_tree_container* root_tiling_container;
 
-    struct e_list floating_views; //struct e_view*
+    struct e_list floating_containers; //struct e_container*
+
+    struct e_cosmic_workspace* cosmic_handle;
+
+    struct wl_listener cosmic_request_activate;
+
+    struct e_ext_workspace* ext_handle;
+
+    struct wl_listener ext_request_activate;
 };
 
 // Create a new workspace for an output.
 // Returns NULL on fail.
 struct e_workspace* e_workspace_create(struct e_output* output);
+
+// Set name of workspace.
+void e_workspace_set_name(struct e_workspace* workspace, const char* name);
 
 // Enable/disable workspace trees.
 void e_workspace_set_activated(struct e_workspace* workspace, bool activated);
@@ -54,8 +69,24 @@ void e_workspace_set_activated(struct e_workspace* workspace, bool activated);
 // Arranges a workspace's children to fit within the given area.
 void e_workspace_arrange(struct e_workspace* workspace, struct wlr_box full_area, struct wlr_box tiled_area);
 
+// Rearrange workspace within its current area.
+void e_workspace_rearrange(struct e_workspace* workspace);
+
 // Update visibility of workspace trees.
 void e_workspace_update_tree_visibility(struct e_workspace* workspace);
+
+// Adds container as tiled to workspace.
+// Workspace must be arranged after.
+void e_workspace_add_tiled_container(struct e_workspace* workspace, struct e_container* container);
+
+// Adds container as floating to workspace.
+// Workspace must be arranged after.
+void e_workspace_add_floating_container(struct e_workspace* workspace, struct e_container* container);
+
+// Sets fullscreen container of workspace and fullscreen mode of containers.
+// Workspace must be arranged after.
+// Container is allowed to be NULL.
+void e_workspace_change_fullscreen_container(struct e_workspace* workspace, struct e_container* container);
 
 // Get workspace from node ancestors.
 // Returns NULL on fail.

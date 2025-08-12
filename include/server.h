@@ -15,7 +15,6 @@
 
 #include "config.h"
 
-struct e_desktop;
 struct e_seat;
 
 struct wlr_xdg_shell;
@@ -25,6 +24,9 @@ struct wlr_xwayland;
 #endif
 struct wlr_ext_foreign_toplevel_list_v1;
 struct wlr_foreign_toplevel_manager_v1;
+
+struct e_cosmic_workspace_manager;
+struct e_ext_workspace_manager;
 
 #define E_COMPOSITOR_VERSION 6
 
@@ -38,10 +40,14 @@ struct wlr_foreign_toplevel_manager_v1;
 #define E_EXT_FOREIGN_TOPLEVEL_LIST_VERSION 1
 
 #define E_LINUX_DRM_SYNCOBJ_VERSION 1
+#define E_LINUX_DMABUF_VERSION 4
+
+#define E_COSMIC_WORKSPACE_VERSION 2
+#define E_EXT_WORKSPACE_VERSION 1
 
 // main struct handling:
-//  - backend (wl_display, wlr_backend, wlr_allocator, wlr_renderer, shells, protocols ...)
-//  - frontend (e_desktop)
+//  - protocols (shells, other, ...)
+//  - scene
 //  - config
 struct e_server
 {
@@ -94,8 +100,27 @@ struct e_server
     struct wlr_ext_foreign_toplevel_list_v1* foreign_toplevel_list;
     struct wlr_foreign_toplevel_manager_v1* foreign_toplevel_manager;
 
-    // what the user interacts with
-    struct e_desktop* desktop;
+    struct e_cosmic_workspace_manager* cosmic_workspace_manager;
+    struct e_ext_workspace_manager* ext_workspace_manager;
+
+    struct wl_list outputs; //struct e_output* 
+    // wlroots utility for working with arrangement of screens in a physical layout
+    struct wlr_output_layout* output_layout;
+
+    // root node of the scene.
+    // handles all rendering & damage tracking, 
+    // use this to add renderable things to the scene graph 
+    // and then call wlr_scene_commit_output to render the frame
+    struct wlr_scene* scene;
+    // layout of outputs in the scene
+    struct wlr_scene_output_layout* scene_layout;
+    
+    // Xwayland unmanaged surfaces.
+    struct wlr_scene_tree* unmanaged;
+    // nodes that are waiting to be reparented
+    struct wlr_scene_tree* pending;
+
+    struct wl_list view_containers; //struct e_view_container*
 
     // collection & management of input devices: keyboard, mouse, ...
     struct e_seat* seat;

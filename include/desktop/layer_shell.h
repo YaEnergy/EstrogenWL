@@ -15,16 +15,17 @@
 
 #include "output.h"
 
-struct e_desktop;
+struct e_server;
 
 // Surfaces meant to be arranged in layers.
 struct e_layer_surface
 {
-    struct e_desktop* desktop;
+    struct e_server* server;
 
     struct e_output* output;
 
     struct wlr_scene_layer_surface_v1* scene_layer_surface_v1;
+    struct wlr_scene_tree* popup_tree;
 
     // New surface state got committed.
     struct wl_listener commit;
@@ -44,12 +45,26 @@ struct e_layer_surface
     struct wl_list link; //e_output::layer_surfaces
 };
 
+// Temporary surface for layer surfaces.
+struct e_layer_popup
+{
+    struct e_layer_surface* layer_surface;
+
+    struct wlr_xdg_popup* xdg_popup;
+    struct wlr_scene_tree* tree;
+
+    struct wl_listener reposition;
+    struct wl_listener new_popup;
+    struct wl_listener commit;
+    struct wl_listener destroy;
+};
+
 /* layer surface functions */
 
-// Create a layer surface for the given desktop.
+// Create a layer surface for the given server.
 // wlr_layer_surface_v1's output should not be NULL.
 // Returns NULL on fail.
-struct e_layer_surface* e_layer_surface_create(struct e_desktop* desktop, struct wlr_layer_surface_v1* wlr_layer_surface_v1);
+struct e_layer_surface* e_layer_surface_create(struct e_server* server, struct wlr_layer_surface_v1* wlr_layer_surface_v1);
 
 // Configures an e_layer_surface's layout, updates remaining area.
 void e_layer_surface_configure(struct e_layer_surface* layer_surface, struct wlr_box* full_area, struct wlr_box* remaining_area);

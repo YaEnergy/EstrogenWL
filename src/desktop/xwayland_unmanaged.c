@@ -9,10 +9,10 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/xwayland.h>
 
-#include "desktop/desktop.h"
-
 #include "util/wl_macros.h"
 #include "util/log.h"
+
+#include "server.h"
 
 // Xwayland surface wants to be configured in a specific way.
 static void e_xwayland_unmanaged_request_configure(struct wl_listener* listener, void* data)
@@ -20,16 +20,23 @@ static void e_xwayland_unmanaged_request_configure(struct wl_listener* listener,
     struct e_xwayland_unmanaged* unmanaged = wl_container_of(listener, unmanaged, request_configure);
     struct wlr_xwayland_surface_configure_event* event = data;
 
+    #ifdef E_VERBOSE
+    e_log_info("unmanaged request configure");
+    #endif
+
     //always respect configure request if unmanaged
     wlr_xwayland_surface_configure(event->surface, event->x, event->y, event->width, event->height);
 }
 
-// New surface state got committed.
-static void e_xwayland_unmanaged_commit(struct wl_listener* listener, void* data)
+static void e_xwayland_unmanaged_set_geometry(struct wl_listener* listener, void* data)
 {
-    struct e_xwayland_unmanaged* unmanaged = wl_container_of(listener, unmanaged, commit);
+    struct e_xwayland_unmanaged* unmanaged = wl_container_of(listener, unmanaged, set_geometry);
 
-    if (unmanaged->tree != NULL)
+    #ifdef E_VERBOSE
+    e_log_info("unmanaged set geometry: pos (%i, %i)", unmanaged->xwayland_surface->x, unmanaged->xwayland_surface->y);
+    #endif
+
+    if (unmanaged->tree != NULL && unmanaged->xwayland_surface != NULL)
         wlr_scene_node_set_position(&unmanaged->tree->node, unmanaged->xwayland_surface->x, unmanaged->xwayland_surface->y);
 }
 
@@ -38,14 +45,12 @@ static void e_xwayland_unmanaged_map(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_unmanaged* unmanaged = wl_container_of(listener, unmanaged, map);
 
-    struct e_desktop* desktop = unmanaged->desktop;
-    struct wlr_surface* surface = unmanaged->xwayland_surface->surface;
+    struct e_server* server = unmanaged->server;
 
-    unmanaged->tree = wlr_scene_subsurface_tree_create(desktop->unmanaged, surface);
+    SIGNAL_CONNECT(unmanaged->xwayland_surface->events.set_geometry, unmanaged->set_geometry, e_xwayland_unmanaged_set_geometry);
+
+    unmanaged->tree = wlr_scene_subsurface_tree_create(server->unmanaged, unmanaged->xwayland_surface->surface);
     wlr_scene_node_set_position(&unmanaged->tree->node, unmanaged->xwayland_surface->x, unmanaged->xwayland_surface->y);
-
-    /* According to labwc, map and unmap can change the surface used */
-    SIGNAL_CONNECT(surface->events.commit, unmanaged->commit, e_xwayland_unmanaged_commit);
 }
 
 // Surface no longer wants to be displayed.
@@ -53,11 +58,10 @@ static void e_xwayland_unmanaged_unmap(struct wl_listener* listener, void* data)
 {
     struct e_xwayland_unmanaged* unmanaged = wl_container_of(listener, unmanaged, unmap);
 
+    SIGNAL_DISCONNECT(unmanaged->set_geometry);
+
     wlr_scene_node_destroy(&unmanaged->tree->node);
     unmanaged->tree = NULL;
-
-    /* According to labwc, map and unmap can change the surface used */
-    SIGNAL_DISCONNECT(unmanaged->commit);
 }
 
 // Surface becomes valid.
@@ -94,11 +98,11 @@ static void e_xwayland_unmanaged_destroy(struct wl_listener* listener, void* dat
     free(unmanaged);
 }
 
-// Creates new xwayland unmanaged surface on desktop.
+// Creates new xwayland unmanaged surface for server.
 // Returns NULL on fail.
-struct e_xwayland_unmanaged* e_xwayland_unmanaged_create(struct e_desktop* desktop, struct wlr_xwayland_surface* xwayland_surface)
+struct e_xwayland_unmanaged* e_xwayland_unmanaged_create(struct e_server* server, struct wlr_xwayland_surface* xwayland_surface)
 {
-    assert(desktop && xwayland_surface);
+    assert(server && xwayland_surface);
 
     struct e_xwayland_unmanaged* unmanaged = calloc(1, sizeof(*unmanaged));
 
@@ -108,7 +112,7 @@ struct e_xwayland_unmanaged* e_xwayland_unmanaged_create(struct e_desktop* deskt
         return NULL;
     }
 
-    unmanaged->desktop = desktop;
+    unmanaged->server = server;
     unmanaged->xwayland_surface = xwayland_surface;
     unmanaged->tree = NULL;
 

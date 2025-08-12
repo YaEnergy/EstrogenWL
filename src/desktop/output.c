@@ -1,5 +1,6 @@
 #include "desktop/output.h"
 
+#include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -29,6 +30,9 @@
 #include "util/list.h"
 #include "util/log.h"
 #include "util/wl_macros.h"
+
+#include "protocols/cosmic-workspace-v1.h"
+#include "protocols/ext-workspace-v1.h"
 
 #include "server.h"
 
@@ -62,23 +66,39 @@ static void e_output_request_state(struct wl_listener* listener, void* data)
         e_log_error("Failed to commit output request state");
 }
 
-static void e_output_handle_destroy(struct wl_listener* listener, void* data)
+static void output_fini_workspaces(struct e_output* output)
 {
-    struct e_output* output = wl_container_of(listener, output, destroy);
+    assert(output);
+
+    if (output == NULL)
+        return;
 
     if (output->active_workspace != NULL)
         e_output_display_workspace(output, NULL);
 
     //destroy all workspaces
-    for (int i = 0; i < output->workspaces.count; i++)
+    for (int i = 0; i < output->workspace_group.workspaces.count; i++)
     {
-        struct e_workspace* workspace = e_list_at(&output->workspaces, i);
-
+        struct e_workspace* workspace = e_list_at(&output->workspace_group.workspaces, i);
+        
         if (workspace != NULL)
             e_workspace_destroy(workspace);
     }
 
-    e_list_fini(&output->workspaces);
+    e_list_fini(&output->workspace_group.workspaces);
+
+    e_cosmic_workspace_group_output_leave(output->workspace_group.cosmic_handle, output->wlr_output);
+    e_cosmic_workspace_group_remove(output->workspace_group.cosmic_handle);
+
+    e_ext_workspace_group_output_leave(output->workspace_group.ext_handle, output->wlr_output);
+    e_ext_workspace_group_remove(output->workspace_group.ext_handle);
+}
+
+static void e_output_handle_destroy(struct wl_listener* listener, void* data)
+{
+    struct e_output* output = wl_container_of(listener, output, destroy);
+
+    output_fini_workspaces(output);
 
     wlr_scene_node_destroy(&output->tree->node);
     output->tree = NULL;
@@ -298,7 +318,7 @@ static void output_init_scene(struct e_server* server, struct e_output* output)
     if (output == NULL || server == NULL)
         return;
 
-    output->tree = wlr_scene_tree_create(&server->desktop->scene->tree);
+    output->tree = wlr_scene_tree_create(&server->scene->tree);
     wlr_scene_node_lower_to_bottom(&output->tree->node);
     
     //create scene trees for all layers
@@ -309,20 +329,22 @@ static void output_init_scene(struct e_server* server, struct e_output* output)
     output->layers.floating = wlr_scene_tree_create(output->tree);
     output->layers.top = wlr_scene_tree_create(output->tree);
     output->layers.overlay = wlr_scene_tree_create(output->tree);
+
+    output->layer_popup_tree = wlr_scene_tree_create(output->tree);
 }
 
-static bool output_init_layout(struct e_desktop* desktop, struct e_output* output)
+static bool output_init_layout(struct e_server* server, struct e_output* output)
 {
-    assert(desktop && output);
+    assert(server && output);
 
-    if (desktop == NULL || output == NULL)
+    if (server == NULL || output == NULL)
         return false;
 
     struct wlr_output* wlr_output = output->wlr_output;
 
     //output layout auto adds wl_output to the display, allows wl clients to find out information about the display
     //TODO: allow configuring the arrangement of outputs in the layout
-    struct wlr_output_layout_output* layout_output = wlr_output_layout_add_auto(desktop->output_layout, wlr_output);
+    struct wlr_output_layout_output* layout_output = wlr_output_layout_add_auto(server->output_layout, wlr_output);
 
     if (layout_output == NULL)
     {
@@ -330,21 +352,21 @@ static bool output_init_layout(struct e_desktop* desktop, struct e_output* outpu
         return false;
     }
 
-    struct wlr_scene_output* scene_output = wlr_scene_output_create(desktop->scene, wlr_output);
+    struct wlr_scene_output* scene_output = wlr_scene_output_create(server->scene, wlr_output);
 
     if (scene_output == NULL)
     {
         e_log_error("e_output_init_layout: failed to create scene output");
-        wlr_output_layout_remove(desktop->output_layout, wlr_output);
+        wlr_output_layout_remove(server->output_layout, wlr_output);
         return false;
     }
 
-    wlr_scene_output_layout_add_output(desktop->scene_layout, layout_output, scene_output);
+    wlr_scene_output_layout_add_output(server->scene_layout, layout_output, scene_output);
 
-    output->layout = desktop->output_layout;
+    output->layout = server->output_layout;
     output->scene_output = scene_output;
 
-    wl_list_insert(&desktop->outputs, &output->link);
+    wl_list_insert(&server->outputs, &output->link);
 
     return true;
 }
@@ -356,20 +378,31 @@ static bool output_init_workspaces(struct e_output* output)
     if (output == NULL || output->server == NULL || output->layout == NULL)
         return false;
 
+    output->workspace_group.cosmic_handle = e_cosmic_workspace_group_create(output->server->cosmic_workspace_manager);
+    e_cosmic_workspace_group_output_enter(output->workspace_group.cosmic_handle, output->wlr_output);
+
+    output->workspace_group.ext_handle = e_ext_workspace_group_create(output->server->ext_workspace_manager);
+    e_ext_workspace_group_output_enter(output->workspace_group.ext_handle, output->wlr_output);
+
     //create 5 workspaces for output
-    e_list_init(&output->workspaces, 5);
+    e_list_init(&output->workspace_group.workspaces, 5);
 
     for (int i = 0; i < 5; i++)
     {
         struct e_workspace* workspace = e_workspace_create(output);
 
+        //give number names
+        char name[16];
+        snprintf(name, sizeof(name), "%i", i + 1);
+        e_workspace_set_name(workspace, name);
+
         if (workspace != NULL)
-            e_list_add(&output->workspaces, workspace);
+            e_list_add(&output->workspace_group.workspaces, workspace);
         else
             e_log_error("e_output_init_workspaces: failed to create workspace %i", i + 1);
     }
 
-    e_output_display_workspace(output, e_list_at(&output->workspaces, 0));
+    e_output_display_workspace(output, e_list_at(&output->workspace_group.workspaces, 0));
 
     e_output_arrange(output);
 
@@ -409,7 +442,7 @@ static void server_new_output(struct wl_listener* listener, void* data)
 
     output->server = server;
     
-    if (!output_init_layout(server->desktop, output))
+    if (!output_init_layout(server, output))
     {
         e_log_error("server_new_output: failed to init layout!");
         e_output_destroy(output);
@@ -434,6 +467,11 @@ bool e_server_init_outputs(struct e_server* server)
 
     if (server == NULL)
         return false;
+
+    wl_list_init(&server->outputs);
+
+    //wlroots utility for working with arrangement of screens in a physical layout
+    server->output_layout = wlr_output_layout_create(server->display);
 
     SIGNAL_CONNECT(server->backend->events.new_output, server->new_output, server_new_output);
 
@@ -466,4 +504,15 @@ void e_server_fini_outputs(struct e_server* server)
         return;
 
     SIGNAL_DISCONNECT(server->new_output);
+
+    //disable & then remove outputs
+    struct e_output* output;
+    struct e_output* tmp;
+
+    wl_list_for_each_safe(output, tmp, &server->outputs, link)
+    {
+        e_output_destroy(output);
+    }
+
+    wlr_output_layout_destroy(server->output_layout);
 }

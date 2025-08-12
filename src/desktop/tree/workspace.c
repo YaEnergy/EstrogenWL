@@ -1,8 +1,10 @@
 #include "desktop/tree/workspace.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
+#include <wayland-server-core.h>
 #include <wayland-util.h>
 
 #include <wlr/types/wlr_scene.h>
@@ -16,10 +18,30 @@
 
 #include "util/list.h"
 #include "util/log.h"
+#include "util/wl_macros.h"
+
+#include "protocols/cosmic-workspace-v1.h"
+#include "protocols/ext-workspace-v1.h"
 
 #include "server.h"
 
 #define NEW_SCENE_TREE(tree, parent, type, data) tree = wlr_scene_tree_create(parent); e_node_desc_create(&tree->node, type, data);
+
+static void e_workspace_cosmic_request_activate(struct wl_listener* listener, void* data)
+{
+    struct e_workspace* workspace = wl_container_of(listener, workspace, cosmic_request_activate);
+
+    if (workspace->output != NULL && !workspace->active)
+        e_output_display_workspace(workspace->output, workspace);
+}
+
+static void e_workspace_ext_request_activate(struct wl_listener* listener, void* data)
+{
+    struct e_workspace* workspace = wl_container_of(listener, workspace, ext_request_activate);
+
+    if (workspace->output != NULL && !workspace->active)
+        e_output_display_workspace(workspace->output, workspace);
+}
 
 // Create a new workspace for an output.
 // Returns NULL on fail.
@@ -42,9 +64,9 @@ struct e_workspace* e_workspace_create(struct e_output* output)
     }
 
     workspace->output = output;
-    workspace->fullscreen_view = NULL;
+    workspace->fullscreen_container = NULL;
 
-    workspace->root_tiling_container = e_tree_container_create(E_TILING_MODE_HORIZONTAL);
+    workspace->root_tiling_container = e_tree_container_create(output->server, E_TILING_MODE_HORIZONTAL);
 
     if (workspace->root_tiling_container == NULL)
     {
@@ -54,21 +76,71 @@ struct e_workspace* e_workspace_create(struct e_output* output)
         return NULL;
     }
 
+    workspace->cosmic_handle = e_cosmic_workspace_create(output->workspace_group.cosmic_handle);
+
+    if (workspace->cosmic_handle == NULL)
+    {
+        e_container_destroy(&workspace->root_tiling_container->base);
+        free(workspace);
+        
+        e_log_error("e_workspace_create: failed to create cosmic workspace handle!");
+        return NULL;
+    }
+
+    e_cosmic_workspace_set_tiling_state(workspace->cosmic_handle, E_COSMIC_WORKSPACE_TILING_STATE_TILING_ENABLED);
+
+    workspace->ext_handle = e_ext_workspace_create(output->server->ext_workspace_manager, NULL);
+
+    if (workspace->ext_handle == NULL)
+    {
+        e_container_destroy(&workspace->root_tiling_container->base);
+        e_cosmic_workspace_remove(workspace->cosmic_handle);
+        free(workspace);
+        
+        e_log_error("e_workspace_create: failed to create ext workspace handle!");
+        return NULL;
+    }
+
+    e_ext_workspace_assign_to_group(workspace->ext_handle, output->workspace_group.ext_handle);
+
+    SIGNAL_CONNECT(workspace->cosmic_handle->events.request_activate, workspace->cosmic_request_activate, e_workspace_cosmic_request_activate);
+    SIGNAL_CONNECT(workspace->ext_handle->events.request_activate, workspace->ext_request_activate, e_workspace_ext_request_activate);
+    
     //layer trees
     NEW_SCENE_TREE(workspace->layers.floating, output->layers.floating, E_NODE_DESC_WORKSPACE, workspace);
     NEW_SCENE_TREE(workspace->layers.tiling, output->layers.tiling, E_NODE_DESC_WORKSPACE, workspace);
     NEW_SCENE_TREE(workspace->layers.fullscreen, output->layers.overlay, E_NODE_DESC_WORKSPACE, workspace);
 
-    e_list_init(&workspace->floating_views, 10);
+    e_list_init(&workspace->floating_containers, 10);
+
+    e_container_set_workspace(&workspace->root_tiling_container->base, workspace);
+    wlr_scene_node_reparent(&workspace->root_tiling_container->base.tree->node, workspace->layers.tiling);
 
     e_workspace_set_activated(workspace, false);
 
     return workspace;
 }
 
+// Set name of workspace.
+void e_workspace_set_name(struct e_workspace* workspace, const char* name)
+{
+    assert(workspace && name);
+
+    if (workspace == NULL || name == NULL)
+        return;
+
+    if (workspace->cosmic_handle->name == NULL || strcmp(workspace->cosmic_handle->name, name) != 0)
+        e_cosmic_workspace_set_name(workspace->cosmic_handle, name);
+
+    if (workspace->ext_handle->name == NULL || strcmp(workspace->ext_handle->name, name) != 0)
+        e_ext_workspace_set_name(workspace->ext_handle, name);
+}
+
 // Enable/disable workspace trees.
 void e_workspace_set_activated(struct e_workspace* workspace, bool activated)
 {
+    assert(workspace);
+
     if (workspace == NULL)
     {
         e_log_error("e_workspace_set_activated: workspace is NULL!");
@@ -77,6 +149,9 @@ void e_workspace_set_activated(struct e_workspace* workspace, bool activated)
 
     workspace->active = activated;
     e_workspace_update_tree_visibility(workspace);
+
+    e_cosmic_workspace_set_active(workspace->cosmic_handle, activated);
+    e_ext_workspace_set_active(workspace->ext_handle, activated);
 }
 
 // Arranges a workspace's children to fit within the given area.
@@ -91,12 +166,39 @@ void e_workspace_arrange(struct e_workspace* workspace, struct wlr_box full_area
     workspace->full_area = full_area;
     workspace->tiled_area = tiled_area;
 
-    //TODO: move trees, don't use x y in configure
+    if (workspace->fullscreen_container != NULL)
+    {
+        wlr_scene_node_reparent(&workspace->fullscreen_container->tree->node, workspace->layers.fullscreen);
 
-    if (workspace->fullscreen_view != NULL)
-        e_view_configure(workspace->fullscreen_view, full_area.x, full_area.y, full_area.width, full_area.height);
+        workspace->fullscreen_container->area = full_area;
+        e_container_arrange(workspace->fullscreen_container);
+    }
+    else 
+    {
+        workspace->root_tiling_container->base.area = tiled_area;
+        e_container_arrange(&workspace->root_tiling_container->base);
 
-    e_container_configure(&workspace->root_tiling_container->base, tiled_area.x, tiled_area.y, tiled_area.width, tiled_area.height);
+        for (int i = 0; i < workspace->floating_containers.count; i++)
+        {
+            struct e_container* container = e_list_at(&workspace->floating_containers, i);
+
+            if (container != NULL)
+            {
+                wlr_scene_node_reparent(&container->tree->node, workspace->layers.floating);
+                e_container_arrange(container);
+            }
+        }
+    }
+
+    e_workspace_update_tree_visibility(workspace);
+}
+
+// Rearrange workspace within its current area.
+void e_workspace_rearrange(struct e_workspace* workspace)
+{
+    assert(workspace);
+
+    e_workspace_arrange(workspace, workspace->full_area, workspace->tiled_area);
 }
 
 // Update visiblity of workspace trees.
@@ -110,7 +212,7 @@ void e_workspace_update_tree_visibility(struct e_workspace* workspace)
 
     if (workspace->active)
     {
-        bool fullscreen = (workspace->fullscreen_view != NULL);
+        bool fullscreen = (workspace->fullscreen_container != NULL);
 
         wlr_scene_node_set_enabled(&workspace->layers.floating->node, !fullscreen);
         wlr_scene_node_set_enabled(&workspace->layers.tiling->node, !fullscreen);
@@ -122,6 +224,48 @@ void e_workspace_update_tree_visibility(struct e_workspace* workspace)
         wlr_scene_node_set_enabled(&workspace->layers.tiling->node, false);
         wlr_scene_node_set_enabled(&workspace->layers.fullscreen->node, false);
     }
+}
+
+// Adds container as tiled to workspace.
+// Workspace must be arranged after.
+void e_workspace_add_tiled_container(struct e_workspace* workspace, struct e_container* container)
+{
+    assert(workspace && container && container->workspace == NULL);
+
+    e_container_set_workspace(container, workspace);
+    e_container_set_tiled(container, true);
+    e_container_set_parent(container, workspace->root_tiling_container);
+    
+    e_container_reparented_workspace(container);
+}
+
+// Adds container as floating to workspace.
+// Workspace must be arranged after.
+void e_workspace_add_floating_container(struct e_workspace* workspace, struct e_container* container)
+{
+    assert(workspace && container && container->workspace == NULL);
+
+    e_container_set_workspace(container, workspace);
+    e_container_set_tiled(container, false);
+    e_list_add(&workspace->floating_containers, container);
+
+    e_container_reparented_workspace(container);
+}
+
+// Sets fullscreen container of workspace and fullscreen mode of containers.
+// Workspace must be arranged after.
+// Container is allowed to be NULL.
+void e_workspace_change_fullscreen_container(struct e_workspace* workspace, struct e_container* container)
+{
+    assert(workspace);
+
+    if (workspace->fullscreen_container != NULL)
+        e_container_set_fullscreen(workspace->fullscreen_container, false);
+
+    workspace->fullscreen_container = container;
+
+    if (container != NULL)
+        e_container_set_fullscreen(container, true);
 }
 
 // Returns NULL on fail.
@@ -169,24 +313,54 @@ struct e_workspace* e_workspace_try_from_node_ancestors(struct wlr_scene_node* n
     return NULL;
 }
 
+static void workspace_destroy_all_floating_containers(struct e_workspace* workspace)
+{
+    assert(workspace);
+
+    //nothing to destroy
+    if (workspace->floating_containers.count == 0)
+        return;
+
+    struct e_list list = { 0 }; //struct e_container*
+    e_list_init(&list, workspace->floating_containers.count);
+
+    for (int i = 0; i < workspace->floating_containers.count; i++)
+        e_list_add(&list, e_list_at(&workspace->floating_containers, i));
+
+    for (int i = 0; i < list.count; i++)
+        e_container_destroy(e_list_at(&list, i));
+
+    e_list_fini(&list);
+}
+
 // Destroy the workspace.
 void e_workspace_destroy(struct e_workspace* workspace)
 {
+    assert(workspace);
+
     if (workspace == NULL)
     {
         e_log_error("e_workspace_destroy: workspace is NULL!");
         return;
     }
 
-    e_tree_container_destroy(workspace->root_tiling_container);
+    SIGNAL_DISCONNECT(workspace->cosmic_request_activate);
+    e_cosmic_workspace_remove(workspace->cosmic_handle);
+
+    SIGNAL_DISCONNECT(workspace->ext_request_activate);
+    e_ext_workspace_remove(workspace->ext_handle);
+
+    e_container_destroy(&workspace->root_tiling_container->base);
     workspace->root_tiling_container = NULL;
+    
+    workspace_destroy_all_floating_containers(workspace);
 
     // Destroy workspace layer trees
     wlr_scene_node_destroy(&workspace->layers.floating->node);
     wlr_scene_node_destroy(&workspace->layers.tiling->node);
     wlr_scene_node_destroy(&workspace->layers.fullscreen->node);
 
-    e_list_fini(&workspace->floating_views);
+    e_list_fini(&workspace->floating_containers);
 
     free(workspace);
 }

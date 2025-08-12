@@ -32,6 +32,7 @@
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
 #include <wlr/types/wlr_alpha_modifier_v1.h>
+#include <wlr/types/wlr_linux_dmabuf_v1.h>
 #include <wlr/types/wlr_linux_drm_syncobj_v1.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_ext_foreign_toplevel_list_v1.h>
@@ -48,7 +49,49 @@
 
 #include "input/seat.h"
 
+#include "protocols/cosmic-workspace-v1.h"
+#include "protocols/ext-workspace-v1.h"
+
 #include "config.h"
+
+static bool e_server_init_scene(struct e_server* server)
+{
+    assert(server && server->display && server->output_layout);
+
+    if (server == NULL)
+        return false;
+
+    server->scene = wlr_scene_create();
+    server->scene_layout = wlr_scene_attach_output_layout(server->scene, server->output_layout);
+
+    server->unmanaged = wlr_scene_tree_create(&server->scene->tree);
+
+    server->pending = wlr_scene_tree_create(&server->scene->tree);
+    wlr_scene_node_set_enabled(&server->pending->node, false);
+
+    wl_list_init(&server->view_containers);
+
+    //gamma control manager for outputs
+    struct wlr_gamma_control_manager_v1* gamma_control_manager = wlr_gamma_control_manager_v1_create(server->display);
+
+    if (gamma_control_manager != NULL)
+        wlr_scene_set_gamma_control_manager_v1(server->scene, gamma_control_manager);
+    else
+        e_log_error("e_server_init_scene: failed to create wlr gamma control manager v1");
+
+    return true;
+}
+
+static void e_server_fini_scene(struct e_server* server)
+{
+    assert(server);
+
+    if (server == NULL)
+        return;
+
+    //destroy root node
+    wlr_scene_node_destroy(&server->scene->tree.node);
+}
 
 // Handle signals that we use to terminate the server.
 static int e_server_handle_signal_terminate(int signal, void* data)
@@ -63,8 +106,8 @@ static void e_server_new_input(struct wl_listener* listener, void* data)
     struct e_server* server = wl_container_of(listener, server, new_input);
     struct wlr_input_device* input = data;
 
-    if (server->desktop->seat != NULL)
-        e_seat_add_input_device(server->desktop->seat, input);
+    if (server->seat != NULL)
+        e_seat_add_input_device(server->seat, input);
 }
 
 // GPU lost, destroy and recreate renderer
@@ -92,12 +135,6 @@ static void e_server_renderer_lost(struct wl_listener* listener, void* data)
         return;
     }
 
-    if(!wlr_renderer_init_wl_display(server->renderer, server->display))
-    {
-        e_log_error("failed to init renderer & display");
-        return;
-    }
-
     SIGNAL_CONNECT(server->renderer->events.lost, server->renderer_lost, e_server_renderer_lost);
 
     // recreate allocator
@@ -115,7 +152,7 @@ static void e_server_renderer_lost(struct wl_listener* listener, void* data)
 
     //reinit outputs
     struct e_output* output;
-    wl_list_for_each(output, &server->desktop->outputs, link)
+    wl_list_for_each(output, &server->outputs, link)
     {
         if (!wlr_output_init_render(output->wlr_output, server->allocator, server->renderer))
             e_log_error("e_server_renderer_lost: failed to init an output's rendering subsystem");
@@ -179,13 +216,22 @@ int e_server_init(struct e_server* server, struct e_config* config)
         return 1;
     }
 
-    if(!wlr_renderer_init_wl_display(server->renderer, server->display))
-    {
-        e_log_error("failed to init renderer & display");
-        return 1;
-    }
-
+    wlr_renderer_init_wl_shm(server->renderer, server->display);
+    
     SIGNAL_CONNECT(server->renderer->events.lost, server->renderer_lost, e_server_renderer_lost);
+
+    struct wlr_linux_dmabuf_v1* linux_dmabuf = NULL;
+
+    if (wlr_renderer_get_texture_formats(server->renderer, WLR_BUFFER_CAP_DMABUF) != NULL)
+    {
+        linux_dmabuf = wlr_linux_dmabuf_v1_create_with_renderer(server->display, E_LINUX_DMABUF_VERSION, server->renderer);
+
+        if (linux_dmabuf == NULL)
+        {
+            e_log_error("e_server_init: dmabuf buffer capability, but failed to create wlr linux dmabuf v1 with renderer");
+            return 1;
+        }
+    }
 
     int drm_fd = wlr_renderer_get_drm_fd(server->renderer);
 
@@ -223,28 +269,27 @@ int e_server_init(struct e_server* server, struct e_config* config)
     wlr_data_control_manager_v1_create(server->display);
     wlr_ext_data_control_manager_v1_create(server->display, E_EXT_DATA_CONTROL_V1_VERSION);
 
-    server->desktop = e_desktop_create(server->display, server->compositor, server->config);
-
-    if (server->desktop == NULL)
+    if (!e_server_init_outputs(server))
     {
-        e_log_error("e_server_init: failed to create desktop");
+        e_log_error("e_server_init: failed to init outputs");
         return 1;
     }
 
+    if (!e_server_init_scene(server))
+    {
+        e_log_error("e_server_init: failed to init scene");
+        return 1;
+    }
+
+    if (linux_dmabuf != NULL)
+        wlr_scene_set_linux_dmabuf_v1(server->scene, linux_dmabuf);
+
     //input device management
-    server->seat = e_seat_create(server->display, server->desktop, server->desktop->output_layout, "seat0");
+    server->seat = e_seat_create(server, server->output_layout, "seat0");
 
     if (server->seat == NULL)
     {
         e_log_error("e_server_init: failed to create seat0");
-        return 1;
-    }
-
-    e_desktop_set_seat(server->desktop, server->seat);
-
-    if (!e_server_init_outputs(server))
-    {
-        e_log_error("e_server_init: failed to init outputs");
         return 1;
     }
 
@@ -272,9 +317,7 @@ int e_server_init(struct e_server* server, struct e_config* config)
     #endif
 
     //protocol to describe output regions
-    struct wlr_xdg_output_manager_v1* xdg_output_manager_v1 = wlr_xdg_output_manager_v1_create(server->display, server->desktop->output_layout);
-
-    if (xdg_output_manager_v1 == NULL)
+    if (wlr_xdg_output_manager_v1_create(server->display, server->output_layout) == NULL)
         e_log_error("e_server_init: failed to create wlr_xdg_output_manager_v1");
 
     //enable viewporter => the size of the surface texture may not match the surface size anymore, only use surface size
@@ -283,18 +326,8 @@ int e_server_init(struct e_server* server, struct e_config* config)
     if (viewporter == NULL)
         e_log_error("e_server_init: failed to create wlr_viewporter");
     
-    struct wlr_presentation* presentation = wlr_presentation_create(server->display, server->backend, E_PRESENTATION_TIME_VERSION);
-
-    if (presentation == NULL)
+    if (wlr_presentation_create(server->display, server->backend, E_PRESENTATION_TIME_VERSION) == NULL)
         e_log_error("e_server_init: failed to create wlr_presentation");
-
-    //gamma control manager for outputs
-    struct wlr_gamma_control_manager_v1* gamma_control_manager = wlr_gamma_control_manager_v1_create(server->display);
-
-    if (gamma_control_manager != NULL)
-        wlr_scene_set_gamma_control_manager_v1(server->desktop->scene, gamma_control_manager);
-    else
-        e_log_error("e_server_init: failed to create wlr gamma control manager v1");
 
     if (wlr_single_pixel_buffer_manager_v1_create(server->display) == NULL)
         e_log_error("e_server_init: failed to create wlr single pixel buffer manager v1");
@@ -312,6 +345,22 @@ int e_server_init(struct e_server* server, struct e_config* config)
 
     if (server->foreign_toplevel_manager == NULL)
         e_log_error("e_server_init: failed to create foreign toplevel manager");
+
+    server->cosmic_workspace_manager = e_cosmic_workspace_manager_create(server->display, E_COSMIC_WORKSPACE_VERSION, E_COSMIC_WORKSPACE_CAPABILITY_ACTIVATE);
+
+    if (server->cosmic_workspace_manager == NULL)
+    {
+        e_log_error("e_server_init: failed to create cosmic workspace manager");
+        return 1;
+    }
+
+    server->ext_workspace_manager = e_ext_workspace_manager_create(server->display, E_EXT_WORKSPACE_VERSION, E_EXT_WORKSPACE_CAPABILITY_ACTIVATE);
+
+    if (server->ext_workspace_manager == NULL)
+    {
+        e_log_error("e_server_init: failed to create ext workspace manager");
+        return 1;
+    }
 
     //allows clients to reference surfaces of other clients
     struct wlr_xdg_foreign_registry* foreign_registry = wlr_xdg_foreign_registry_create(server->display);
@@ -403,14 +452,13 @@ void e_server_fini(struct e_server* server)
     wl_display_destroy_clients(server->display);
 
     e_seat_destroy(server->seat);
-    e_desktop_set_seat(server->desktop, NULL);
     
     e_server_fini_xdg_shell(server);
     e_server_fini_layer_shell(server);
 
     e_server_fini_outputs(server);
 
-    e_desktop_destroy(server->desktop);
+    e_server_fini_scene(server);
 
     wlr_allocator_destroy(server->allocator);
     wlr_renderer_destroy(server->renderer);

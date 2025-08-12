@@ -35,21 +35,29 @@ void* e_list_at(struct e_list* list, int i)
 }
 
 // Returns true on success, false on fail.
-static bool e_list_expand(struct e_list* list)
+static bool e_list_ensure_capacity(struct e_list* list, int capacity)
 {
     assert(list && list->capacity > 0);
 
-    void** new_items = realloc(list->items, sizeof(*list->items) * list->capacity * 2);
+    if (list->capacity >= capacity)
+        return true;
+
+    int new_capacity = list->capacity;
+
+    while (new_capacity < capacity)
+        new_capacity <<= 1;
+
+    void** new_items = realloc(list->items, sizeof(*list->items) * new_capacity);
 
     if (new_items == NULL)
         return false;
 
     //fill new spots with NULL
-    for (int i = list->capacity; i < list->capacity * 2; i++)
+    for (int i = list->capacity; i < new_capacity; i++)
         new_items[i] = NULL;
 
     list->items = new_items;
-    list->capacity *= 2;
+    list->capacity = new_capacity;
 
     return true;
 }
@@ -70,11 +78,8 @@ bool e_list_insert(struct e_list* list, void* item, int index)
     if (index < 0 || index > list->count)
         return false;
 
-    if (list->count + 1 > list->capacity)
-    {
-        if (!e_list_expand(list))
-            return false;
-    }
+    if (!e_list_ensure_capacity(list, list->count + 1))
+        return false;
 
     //shift items to the right by 1 space
     for (int i = list->count - 1; i >= index; i--)
@@ -132,6 +137,17 @@ bool e_list_remove_index(struct e_list* list, int index)
     return true;
 }
 
+// Remove all items in the list.
+void e_list_clear(struct e_list* list)
+{
+    assert(list);
+
+    for (int i = 0; i < list->count; i++)
+        list->items[i] = NULL;
+
+    list->count = 0;
+}
+
 // Swaps 2 indexes in 2 separate lists.
 // List a & b are allowed to be the same list.
 // Returns true on success, false on fail.
@@ -148,6 +164,23 @@ bool e_list_swap_outside(struct e_list* list_a, int index_a, struct e_list* list
     void* tmp = list_a->items[index_a];
     list_a->items[index_a] = list_b->items[index_b];
     list_b->items[index_b] = tmp;
+
+    return true;
+}
+
+// Replace all items in dest with those in src.
+// Returns true on success, false on fail.
+bool e_list_copy_to(struct e_list* src, struct e_list* dest)
+{
+    assert(src && dest);
+
+    e_list_clear(dest);
+
+    if (!e_list_ensure_capacity(dest, src->count))
+        return false;
+
+    for (int i = 0; i < src->count; i++)
+        dest->items[i] = src->items[i];
 
     return true;
 }

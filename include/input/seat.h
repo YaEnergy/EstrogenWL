@@ -28,7 +28,7 @@ struct e_dnd_action
 // Collection & management of input devices: keyboard, mouse, ...
 struct e_seat
 {
-    struct e_desktop* desktop;
+    struct e_server* server;
 
     struct wlr_seat* wlr_seat;
 
@@ -70,7 +70,7 @@ struct e_seat
 };
 
 // Returns NULL on fail.
-struct e_seat* e_seat_create(struct wl_display* display, struct e_desktop* desktop, struct wlr_output_layout* output_layout, const char* name);
+struct e_seat* e_seat_create(struct e_server* server, struct wlr_output_layout* output_layout, const char* name);
 
 // Add a new input device to a seat.
 void e_seat_add_input_device(struct e_seat* seat, struct wlr_input_device* input);

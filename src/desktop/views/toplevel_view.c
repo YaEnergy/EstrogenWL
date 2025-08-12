@@ -15,7 +15,6 @@
 
 #include "desktop/desktop.h"
 #include "desktop/output.h"
-#include "desktop/xdg_popup.h"
 #include "desktop/tree/node.h"
 #include "desktop/views/view.h"
 
@@ -23,6 +22,93 @@
 
 #include "util/log.h"
 #include "util/wl_macros.h"
+
+/* Toplevel view popups */
+
+// Returns NULL on fail.
+static struct e_xdg_popup* xdg_popup_create(struct wlr_xdg_popup* xdg_popup, struct e_view* view, struct wlr_scene_tree* parent);
+
+static void xdg_popup_handle_new_popup(struct wl_listener* listener, void* data)
+{
+    struct e_xdg_popup* popup = wl_container_of(listener, popup, new_popup);
+    struct wlr_xdg_popup* new_xdg_popup = data;
+
+    e_log_info("popup creates new popup!");
+    xdg_popup_create(new_xdg_popup, popup->view, popup->tree);
+}
+
+static void xdg_popup_unconstrain(struct e_xdg_popup* popup)
+{
+    assert(popup);
+
+    if (popup == NULL)
+        return;
+
+    struct wlr_box toplevel_popup_space = popup->view->popup_space;
+    toplevel_popup_space.x += popup->view->root_geometry.x;
+    toplevel_popup_space.y += popup->view->root_geometry.y;
+
+    wlr_xdg_popup_unconstrain_from_box(popup->xdg_popup, &toplevel_popup_space);
+}
+
+static void xdg_popup_handle_reposition(struct wl_listener* listener, void* data)
+{
+    struct e_xdg_popup* popup = wl_container_of(listener, popup, reposition);
+
+    xdg_popup_unconstrain(popup);
+}
+
+static void xdg_popup_handle_commit(struct wl_listener* listener, void* data)
+{
+    struct e_xdg_popup* popup = wl_container_of(listener, popup, commit);
+    
+    if (popup->xdg_popup->base->initial_commit)
+    {
+        xdg_popup_unconstrain(popup);
+        wlr_xdg_surface_schedule_configure(popup->xdg_popup->base);
+    }
+}
+
+static void xdg_popup_handle_destroy(struct wl_listener* listener, void* data)
+{
+    struct e_xdg_popup* popup = wl_container_of(listener, popup, destroy);
+
+    SIGNAL_DISCONNECT(popup->reposition);
+    SIGNAL_DISCONNECT(popup->new_popup);
+    SIGNAL_DISCONNECT(popup->commit);
+    SIGNAL_DISCONNECT(popup->destroy);
+
+    free(popup);
+}
+
+// Returns NULL on fail.
+static struct e_xdg_popup* xdg_popup_create(struct wlr_xdg_popup* xdg_popup, struct e_view* view, struct wlr_scene_tree* parent)
+{
+    assert(xdg_popup && parent);
+
+    struct e_xdg_popup* popup = calloc(1, sizeof(*popup));
+
+    if (popup == NULL)
+        return NULL;
+
+    popup->xdg_popup = xdg_popup;
+    popup->view = view;
+
+    //create popup's scene tree, and add popup to scene tree of parent
+    popup->tree = wlr_scene_xdg_surface_create(parent, xdg_popup->base);
+    e_node_desc_create(&popup->tree->node, E_NODE_DESC_XDG_POPUP, popup);
+
+    //events
+
+    SIGNAL_CONNECT(xdg_popup->events.reposition, popup->reposition, xdg_popup_handle_reposition);
+    SIGNAL_CONNECT(xdg_popup->base->events.new_popup, popup->new_popup, xdg_popup_handle_new_popup);
+    SIGNAL_CONNECT(xdg_popup->base->surface->events.commit, popup->commit, xdg_popup_handle_commit);
+    SIGNAL_CONNECT(xdg_popup->events.destroy, popup->destroy, xdg_popup_handle_destroy);
+
+    return popup;
+}
+
+/* Toplevel view */
 
 // Returns size hints of view.
 static struct e_view_size_hints e_view_toplevel_get_size_hints(struct e_view* view)
@@ -57,12 +143,22 @@ static struct wlr_scene_tree* e_view_toplevel_create_content_tree(struct e_view*
     return tree;
 }
 
+static void toplevel_view_update_geometry(struct e_toplevel_view* toplevel_view)
+{
+    assert(toplevel_view);
+
+    toplevel_view->base.root_geometry = toplevel_view->xdg_toplevel->base->geometry;
+    toplevel_view->base.width = toplevel_view->xdg_toplevel->current.width;
+    toplevel_view->base.height = toplevel_view->xdg_toplevel->current.height;
+}
+
 //surface is ready to be displayed
 static void e_toplevel_view_map(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, map);
 
     wlr_xdg_toplevel_set_wm_capabilities(toplevel_view->xdg_toplevel, WLR_XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
+    toplevel_view_update_geometry(toplevel_view);
     
     if (toplevel_view->xdg_toplevel->requested.fullscreen)
     {
@@ -105,22 +201,9 @@ static void e_toplevel_view_commit(struct wl_listener* listener, void* data)
         return;
     }
 
-    if (!toplevel_view->xdg_toplevel->base->surface->mapped)
-        return;
+    toplevel_view_update_geometry(toplevel_view);
 
-    toplevel_view->base.current.x = toplevel_view->scheduled_x;
-    toplevel_view->base.current.y = toplevel_view->scheduled_y;
-    
-    toplevel_view->base.current.width = toplevel_view->xdg_toplevel->current.width;
-    toplevel_view->base.current.height = toplevel_view->xdg_toplevel->current.height;
-
-    e_view_moved(&toplevel_view->base);
-
-    toplevel_view->base.container.area = toplevel_view->base.current;
-
-    //Now that we've finished the changes that were scheduled, we can schedule the next changes.
-    if (e_view_has_pending_changes(&toplevel_view->base))
-        e_view_configure_pending(&toplevel_view->base);
+    wl_signal_emit_mutable(&toplevel_view->base.events.commit, NULL);
 }
 
 //new wlr_xdg_popup by toplevel view
@@ -131,29 +214,25 @@ static void e_toplevel_view_new_popup(struct wl_listener* listener, void* data)
 
     e_log_info("new popup by toplevel view: %s", toplevel_view->xdg_toplevel->title);
 
-    e_xdg_popup_create(xdg_popup, toplevel_view->base.tree);
+    xdg_popup_create(xdg_popup, &toplevel_view->base, toplevel_view->base.tree);
 }
 
 static void e_toplevel_view_request_fullscreen(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, request_fullscreen);
 
-    //will (un)fullscreen on map
-    if (!toplevel_view->base.mapped)
-        return;
-
     struct wlr_xdg_toplevel* toplevel = toplevel_view->xdg_toplevel;
 
-    //respect requested output
+    struct e_view_request_fullscreen_event view_event = {
+        .view = &toplevel_view->base,
+        .fullscreen = toplevel->requested.fullscreen,
+        .output = NULL
+    };
+
     if (toplevel->requested.fullscreen_output != NULL)
-    {
-        struct e_output* requested_output = toplevel->requested.fullscreen_output->data;
+        view_event.output = toplevel->requested.fullscreen_output->data;
 
-        if (requested_output != NULL && requested_output->active_workspace != NULL)
-            e_view_move_to_workspace(&toplevel_view->base, requested_output->active_workspace);
-    }
-
-    e_view_set_fullscreen(&toplevel_view->base, toplevel->requested.fullscreen);
+    wl_signal_emit_mutable(&toplevel_view->base.events.request_fullscreen, &view_event);
 }
 
 static void e_toplevel_view_request_maximize(struct wl_listener* listener, void* data)
@@ -172,8 +251,11 @@ static void e_toplevel_view_request_move(struct wl_listener* listener, void* dat
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, request_move);
 
-    struct e_desktop* desktop = toplevel_view->base.desktop;
-    e_cursor_start_view_move(desktop->seat->cursor, &toplevel_view->base);
+    struct e_view_request_move_event view_event = {
+        .view = &toplevel_view->base
+    };
+
+    wl_signal_emit_mutable(&toplevel_view->base.events.request_move, &view_event);
 }
 
 static void e_toplevel_view_request_resize(struct wl_listener* listener, void* data)
@@ -181,8 +263,12 @@ static void e_toplevel_view_request_resize(struct wl_listener* listener, void* d
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, request_resize);
     struct wlr_xdg_toplevel_resize_event* event = data;
     
-    struct e_desktop* desktop = toplevel_view->base.desktop;
-    e_cursor_start_view_resize(desktop->seat->cursor, &toplevel_view->base, event->edges);
+    struct e_view_request_resize_event view_event = {
+        .view = &toplevel_view->base,
+        .edges = event->edges,
+    };
+
+    wl_signal_emit_mutable(&toplevel_view->base.events.request_resize, &view_event);
 }
 
 static void e_toplevel_view_set_title(struct wl_listener* listener, void* data)
@@ -196,6 +282,8 @@ static void e_toplevel_view_set_title(struct wl_listener* listener, void* data)
 static void e_toplevel_view_destroy(struct wl_listener* listener, void* data)
 {
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, destroy);
+
+    wl_signal_emit_mutable(&toplevel_view->base.events.destroy, NULL);
 
     SIGNAL_DISCONNECT(toplevel_view->map);
     SIGNAL_DISCONNECT(toplevel_view->unmap);
@@ -216,8 +304,8 @@ static void e_toplevel_view_destroy(struct wl_listener* listener, void* data)
     free(toplevel_view);
 }
 
-// Notify the view implementation of the new tiled state.
-static void e_view_toplevel_notify_tiled(struct e_view* view, bool tiled)
+// Sets the tiled state of the view.
+static void e_view_toplevel_set_tiled(struct e_view* view, bool tiled)
 {
     assert(view && view->data);
 
@@ -244,18 +332,6 @@ static void e_view_toplevel_set_fullscreen(struct e_view* view, bool fullscreen)
     struct e_toplevel_view* toplevel_view = view->data;
 
     wlr_xdg_toplevel_set_fullscreen(toplevel_view->xdg_toplevel, fullscreen);
-
-    if (fullscreen)
-        e_view_fullscreen(view);
-    else
-        e_view_unfullscreen(view);
-}
-
-static bool toplevel_size_configure_is_scheduled(struct wlr_xdg_toplevel* xdg_toplevel)
-{
-    assert(xdg_toplevel);
-
-    return xdg_toplevel->scheduled.width != xdg_toplevel->current.width || xdg_toplevel->scheduled.height != xdg_toplevel->current.height;
 }
 
 static void e_view_toplevel_configure(struct e_view* view, int lx, int ly, int width, int height)
@@ -268,26 +344,7 @@ static void e_view_toplevel_configure(struct e_view* view, int lx, int ly, int w
     e_log_info("toplevel configure");
     #endif
     
-    view->pending = (struct wlr_box){lx, ly, width, height};
-
-    //configure is already scheduled, commit will start next one
-    if (toplevel_size_configure_is_scheduled(toplevel_view->xdg_toplevel))
-        return;
-
-    //if size remains the same then just move the container node
-    if (view->current.width == width && view->current.height == height)
-    {
-        toplevel_view->base.current.x = lx;
-        toplevel_view->base.current.y = ly;
-        e_view_moved(&toplevel_view->base);
-    }
-    else
-    {
-        //wait until surface commit to apply x & y
-        toplevel_view->scheduled_x = lx;
-        toplevel_view->scheduled_y = ly;
-        wlr_xdg_toplevel_set_size(toplevel_view->xdg_toplevel, width, height);
-    }
+    wlr_xdg_toplevel_set_size(toplevel_view->xdg_toplevel, width, height);
 }
 
 static bool e_view_toplevel_wants_floating(struct e_view* view)
@@ -313,7 +370,7 @@ static void e_view_toplevel_send_close(struct e_view* view)
 static const struct e_view_impl view_toplevel_implementation = {
     .get_size_hints = e_view_toplevel_get_size_hints,
 
-    .notify_tiled = e_view_toplevel_notify_tiled,
+    .set_tiled = e_view_toplevel_set_tiled,
     
     .set_activated = e_view_toplevel_set_activated,
     .set_fullscreen = e_view_toplevel_set_fullscreen,
@@ -324,9 +381,9 @@ static const struct e_view_impl view_toplevel_implementation = {
     .send_close = e_view_toplevel_send_close,
 };
 
-struct e_toplevel_view* e_toplevel_view_create(struct e_desktop* desktop, struct wlr_xdg_toplevel* xdg_toplevel)
+struct e_toplevel_view* e_toplevel_view_create(struct wlr_xdg_toplevel* xdg_toplevel, struct wlr_scene_tree* parent)
 {
-    assert(desktop && xdg_toplevel);
+    assert(xdg_toplevel && parent);
 
     struct e_toplevel_view* toplevel_view = calloc(1, sizeof(*toplevel_view));
 
@@ -339,7 +396,7 @@ struct e_toplevel_view* e_toplevel_view_create(struct e_desktop* desktop, struct
     //give pointer to xdg toplevel
     toplevel_view->xdg_toplevel = xdg_toplevel;
 
-    e_view_init(&toplevel_view->base, desktop, E_VIEW_TOPLEVEL, toplevel_view, &view_toplevel_implementation);
+    e_view_init(&toplevel_view->base, E_VIEW_TOPLEVEL, toplevel_view, &view_toplevel_implementation, parent);
 
     toplevel_view->base.title = xdg_toplevel->title;
     toplevel_view->base.surface = xdg_toplevel->base->surface;
