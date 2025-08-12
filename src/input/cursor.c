@@ -223,6 +223,70 @@ static void e_cursor_handle_mode_move(struct e_cursor* cursor)
     }
 }
 
+// Checks whether the given edges include an edge thats parallel to the given tiling mode.
+// edges is bitmask of enum wlr_edges.
+static bool edges_has_parallel(uint32_t edges, enum e_tiling_mode tiling_mode)
+{
+    switch (tiling_mode)
+    {
+        case E_TILING_MODE_HORIZONTAL:
+            return (edges & WLR_EDGE_LEFT || edges & WLR_EDGE_RIGHT);
+        case E_TILING_MODE_VERTICAL:
+            return (edges & WLR_EDGE_TOP || edges & WLR_EDGE_BOTTOM);
+        default:
+            return false;
+    }
+}
+
+static void e_cursor_resize_tiled(struct e_cursor* cursor)
+{
+    assert(cursor);
+
+    //if grabbed edge is along the direction of the grabbed view's parent container, update grabbed view's container percentage (not parent)
+    //else update grabbed view's PARENT container's percentage
+    
+    struct e_container* container_resize = NULL;
+
+    if (edges_has_parallel(cursor->grab_edges, cursor->grab_container->parent->tiling_mode))
+        container_resize = cursor->grab_container;
+    else
+        container_resize = &cursor->grab_container->parent->base;
+
+    if (container_resize->parent == NULL)
+    {
+        e_log_error("e_cursor_resize_tiled: container to resize has no parent!");
+        e_cursor_reset_mode(cursor);
+        return;
+    }
+
+    enum e_tiling_mode tiling_axis = container_resize->parent->tiling_mode;
+
+    int size = (tiling_axis == E_TILING_MODE_HORIZONTAL) ? container_resize->parent->base.area.width : container_resize->parent->base.area.height;
+    double cursor_pos = (tiling_axis == E_TILING_MODE_HORIZONTAL) ? cursor->wlr_cursor->x : cursor->wlr_cursor->y;
+
+    double grab_start_pos = (tiling_axis == E_TILING_MODE_HORIZONTAL) ? cursor->grab_start_x : cursor->grab_start_y;
+
+    //calc percentage moved from start pos
+    float delta_percentage = (cursor_pos - grab_start_pos) / (float)size;
+
+    //are we growing container along its end? right edge in horizontal tiling, bottom edge in vertical tiling
+    bool end = edges_has_parallel(cursor->grab_edges, tiling_axis) && (cursor->grab_edges & WLR_EDGE_RIGHT || cursor->grab_edges & WLR_EDGE_BOTTOM);
+    
+    //if resizing from the beginning, going left/up should grow container instead of shrinking
+    if (!end)
+        delta_percentage = -delta_percentage;
+
+    struct e_container* affected = end ? e_container_next_sibling(container_resize) : e_container_prev_sibling(container_resize);
+
+    if (affected != NULL)
+    {
+        e_container_resize_tiled(container_resize, affected, cursor->grab_start_tile_percentage + delta_percentage);
+        
+        //rearrange parent
+        e_container_arrange(&container_resize->parent->base);
+    }
+}
+
 static void e_cursor_resize_floating(struct e_cursor* cursor)
 {
     assert(cursor);
@@ -343,14 +407,9 @@ static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
     //TODO: wait for view to finish committing (resize) before applying pending position
 
     if (e_container_is_tiled(cursor->grab_container))
-    {
-        //TODO: allow resizing of tiled containers
-        wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "not-allowed");
-    }
+        e_cursor_resize_tiled(cursor);
     else //floating
-    {
         e_cursor_resize_floating(cursor);
-    }
 }
 
 static void e_cursor_handle_motion(struct e_cursor* cursor, uint32_t time_msec)
@@ -505,6 +564,8 @@ static void e_cursor_start_grab_container_mode(struct e_cursor* cursor, struct e
     cursor->grab_start_x = cursor->wlr_cursor->x;
     cursor->grab_start_y = cursor->wlr_cursor->y;
 
+    cursor->grab_start_tile_percentage = container->percentage;
+
     SIGNAL_CONNECT(container->events.destroy, cursor->grab_container_destroy, e_cursor_handle_grab_container_destroy);
 
     e_log_info("Grabbed container");
@@ -565,7 +626,9 @@ static void e_cursor_set_xcursor_resize(struct e_cursor* cursor, enum wlr_edges 
     wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, resize_cursor_name);
 }
 
-void e_cursor_start_container_resize(struct e_cursor* cursor, struct e_container* container, enum wlr_edges edges)
+// Starts grabbing a container under the resize mode, resizing along specified edges.
+// edges is bitmask of enum wlr_edges.
+void e_cursor_start_container_resize(struct e_cursor* cursor, struct e_container* container, uint32_t edges)
 {
     assert(cursor && container);
 

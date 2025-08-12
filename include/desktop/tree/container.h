@@ -171,6 +171,20 @@ void e_container_reparented_workspace(struct e_container* container);
 // Old & new workspace must be arranged after.
 void e_container_move_to_workspace(struct e_container* container, struct e_workspace* workspace);
 
+// Grow/shrink tiled container's percentage, keeping the percentage sum of the main container and a sibling container the same.
+// Sibling containers have the same parent container.
+// Returns if they were able to be resized.
+// Their parent container must be arranged after.
+bool e_container_resize_tiled(struct e_container* container, struct e_container* affected_sibling, float percentage);
+
+// Gets next sibling of container.
+// Returns NULL if none.
+struct e_container* e_container_next_sibling(struct e_container* container);
+
+// Gets previous sibling of container.
+// Returns NULL if none.
+struct e_container* e_container_prev_sibling(struct e_container* container);
+
 // Returns NULL on fail.
 struct e_container* e_container_try_from_node_ancestors(struct wlr_scene_node* node);
 
