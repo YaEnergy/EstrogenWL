@@ -22,7 +22,7 @@
 #include "util/list.h"
 #include "util/log.h"
 
-struct e_output;
+#define CONTAINER_TILE_RESIZE_MIN_PERCENTAGE 0.05f
 
 bool e_container_init(struct e_container* container, enum e_container_type type, struct e_server* server)
 {
@@ -377,6 +377,63 @@ void e_container_move_to_workspace(struct e_container* container, struct e_works
         e_workspace_add_tiled_container(workspace, container);
     else
         e_workspace_add_floating_container(workspace, container);
+}
+
+// Grow/shrink tiled container's percentage, keeping the percentage sum of the main container and a sibling container the same.
+// Sibling containers have the same parent container.
+// Returns if they were able to be resized.
+// Their parent container must be arranged after.
+bool e_container_resize_tiled(struct e_container* container, struct e_container* affected_sibling, float percentage)
+{
+    assert(container && affected_sibling && container->parent == affected_sibling->parent && container->parent != NULL);
+
+    float total_percentage = container->percentage + affected_sibling->percentage;
+
+    //can't resize without breaking limits
+    if (total_percentage < CONTAINER_TILE_RESIZE_MIN_PERCENTAGE * 2)
+        return false;
+
+    //limit size of affected container, keep min %
+    if (total_percentage - percentage < CONTAINER_TILE_RESIZE_MIN_PERCENTAGE)
+        percentage = total_percentage - CONTAINER_TILE_RESIZE_MIN_PERCENTAGE;
+    //limit size of main container, keep min %
+    else if (percentage < CONTAINER_TILE_RESIZE_MIN_PERCENTAGE)
+        percentage = CONTAINER_TILE_RESIZE_MIN_PERCENTAGE;
+
+    container->percentage = percentage;
+    affected_sibling->percentage  = total_percentage - percentage;
+    
+    return true;
+}
+
+// Gets next sibling of container.
+// Returns NULL if none.
+struct e_container* e_container_next_sibling(struct e_container* container)
+{
+    if (container == NULL || container->parent == NULL)
+        return NULL;
+
+    int index = e_list_find_index(&container->parent->children, container);
+
+    if (index == -1)
+        return NULL;
+
+    return e_list_at(&container->parent->children, index + 1);
+}
+
+// Gets previous sibling of container.
+// Returns NULL if none.
+struct e_container* e_container_prev_sibling(struct e_container* container)
+{
+    if (container == NULL || container->parent == NULL)
+        return NULL;
+
+    int index = e_list_find_index(&container->parent->children, container);
+
+    if (index == -1)
+        return NULL;
+
+    return e_list_at(&container->parent->children, index - 1);
 }
 
 // Returns NULL on fail.

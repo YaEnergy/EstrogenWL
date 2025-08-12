@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 #include <wayland-server-core.h>
 
 #include <wlr/types/wlr_output_layout.h>
@@ -47,8 +49,9 @@ struct e_cursor
     struct wl_listener grab_container_destroy;
     double grab_start_x;
     double grab_start_y;
+    float grab_start_tile_percentage;
     struct wlr_box grab_start_cbox;
-    enum wlr_edges grab_edges;
+    uint32_t grab_edges; //bitmask enum wlr_edges 
 };
 
 // Returns NULL on fail.
@@ -59,8 +62,9 @@ void e_cursor_set_mode(struct e_cursor* cursor, enum e_cursor_mode mode);
 // Lets go of a possibly grabbed view, & sets cursor mode to default.
 void e_cursor_reset_mode(struct e_cursor* cursor);
 
-// Starts grabbing a container under the resize mode, resizing along specified edges/
-void e_cursor_start_container_resize(struct e_cursor* cursor, struct e_container* container, enum wlr_edges edges);
+// Starts grabbing a container under the resize mode, resizing along specified edges.
+// edges is bitmask of enum wlr_edges.
+void e_cursor_start_container_resize(struct e_cursor* cursor, struct e_container* container, uint32_t edges);
 
 // Starts grabbing a container under the move mode.
 void e_cursor_start_container_move(struct e_cursor* cursor, struct e_container* container);
