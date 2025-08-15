@@ -12,23 +12,36 @@
 
 struct e_view;
 
-struct e_foreign_toplevel
+struct e_ext_foreign_toplevel
 {
     struct e_view* view;
-    
+
+    //TODO: struct wlr_ext_foreign_toplevel_handle_v1* ext_handle;
+
+    //TODO: struct wl_listener destroy;
+};
+
+struct e_wlr_foreign_toplevel
+{
+    struct e_view* view;
+
     struct wlr_foreign_toplevel_handle_v1* wlr_handle;
-    struct wlr_ext_foreign_toplevel_handle_v1* ext_handle;
 
-    struct wl_listener request_maximize;
-    struct wl_listener request_minimize;
-    struct wl_listener request_activate;
-    struct wl_listener request_fullscreen;
-    struct wl_listener request_close;
+    //TODO: struct wl_listener request_maximize;
+    //TODO: struct wl_listener request_minimize;
+    //TODO: struct wl_listener request_activate;
+    //TODO: struct wl_listener request_fullscreen;
+    //TODO: struct wl_listener request_close;
 
-    struct wl_listener set_rectangle;
+    //TODO: struct wl_listener set_rectangle;
 
-    struct wl_listener wlr_destroy;
-    struct wl_listener ext_detroy;
+    //TODO: struct wl_listener destroy;
+};
+
+struct e_foreign_toplevel
+{
+    struct e_wlr_foreign_toplevel wlr;
+    struct e_ext_foreign_toplevel ext;
 };
 
 // Returns NULL on fail.
