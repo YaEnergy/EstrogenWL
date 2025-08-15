@@ -368,9 +368,9 @@ static const struct e_view_impl view_xwayland_implementation = {
 
 // Creates new xwayland view.
 // Returns NULL on fail.
-struct e_xwayland_view* e_xwayland_view_create(struct wlr_xwayland_surface* xwayland_surface, struct wlr_scene_tree* parent)
+struct e_xwayland_view* e_xwayland_view_create(struct e_server* server, struct wlr_xwayland_surface* xwayland_surface)
 {
-    assert(xwayland_surface && parent);
+    assert(server && xwayland_surface);
     
     struct e_xwayland_view* xwayland_view = calloc(1, sizeof(*xwayland_view));
 
@@ -382,7 +382,7 @@ struct e_xwayland_view* e_xwayland_view_create(struct wlr_xwayland_surface* xway
 
     xwayland_view->xwayland_surface = xwayland_surface;
 
-    e_view_init(&xwayland_view->base, E_VIEW_XWAYLAND, xwayland_view, &view_xwayland_implementation, parent);
+    e_view_init(&xwayland_view->base, E_VIEW_XWAYLAND, xwayland_view, &view_xwayland_implementation, server);
 
     xwayland_view->base.title = xwayland_surface->title;
 

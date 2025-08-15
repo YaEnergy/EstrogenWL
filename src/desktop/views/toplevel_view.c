@@ -381,9 +381,9 @@ static const struct e_view_impl view_toplevel_implementation = {
     .send_close = e_view_toplevel_send_close,
 };
 
-struct e_toplevel_view* e_toplevel_view_create(struct wlr_xdg_toplevel* xdg_toplevel, struct wlr_scene_tree* parent)
+struct e_toplevel_view* e_toplevel_view_create(struct e_server* server, struct wlr_xdg_toplevel* xdg_toplevel)
 {
-    assert(xdg_toplevel && parent);
+    assert(server && xdg_toplevel);
 
     struct e_toplevel_view* toplevel_view = calloc(1, sizeof(*toplevel_view));
 
@@ -396,7 +396,7 @@ struct e_toplevel_view* e_toplevel_view_create(struct wlr_xdg_toplevel* xdg_topl
     //give pointer to xdg toplevel
     toplevel_view->xdg_toplevel = xdg_toplevel;
 
-    e_view_init(&toplevel_view->base, E_VIEW_TOPLEVEL, toplevel_view, &view_toplevel_implementation, parent);
+    e_view_init(&toplevel_view->base, E_VIEW_TOPLEVEL, toplevel_view, &view_toplevel_implementation, server);
 
     toplevel_view->base.title = xdg_toplevel->title;
     toplevel_view->base.surface = xdg_toplevel->base->surface;

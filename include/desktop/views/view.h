@@ -120,6 +120,9 @@ struct e_view_request_configure_event
 // A view: xdg toplevel or xwayland view
 struct e_view
 {
+    // Server that created this view.
+    struct e_server* server;
+
     // Determines what type of view this is: see e_view_type
     enum e_view_type type;
     
@@ -183,7 +186,7 @@ struct e_view
 // Init a view, must call e_view_fini at the end of its life.
 // This function should only be called by the implementations of each view type. 
 // I mean it would be a bit weird to even call this function somewhere else.
-void e_view_init(struct e_view* view, enum e_view_type type, void* data, const struct e_view_impl* implementation, struct wlr_scene_tree* parent);
+void e_view_init(struct e_view* view, enum e_view_type type, void* data, const struct e_view_impl* implementation, struct e_server* server);
 
 // Returns size hints of view.
 struct e_view_size_hints e_view_get_size_hints(struct e_view* view);

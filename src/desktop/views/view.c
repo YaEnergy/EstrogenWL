@@ -24,11 +24,15 @@
 
 #include "util/log.h"
 
+#include "server.h"
+
 //this function should only be called by the implementations of each view type. 
 //I mean it would be a bit weird to even call this function somewhere else.
-void e_view_init(struct e_view* view, enum e_view_type type, void* data, const struct e_view_impl* implementation, struct wlr_scene_tree* parent)
+void e_view_init(struct e_view* view, enum e_view_type type, void* data, const struct e_view_impl* implementation, struct e_server* server)
 {
-    assert(view && implementation && parent);
+    assert(view && implementation && server);
+
+    view->server = server;
 
     view->type = type;
     view->data = data;
@@ -41,7 +45,7 @@ void e_view_init(struct e_view* view, enum e_view_type type, void* data, const s
 
     view->title = NULL;
     
-    view->tree = wlr_scene_tree_create(parent);
+    view->tree = wlr_scene_tree_create(server->pending);
     e_node_desc_create(&view->tree->node, E_NODE_DESC_VIEW, view);
 
     view->root_geometry = (struct wlr_box){0, 0, 0, 0};

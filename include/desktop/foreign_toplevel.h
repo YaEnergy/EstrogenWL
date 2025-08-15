@@ -31,7 +31,7 @@ struct e_foreign_toplevel
     struct wl_listener ext_detroy;
 };
 
-//TODO: views should have access to the server.
+// Returns NULL on fail.
 struct e_foreign_toplevel* e_foreign_toplevel_create(struct e_view* view);
 
 void e_foreign_toplevel_destroy(struct e_foreign_toplevel* foreign_toplevel);
