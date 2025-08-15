@@ -208,22 +208,8 @@ static void e_view_container_handle_view_commit(struct wl_listener* listener, vo
     bool position_pending = (view_container->view_current.x != view_container->view_pending.x
         || view_container->view_current.y != view_container->view_pending.y);
 
-    bool update_required = false;
-
-    if (size_changed)
-    {
-        update_required = true;
-        
-        e_log_info("view container view committed: new size");
-    }
-    else if (!size_pending && position_pending)
-    {
-        update_required = true;
-
-        e_log_info("view container view committed: no new size, but container has pending position");
-    }
-
-    if (update_required)
+    //size changed or position pending but no size pending
+    if (size_changed || (!size_pending && position_pending))
         view_container_apply_geometry(view_container, view_container->view->width, view_container->view->height);
 }
 
