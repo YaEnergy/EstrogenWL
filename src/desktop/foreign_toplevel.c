@@ -52,8 +52,6 @@ static void ext_handle_init(struct e_ext_foreign_toplevel* ext_handle, struct e_
     ext_handle->handle = wlr_ext_foreign_toplevel_handle_v1_create(view->server->foreign_toplevel_list, &state);    
 
     SIGNAL_CONNECT(ext_handle->handle->events.destroy, ext_handle->destroy, ext_handle_handle_destroy);
-
-    //TODO: initial state
 }
 
 /* wlr handle */

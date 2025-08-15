@@ -44,7 +44,9 @@ struct e_foreign_toplevel
     struct e_ext_foreign_toplevel ext;
 };
 
+// Should be done on view map.
 // Returns NULL on fail.
 struct e_foreign_toplevel* e_foreign_toplevel_create(struct e_view* view);
 
+// Should be done on view unmap.
 void e_foreign_toplevel_destroy(struct e_foreign_toplevel* foreign_toplevel);

@@ -22,6 +22,7 @@
 
 struct e_output;
 
+struct e_foreign_toplevel;
 struct e_view;
 
 // What the view can handle in size.
@@ -158,6 +159,9 @@ struct e_view
 
     // Output where view is currently being displayed, may be NULL.
     struct e_output* output;
+
+    // May be NULL.
+    struct e_foreign_toplevel* foreign_toplevel;
 
     struct
     {

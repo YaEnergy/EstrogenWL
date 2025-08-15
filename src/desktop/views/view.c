@@ -14,6 +14,7 @@
 #include <wlr/util/box.h>
 
 #include "desktop/desktop.h"
+#include "desktop/foreign_toplevel.h"
 #include "desktop/output.h"
 
 #include "desktop/tree/node.h"
@@ -221,6 +222,14 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* fullscree
         return;
     }
 
+    view->foreign_toplevel = e_foreign_toplevel_create(view);
+
+    if (view->foreign_toplevel == NULL)
+    {
+        e_log_error("e_view_map: unable to map view, failed to create foreign toplevel!");
+        return;
+    }
+
     view->mapped = true;
 
     struct e_view_map_event view_event = {
@@ -247,6 +256,12 @@ void e_view_unmap(struct e_view* view)
     {
         wlr_scene_node_destroy(&view->content_tree->node);
         view->content_tree = NULL;
+    }
+
+    if (view->foreign_toplevel != NULL)
+    {
+        e_foreign_toplevel_destroy(view->foreign_toplevel);
+        view->foreign_toplevel = NULL;
     }
 
     wl_signal_emit_mutable(&view->events.unmap, NULL);
