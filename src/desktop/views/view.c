@@ -106,9 +106,13 @@ void e_view_set_output(struct e_view* view, struct e_output* output)
         return;
     }
 
+    if (view->output != NULL && view->foreign_toplevel != NULL)
+        e_foreign_toplevel_output_leave(view->foreign_toplevel, view->output);
+
     view->output = output;
 
-    //TODO: later, foreign toplevel output enter & leave
+    if (view->output != NULL && view->foreign_toplevel != NULL)
+        e_foreign_toplevel_output_enter(view->foreign_toplevel, view->output);
 }
 
 // Set space for popups relative to view.

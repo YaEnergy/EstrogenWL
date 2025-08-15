@@ -12,6 +12,7 @@
 #include "util/wl_macros.h"
 
 #include "desktop/views/view.h"
+#include "desktop/output.h"
 
 #include "server.h"
 
@@ -97,9 +98,26 @@ struct e_foreign_toplevel* e_foreign_toplevel_create(struct e_view* view)
     ext_handle_init(&foreign_toplevel->ext, view);
     wlr_handle_init(&foreign_toplevel->wlr, view);
 
+    if (view->output != NULL)
+        e_foreign_toplevel_output_enter(foreign_toplevel, view->output);
+
     //TODO: initial state
 
     return foreign_toplevel;
+}
+
+void e_foreign_toplevel_output_enter(struct e_foreign_toplevel* foreign_toplevel, struct e_output* output)
+{
+    assert(foreign_toplevel && output);
+
+    wlr_foreign_toplevel_handle_v1_output_enter(foreign_toplevel->wlr.handle, output->wlr_output);
+}
+
+void e_foreign_toplevel_output_leave(struct e_foreign_toplevel* foreign_toplevel, struct e_output* output)
+{
+    assert(foreign_toplevel && output);
+
+    wlr_foreign_toplevel_handle_v1_output_leave(foreign_toplevel->wlr.handle, output->wlr_output);
 }
 
 void e_foreign_toplevel_destroy(struct e_foreign_toplevel* foreign_toplevel)
