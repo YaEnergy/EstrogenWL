@@ -57,9 +57,18 @@ static void ext_handle_init(struct e_ext_foreign_toplevel* ext_handle, struct e_
 
 /* wlr handle */
 
+static void wlr_handle_handle_request_close(struct wl_listener* listener, void* data)
+{
+    struct e_wlr_foreign_toplevel* wlr_handle = wl_container_of(listener, wlr_handle, request_close);
+
+    e_view_send_close(wlr_handle->view);
+}
+
 static void wlr_handle_handle_destroy(struct wl_listener* listener, void* data)
 {
     struct e_wlr_foreign_toplevel* wlr_handle = wl_container_of(listener, wlr_handle, destroy);
+
+    SIGNAL_DISCONNECT(wlr_handle->request_close);
 
     SIGNAL_DISCONNECT(wlr_handle->destroy);   
 }
@@ -77,6 +86,8 @@ static void wlr_handle_init(struct e_wlr_foreign_toplevel* wlr_handle, struct e_
 
     wlr_handle->view = view;
     wlr_handle->handle = wlr_foreign_toplevel_handle_v1_create(view->server->foreign_toplevel_manager);
+
+    SIGNAL_CONNECT(wlr_handle->handle->events.request_close, wlr_handle->request_close, wlr_handle_handle_request_close);
 
     SIGNAL_CONNECT(wlr_handle->handle->events.destroy, wlr_handle->destroy, wlr_handle_handle_destroy);
 
