@@ -182,6 +182,8 @@ struct e_view
         // View requests a specific configure.
         // View must be configured, even if nothing changes.
         struct wl_signal request_configure; //struct e_view_request_configure_event
+        // View wants to be activated.
+        struct wl_signal request_activate;
 
         struct wl_signal destroy;
     } events;

@@ -70,6 +70,7 @@ void e_view_init(struct e_view* view, enum e_view_type type, void* data, const s
     wl_signal_init(&view->events.request_move);
     wl_signal_init(&view->events.request_resize);
     wl_signal_init(&view->events.request_configure);
+    wl_signal_init(&view->events.request_activate);
 
     wl_signal_init(&view->events.destroy);
 }
