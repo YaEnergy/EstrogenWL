@@ -16,16 +16,16 @@ struct e_ext_foreign_toplevel
 {
     struct e_view* view;
 
-    //TODO: struct wlr_ext_foreign_toplevel_handle_v1* ext_handle;
+    struct wlr_ext_foreign_toplevel_handle_v1* handle;
 
-    //TODO: struct wl_listener destroy;
+    struct wl_listener destroy;
 };
 
 struct e_wlr_foreign_toplevel
 {
     struct e_view* view;
 
-    struct wlr_foreign_toplevel_handle_v1* wlr_handle;
+    struct wlr_foreign_toplevel_handle_v1* handle;
 
     //TODO: struct wl_listener request_maximize;
     //TODO: struct wl_listener request_minimize;
@@ -35,7 +35,7 @@ struct e_wlr_foreign_toplevel
 
     //TODO: struct wl_listener set_rectangle;
 
-    //TODO: struct wl_listener destroy;
+    struct wl_listener destroy;
 };
 
 struct e_foreign_toplevel
