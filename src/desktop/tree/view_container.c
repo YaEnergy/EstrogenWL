@@ -161,8 +161,6 @@ static void view_container_apply_geometry(struct e_view_container* view_containe
     //I struggle to wrap my head around this problem, but the solution is easier to wrap my head around
     //I would prefer not having to touch cursor from the seat & server too much in here though...
 
-    //TODO: maybe like use an anchor point, will also allow centering
-
     //TODO: center view if container is tiled?
 
     view_container->view_current.width = width;
