@@ -111,6 +111,7 @@ struct e_view_container
     struct wl_listener request_resize;
     struct wl_listener request_configure;
     struct wl_listener request_fullscreen;
+    struct wl_listener request_activate;
 
     struct wl_listener destroy;
 

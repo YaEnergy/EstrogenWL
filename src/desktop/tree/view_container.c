@@ -228,6 +228,21 @@ static void e_view_container_handle_view_request_fullscreen(struct wl_listener* 
         e_workspace_rearrange(new_workspace);
 }
 
+static void e_view_container_handle_view_request_activate(struct wl_listener* listener, void* data)
+{
+    struct e_view_container* view_container = wl_container_of(listener, view_container, request_activate);
+
+    if (view_container->base.workspace == NULL || view_container->base.workspace->output == NULL)
+        return;
+
+    struct e_output* output = view_container->base.workspace->output;
+
+    if (output->active_workspace != view_container->base.workspace)
+        e_output_display_workspace(output, view_container->base.workspace);
+
+    e_desktop_focus_view_container(view_container);
+}
+
 static void e_view_container_handle_view_destroy(struct wl_listener* listener, void* data)
 {
     struct e_view_container* view_container = wl_container_of(listener, view_container, destroy);
@@ -267,6 +282,7 @@ struct e_view_container* e_view_container_create(struct e_server* server, struct
     SIGNAL_CONNECT(view->events.request_resize, view_container->request_resize, e_view_container_handle_view_request_resize);
     SIGNAL_CONNECT(view->events.request_configure, view_container->request_configure, e_view_container_handle_view_request_configure);
     SIGNAL_CONNECT(view->events.request_fullscreen, view_container->request_fullscreen, e_view_container_handle_view_request_fullscreen);
+    SIGNAL_CONNECT(view->events.request_activate, view_container->request_activate, e_view_container_handle_view_request_activate);
 
     SIGNAL_CONNECT(view->events.destroy, view_container->destroy, e_view_container_handle_view_destroy);
 
