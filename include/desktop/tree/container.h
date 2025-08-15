@@ -53,7 +53,8 @@ struct e_container
 
     // Area containing is taking in.
     struct wlr_box area;
-    // percentage of space this container takes up within parent container
+    // Percentage of space this container takes up within parent container.
+    // From 0-1
     float percentage;
 
     struct wlr_scene_tree* tree;
