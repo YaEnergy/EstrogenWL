@@ -24,6 +24,8 @@
 #include "util/log.h"
 #include "util/wl_macros.h"
 
+//TODO: use xwayland_view_impl_* instead of e_view_xwayland_* for better consistency across other files
+
 // Returns size hints of view.
 static struct e_view_size_hints e_view_xwayland_get_size_hints(struct e_view* view)
 {
@@ -146,6 +148,7 @@ static void e_view_xwayland_set_activated(struct e_view* view, bool activated)
 
     struct e_xwayland_view* xwayland_view = view->data;
 
+    e_view_base_set_activated(&xwayland_view->base, activated);
     wlr_xwayland_surface_activate(xwayland_view->xwayland_surface, activated);
 }
 
@@ -155,6 +158,7 @@ static void e_view_xwayland_set_fullscreen(struct e_view* view, bool fullscreen)
 
     struct e_xwayland_view* xwayland_view = view->data;
 
+    e_view_base_set_fullscreen(&xwayland_view->base, fullscreen);
     wlr_xwayland_surface_set_fullscreen(xwayland_view->xwayland_surface, fullscreen);
 }
 
@@ -368,9 +372,9 @@ static const struct e_view_impl view_xwayland_implementation = {
 
 // Creates new xwayland view.
 // Returns NULL on fail.
-struct e_xwayland_view* e_xwayland_view_create(struct wlr_xwayland_surface* xwayland_surface, struct wlr_scene_tree* parent)
+struct e_xwayland_view* e_xwayland_view_create(struct e_server* server, struct wlr_xwayland_surface* xwayland_surface)
 {
-    assert(xwayland_surface && parent);
+    assert(server && xwayland_surface);
     
     struct e_xwayland_view* xwayland_view = calloc(1, sizeof(*xwayland_view));
 
@@ -382,7 +386,7 @@ struct e_xwayland_view* e_xwayland_view_create(struct wlr_xwayland_surface* xway
 
     xwayland_view->xwayland_surface = xwayland_surface;
 
-    e_view_init(&xwayland_view->base, E_VIEW_XWAYLAND, xwayland_view, &view_xwayland_implementation, parent);
+    e_view_init(&xwayland_view->base, E_VIEW_XWAYLAND, xwayland_view, &view_xwayland_implementation, server);
 
     xwayland_view->base.title = xwayland_surface->title;
 

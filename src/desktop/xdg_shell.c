@@ -22,7 +22,7 @@ static void xdg_shell_new_toplevel(struct wl_listener* listener, void* data)
 
     e_log_info("New toplevel view");
 
-    struct e_toplevel_view* view = e_toplevel_view_create(xdg_toplevel, server->pending);
+    struct e_toplevel_view* view = e_toplevel_view_create(server, xdg_toplevel);
 
     if (view == NULL)
     {

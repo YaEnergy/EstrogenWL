@@ -52,4 +52,4 @@ struct e_xdg_popup
 
 // Creates new toplevel view.
 // Returns NULL on fail.
-struct e_toplevel_view* e_toplevel_view_create(struct wlr_xdg_toplevel* xdg_toplevel, struct wlr_scene_tree* pending);
+struct e_toplevel_view* e_toplevel_view_create(struct e_server* server, struct wlr_xdg_toplevel* xdg_toplevel);
