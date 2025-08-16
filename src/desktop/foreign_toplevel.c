@@ -74,7 +74,7 @@ static void wlr_handle_handle_request_fullscreen(struct wl_listener* listener, v
     struct e_view_request_fullscreen_event view_event = {
         .view = wlr_handle->view,
         .fullscreen = event->fullscreen,
-        .output = (event->fullscreen && event->output != NULL && event->output->data != NULL) ? event->output->data : NULL
+        .output = (event->fullscreen && event->output != NULL) ? event->output->data : NULL
     };
 
     wl_signal_emit_mutable(&wlr_handle->view->events.request_fullscreen, &view_event);
