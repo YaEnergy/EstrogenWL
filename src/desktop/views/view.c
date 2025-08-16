@@ -178,6 +178,20 @@ void e_view_set_fullscreen(struct e_view* view, bool fullscreen)
         e_log_error("e_view_set_fullscreen: set fullscreen not implemented!");
 }
 
+void e_view_base_set_activated(struct e_view* view, bool activated)
+{
+    assert(view);
+
+    view->activated = activated;
+}
+
+void e_view_base_set_fullscreen(struct e_view* view, bool fullscreen)
+{
+    assert(view);
+
+    view->fullscreen = fullscreen;
+}
+
 // Create a scene tree displaying this view's surfaces and subsurfaces.
 // Returns NULL on fail.
 static struct wlr_scene_tree* e_view_create_content_tree(struct e_view* view)

@@ -110,6 +110,8 @@ static struct e_xdg_popup* xdg_popup_create(struct wlr_xdg_popup* xdg_popup, str
 
 /* Toplevel view */
 
+//TODO: use toplevel_view_impl_* instead of e_view_toplevel for better consistency across other files
+
 // Returns size hints of view.
 static struct e_view_size_hints e_view_toplevel_get_size_hints(struct e_view* view)
 {
@@ -321,6 +323,7 @@ static void e_view_toplevel_set_activated(struct e_view* view, bool activated)
 
     struct e_toplevel_view* toplevel_view = view->data;
 
+    e_view_base_set_activated(&toplevel_view->base, activated);
     wlr_xdg_toplevel_set_activated(toplevel_view->xdg_toplevel, activated);
 }
 
@@ -331,6 +334,7 @@ static void e_view_toplevel_set_fullscreen(struct e_view* view, bool fullscreen)
 
     struct e_toplevel_view* toplevel_view = view->data;
 
+    e_view_base_set_fullscreen(&toplevel_view->base, fullscreen);
     wlr_xdg_toplevel_set_fullscreen(toplevel_view->xdg_toplevel, fullscreen);
 }
 

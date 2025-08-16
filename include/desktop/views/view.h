@@ -152,6 +152,7 @@ struct e_view
     bool mapped;
 
     bool tiled;
+    bool activated;
     bool fullscreen;
 
     // View's title
@@ -224,6 +225,9 @@ void e_view_set_activated(struct e_view* view, bool activated);
 
 // Set the fullscreen mode of the view.
 void e_view_set_fullscreen(struct e_view* view, bool fullscreen);
+
+void e_view_base_set_activated(struct e_view* view, bool activated);
+void e_view_base_set_fullscreen(struct e_view* view, bool fullscreen);
 
 /*
 void e_view_set_maximized(struct e_view* view, bool maximized);

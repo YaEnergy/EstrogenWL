@@ -24,6 +24,8 @@
 #include "util/log.h"
 #include "util/wl_macros.h"
 
+//TODO: use xwayland_view_impl_* instead of e_view_xwayland_* for better consistency across other files
+
 // Returns size hints of view.
 static struct e_view_size_hints e_view_xwayland_get_size_hints(struct e_view* view)
 {
@@ -146,6 +148,7 @@ static void e_view_xwayland_set_activated(struct e_view* view, bool activated)
 
     struct e_xwayland_view* xwayland_view = view->data;
 
+    e_view_base_set_activated(&xwayland_view->base, activated);
     wlr_xwayland_surface_activate(xwayland_view->xwayland_surface, activated);
 }
 
@@ -155,6 +158,7 @@ static void e_view_xwayland_set_fullscreen(struct e_view* view, bool fullscreen)
 
     struct e_xwayland_view* xwayland_view = view->data;
 
+    e_view_base_set_fullscreen(&xwayland_view->base, fullscreen);
     wlr_xwayland_surface_set_fullscreen(xwayland_view->xwayland_surface, fullscreen);
 }
 
