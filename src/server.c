@@ -339,12 +339,18 @@ int e_server_init(struct e_server* server, struct e_config* config)
     server->foreign_toplevel_list = wlr_ext_foreign_toplevel_list_v1_create(server->display, E_EXT_FOREIGN_TOPLEVEL_LIST_VERSION);
 
     if (server->foreign_toplevel_list == NULL)
+    {
         e_log_error("e_server_init: failed to create foreign toplevel list");
+        return 1;
+    }
 
     server->foreign_toplevel_manager = wlr_foreign_toplevel_manager_v1_create(server->display);
 
     if (server->foreign_toplevel_manager == NULL)
+    {
         e_log_error("e_server_init: failed to create foreign toplevel manager");
+        return 1;
+    }
 
     server->cosmic_workspace_manager = e_cosmic_workspace_manager_create(server->display, E_COSMIC_WORKSPACE_VERSION, E_COSMIC_WORKSPACE_CAPABILITY_ACTIVATE);
 
