@@ -53,5 +53,8 @@ struct e_foreign_toplevel* e_foreign_toplevel_create(struct e_view* view);
 void e_foreign_toplevel_output_enter(struct e_foreign_toplevel* foreign_toplevel, struct e_output* output);
 void e_foreign_toplevel_output_leave(struct e_foreign_toplevel* foreign_toplevel, struct e_output* output);
 
+void e_foreign_toplevel_set_activated(struct e_foreign_toplevel* foreign_toplevel, bool activated);
+void e_foreign_toplevel_set_fullscreen(struct e_foreign_toplevel* foreign_toplevel, bool fullscreen);
+
 // Should be done on view unmap.
 void e_foreign_toplevel_destroy(struct e_foreign_toplevel* foreign_toplevel);

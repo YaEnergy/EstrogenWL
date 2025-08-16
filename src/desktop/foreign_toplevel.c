@@ -139,6 +139,8 @@ struct e_foreign_toplevel* e_foreign_toplevel_create(struct e_view* view)
     if (view->output != NULL)
         e_foreign_toplevel_output_enter(foreign_toplevel, view->output);
 
+    e_foreign_toplevel_set_activated(foreign_toplevel, view->activated);
+    e_foreign_toplevel_set_fullscreen(foreign_toplevel, view->fullscreen);
     //TODO: initial state
 
     return foreign_toplevel;
@@ -156,6 +158,20 @@ void e_foreign_toplevel_output_leave(struct e_foreign_toplevel* foreign_toplevel
     assert(foreign_toplevel && output);
 
     wlr_foreign_toplevel_handle_v1_output_leave(foreign_toplevel->wlr.handle, output->wlr_output);
+}
+
+void e_foreign_toplevel_set_activated(struct e_foreign_toplevel* foreign_toplevel, bool activated)
+{
+    assert(foreign_toplevel);
+
+    wlr_foreign_toplevel_handle_v1_set_activated(foreign_toplevel->wlr.handle, activated);
+}
+
+void e_foreign_toplevel_set_fullscreen(struct e_foreign_toplevel* foreign_toplevel, bool fullscreen)
+{
+    assert(foreign_toplevel);
+
+    wlr_foreign_toplevel_handle_v1_set_fullscreen(foreign_toplevel->wlr.handle, fullscreen);
 }
 
 void e_foreign_toplevel_destroy(struct e_foreign_toplevel* foreign_toplevel)
