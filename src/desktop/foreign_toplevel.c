@@ -66,6 +66,20 @@ static void wlr_handle_handle_request_activate(struct wl_listener* listener, voi
     wl_signal_emit_mutable(&wlr_handle->view->events.request_activate, NULL);
 }
 
+static void wlr_handle_handle_request_fullscreen(struct wl_listener* listener, void* data)
+{
+    struct e_wlr_foreign_toplevel* wlr_handle = wl_container_of(listener, wlr_handle, request_fullscreen);
+    struct wlr_foreign_toplevel_handle_v1_fullscreen_event* event = data;
+
+    struct e_view_request_fullscreen_event view_event = {
+        .view = wlr_handle->view,
+        .fullscreen = event->fullscreen,
+        .output = (event->fullscreen && event->output != NULL && event->output->data != NULL) ? event->output->data : NULL
+    };
+
+    wl_signal_emit_mutable(&wlr_handle->view->events.request_fullscreen, &view_event);
+}
+
 static void wlr_handle_handle_request_close(struct wl_listener* listener, void* data)
 {
     struct e_wlr_foreign_toplevel* wlr_handle = wl_container_of(listener, wlr_handle, request_close);
@@ -78,6 +92,7 @@ static void wlr_handle_handle_destroy(struct wl_listener* listener, void* data)
     struct e_wlr_foreign_toplevel* wlr_handle = wl_container_of(listener, wlr_handle, destroy);
 
     SIGNAL_DISCONNECT(wlr_handle->request_activate);
+    SIGNAL_DISCONNECT(wlr_handle->request_fullscreen);
     SIGNAL_DISCONNECT(wlr_handle->request_close);
 
     SIGNAL_DISCONNECT(wlr_handle->destroy);   
@@ -98,6 +113,7 @@ static void wlr_handle_init(struct e_wlr_foreign_toplevel* wlr_handle, struct e_
     wlr_handle->handle = wlr_foreign_toplevel_handle_v1_create(view->server->foreign_toplevel_manager);
 
     SIGNAL_CONNECT(wlr_handle->handle->events.request_activate, wlr_handle->request_activate, wlr_handle_handle_request_activate);
+    SIGNAL_CONNECT(wlr_handle->handle->events.request_fullscreen, wlr_handle->request_fullscreen, wlr_handle_handle_request_fullscreen);
     SIGNAL_CONNECT(wlr_handle->handle->events.request_close, wlr_handle->request_close, wlr_handle_handle_request_close);
 
     SIGNAL_CONNECT(wlr_handle->handle->events.destroy, wlr_handle->destroy, wlr_handle_handle_destroy);

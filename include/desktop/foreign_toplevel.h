@@ -32,7 +32,7 @@ struct e_wlr_foreign_toplevel
     //TODO: struct wl_listener request_maximize;
     //TODO: struct wl_listener request_minimize;
     struct wl_listener request_activate;
-    //TODO: struct wl_listener request_fullscreen;
+    struct wl_listener request_fullscreen;
     struct wl_listener request_close;
 
     //TODO: struct wl_listener set_rectangle;
