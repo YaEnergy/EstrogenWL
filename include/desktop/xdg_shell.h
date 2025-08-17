@@ -31,6 +31,7 @@ struct e_toplevel_view
     struct wl_listener request_resize;
 
     struct wl_listener set_title;
+    struct wl_listener set_app_id;
 
     //xdg_toplevel got destroyed
     struct wl_listener destroy;
@@ -52,4 +53,4 @@ struct e_xdg_popup
 
 // Creates new toplevel view.
 // Returns NULL on fail.
-struct e_toplevel_view* e_toplevel_view_create(struct wlr_xdg_toplevel* xdg_toplevel, struct wlr_scene_tree* pending);
+struct e_toplevel_view* e_toplevel_view_create(struct e_server* server, struct wlr_xdg_toplevel* xdg_toplevel);

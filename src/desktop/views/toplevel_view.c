@@ -17,6 +17,7 @@
 #include "desktop/output.h"
 #include "desktop/tree/node.h"
 #include "desktop/views/view.h"
+#include "desktop/foreign_toplevel.h"
 
 #include "input/cursor.h"
 
@@ -109,6 +110,8 @@ static struct e_xdg_popup* xdg_popup_create(struct wlr_xdg_popup* xdg_popup, str
 }
 
 /* Toplevel view */
+
+//TODO: use toplevel_view_impl_* instead of e_view_toplevel for better consistency across other files
 
 // Returns size hints of view.
 static struct e_view_size_hints e_view_toplevel_get_size_hints(struct e_view* view)
@@ -276,6 +279,19 @@ static void e_toplevel_view_set_title(struct wl_listener* listener, void* data)
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, set_title);
 
     toplevel_view->base.title = toplevel_view->xdg_toplevel->title;
+
+    if (toplevel_view->base.foreign_toplevel != NULL)
+        e_foreign_toplevel_set_title(toplevel_view->base.foreign_toplevel, toplevel_view->base.title);
+}
+
+static void e_toplevel_view_set_app_id(struct wl_listener* listener, void* data)
+{
+    struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, set_app_id);
+
+    toplevel_view->base.app_id = toplevel_view->xdg_toplevel->app_id;
+
+    if (toplevel_view->base.foreign_toplevel != NULL)
+        e_foreign_toplevel_set_app_id(toplevel_view->base.foreign_toplevel, toplevel_view->base.app_id);
 }
 
 //xdg_toplevel got destroyed
@@ -296,6 +312,7 @@ static void e_toplevel_view_destroy(struct wl_listener* listener, void* data)
     SIGNAL_DISCONNECT(toplevel_view->request_move);
     SIGNAL_DISCONNECT(toplevel_view->request_resize);
     SIGNAL_DISCONNECT(toplevel_view->set_title);
+    SIGNAL_DISCONNECT(toplevel_view->set_app_id);
 
     SIGNAL_DISCONNECT(toplevel_view->destroy);
 
@@ -321,6 +338,7 @@ static void e_view_toplevel_set_activated(struct e_view* view, bool activated)
 
     struct e_toplevel_view* toplevel_view = view->data;
 
+    e_view_base_set_activated(&toplevel_view->base, activated);
     wlr_xdg_toplevel_set_activated(toplevel_view->xdg_toplevel, activated);
 }
 
@@ -331,6 +349,7 @@ static void e_view_toplevel_set_fullscreen(struct e_view* view, bool fullscreen)
 
     struct e_toplevel_view* toplevel_view = view->data;
 
+    e_view_base_set_fullscreen(&toplevel_view->base, fullscreen);
     wlr_xdg_toplevel_set_fullscreen(toplevel_view->xdg_toplevel, fullscreen);
 }
 
@@ -381,9 +400,9 @@ static const struct e_view_impl view_toplevel_implementation = {
     .send_close = e_view_toplevel_send_close,
 };
 
-struct e_toplevel_view* e_toplevel_view_create(struct wlr_xdg_toplevel* xdg_toplevel, struct wlr_scene_tree* parent)
+struct e_toplevel_view* e_toplevel_view_create(struct e_server* server, struct wlr_xdg_toplevel* xdg_toplevel)
 {
-    assert(xdg_toplevel && parent);
+    assert(server && xdg_toplevel);
 
     struct e_toplevel_view* toplevel_view = calloc(1, sizeof(*toplevel_view));
 
@@ -396,7 +415,7 @@ struct e_toplevel_view* e_toplevel_view_create(struct wlr_xdg_toplevel* xdg_topl
     //give pointer to xdg toplevel
     toplevel_view->xdg_toplevel = xdg_toplevel;
 
-    e_view_init(&toplevel_view->base, E_VIEW_TOPLEVEL, toplevel_view, &view_toplevel_implementation, parent);
+    e_view_init(&toplevel_view->base, E_VIEW_TOPLEVEL, toplevel_view, &view_toplevel_implementation, server);
 
     toplevel_view->base.title = xdg_toplevel->title;
     toplevel_view->base.surface = xdg_toplevel->base->surface;
@@ -420,6 +439,7 @@ struct e_toplevel_view* e_toplevel_view_create(struct wlr_xdg_toplevel* xdg_topl
     SIGNAL_CONNECT(xdg_toplevel->events.request_move, toplevel_view->request_move, e_toplevel_view_request_move);
     SIGNAL_CONNECT(xdg_toplevel->events.request_resize, toplevel_view->request_resize, e_toplevel_view_request_resize);
     SIGNAL_CONNECT(xdg_toplevel->events.set_title, toplevel_view->set_title, e_toplevel_view_set_title);
+    SIGNAL_CONNECT(xdg_toplevel->events.set_app_id, toplevel_view->set_app_id, e_toplevel_view_set_app_id);
 
     SIGNAL_CONNECT(xdg_toplevel->events.destroy, toplevel_view->destroy, e_toplevel_view_destroy);
 

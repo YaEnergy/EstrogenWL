@@ -22,6 +22,7 @@
 
 struct e_output;
 
+struct e_foreign_toplevel;
 struct e_view;
 
 // What the view can handle in size.
@@ -120,6 +121,9 @@ struct e_view_request_configure_event
 // A view: xdg toplevel or xwayland view
 struct e_view
 {
+    // Server that created this view.
+    struct e_server* server;
+
     // Determines what type of view this is: see e_view_type
     enum e_view_type type;
     
@@ -148,13 +152,22 @@ struct e_view
     bool mapped;
 
     bool tiled;
+    bool activated;
     bool fullscreen;
 
-    // View's title
-    char* title;
+    // View's title.
+    // May be NULL.
+    const char* title;
+    // View's application identifier.
+    // For XDG toplevels, this is the app id property, but for xwayland surfaces this is set to its class.
+    // May be NULL.
+    const char* app_id;
 
     // Output where view is currently being displayed, may be NULL.
     struct e_output* output;
+
+    // May be NULL.
+    struct e_foreign_toplevel* foreign_toplevel;
 
     struct
     {
@@ -175,6 +188,8 @@ struct e_view
         // View requests a specific configure.
         // View must be configured, even if nothing changes.
         struct wl_signal request_configure; //struct e_view_request_configure_event
+        // View wants to be activated.
+        struct wl_signal request_activate;
 
         struct wl_signal destroy;
     } events;
@@ -183,7 +198,7 @@ struct e_view
 // Init a view, must call e_view_fini at the end of its life.
 // This function should only be called by the implementations of each view type. 
 // I mean it would be a bit weird to even call this function somewhere else.
-void e_view_init(struct e_view* view, enum e_view_type type, void* data, const struct e_view_impl* implementation, struct wlr_scene_tree* parent);
+void e_view_init(struct e_view* view, enum e_view_type type, void* data, const struct e_view_impl* implementation, struct e_server* server);
 
 // Returns size hints of view.
 struct e_view_size_hints e_view_get_size_hints(struct e_view* view);
@@ -215,6 +230,9 @@ void e_view_set_activated(struct e_view* view, bool activated);
 
 // Set the fullscreen mode of the view.
 void e_view_set_fullscreen(struct e_view* view, bool fullscreen);
+
+void e_view_base_set_activated(struct e_view* view, bool activated);
+void e_view_base_set_fullscreen(struct e_view* view, bool fullscreen);
 
 /*
 void e_view_set_maximized(struct e_view* view, bool maximized);

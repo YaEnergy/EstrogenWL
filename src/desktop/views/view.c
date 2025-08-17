@@ -14,6 +14,7 @@
 #include <wlr/util/box.h>
 
 #include "desktop/desktop.h"
+#include "desktop/foreign_toplevel.h"
 #include "desktop/output.h"
 
 #include "desktop/tree/node.h"
@@ -24,11 +25,15 @@
 
 #include "util/log.h"
 
+#include "server.h"
+
 //this function should only be called by the implementations of each view type. 
 //I mean it would be a bit weird to even call this function somewhere else.
-void e_view_init(struct e_view* view, enum e_view_type type, void* data, const struct e_view_impl* implementation, struct wlr_scene_tree* parent)
+void e_view_init(struct e_view* view, enum e_view_type type, void* data, const struct e_view_impl* implementation, struct e_server* server)
 {
-    assert(view && implementation && parent);
+    assert(view && implementation && server);
+
+    view->server = server;
 
     view->type = type;
     view->data = data;
@@ -37,11 +42,13 @@ void e_view_init(struct e_view* view, enum e_view_type type, void* data, const s
     view->surface = NULL;
 
     view->tiled = false;
+    view->activated = false;
     view->fullscreen = false;
 
     view->title = NULL;
+    view->app_id = NULL;
     
-    view->tree = wlr_scene_tree_create(parent);
+    view->tree = wlr_scene_tree_create(server->pending);
     e_node_desc_create(&view->tree->node, E_NODE_DESC_VIEW, view);
 
     view->root_geometry = (struct wlr_box){0, 0, 0, 0};
@@ -65,6 +72,7 @@ void e_view_init(struct e_view* view, enum e_view_type type, void* data, const s
     wl_signal_init(&view->events.request_move);
     wl_signal_init(&view->events.request_resize);
     wl_signal_init(&view->events.request_configure);
+    wl_signal_init(&view->events.request_activate);
 
     wl_signal_init(&view->events.destroy);
 }
@@ -101,9 +109,13 @@ void e_view_set_output(struct e_view* view, struct e_output* output)
         return;
     }
 
+    if (view->output != NULL && view->foreign_toplevel != NULL)
+        e_foreign_toplevel_output_leave(view->foreign_toplevel, view->output);
+
     view->output = output;
 
-    //TODO: later, foreign toplevel output enter & leave
+    if (view->output != NULL && view->foreign_toplevel != NULL)
+        e_foreign_toplevel_output_enter(view->foreign_toplevel, view->output);
 }
 
 // Set space for popups relative to view.
@@ -168,6 +180,26 @@ void e_view_set_fullscreen(struct e_view* view, bool fullscreen)
         e_log_error("e_view_set_fullscreen: set fullscreen not implemented!");
 }
 
+void e_view_base_set_activated(struct e_view* view, bool activated)
+{
+    assert(view);
+
+    view->activated = activated;
+
+    if (view->foreign_toplevel != NULL)
+        e_foreign_toplevel_set_activated(view->foreign_toplevel, activated);
+}
+
+void e_view_base_set_fullscreen(struct e_view* view, bool fullscreen)
+{
+    assert(view);
+
+    view->fullscreen = fullscreen;
+
+    if (view->foreign_toplevel != NULL)
+        e_foreign_toplevel_set_fullscreen(view->foreign_toplevel, fullscreen);
+}
+
 // Create a scene tree displaying this view's surfaces and subsurfaces.
 // Returns NULL on fail.
 static struct wlr_scene_tree* e_view_create_content_tree(struct e_view* view)
@@ -217,6 +249,14 @@ void e_view_map(struct e_view* view, bool fullscreen, struct e_output* fullscree
         return;
     }
 
+    view->foreign_toplevel = e_foreign_toplevel_create(view);
+
+    if (view->foreign_toplevel == NULL)
+    {
+        e_log_error("e_view_map: unable to map view, failed to create foreign toplevel!");
+        return;
+    }
+
     view->mapped = true;
 
     struct e_view_map_event view_event = {
@@ -243,6 +283,12 @@ void e_view_unmap(struct e_view* view)
     {
         wlr_scene_node_destroy(&view->content_tree->node);
         view->content_tree = NULL;
+    }
+
+    if (view->foreign_toplevel != NULL)
+    {
+        e_foreign_toplevel_destroy(view->foreign_toplevel);
+        view->foreign_toplevel = NULL;
     }
 
     wl_signal_emit_mutable(&view->events.unmap, NULL);

@@ -18,11 +18,14 @@
 
 #include "desktop/tree/node.h"
 #include "desktop/views/view.h"
+#include "desktop/foreign_toplevel.h"
 
 #include "input/cursor.h"
 
 #include "util/log.h"
 #include "util/wl_macros.h"
+
+//TODO: use xwayland_view_impl_* instead of e_view_xwayland_* for better consistency across other files
 
 // Returns size hints of view.
 static struct e_view_size_hints e_view_xwayland_get_size_hints(struct e_view* view)
@@ -146,6 +149,7 @@ static void e_view_xwayland_set_activated(struct e_view* view, bool activated)
 
     struct e_xwayland_view* xwayland_view = view->data;
 
+    e_view_base_set_activated(&xwayland_view->base, activated);
     wlr_xwayland_surface_activate(xwayland_view->xwayland_surface, activated);
 }
 
@@ -155,6 +159,7 @@ static void e_view_xwayland_set_fullscreen(struct e_view* view, bool fullscreen)
 
     struct e_xwayland_view* xwayland_view = view->data;
 
+    e_view_base_set_fullscreen(&xwayland_view->base, fullscreen);
     wlr_xwayland_surface_set_fullscreen(xwayland_view->xwayland_surface, fullscreen);
 }
 
@@ -236,6 +241,25 @@ static void e_xwayland_view_set_title(struct wl_listener* listener, void* data)
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, set_title);
 
     xwayland_view->base.title = xwayland_view->xwayland_surface->title;
+
+    if (xwayland_view->base.foreign_toplevel != NULL)
+        e_foreign_toplevel_set_title(xwayland_view->base.foreign_toplevel, xwayland_view->base.title);
+}
+
+static void e_xwayland_view_set_class(struct wl_listener* listener, void* data)
+{
+    struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, set_class);
+
+    // According to xlib documentation: 
+    // "the name specified as part of WM_CLASS is the formal name of the application that 
+    // should be used when retrieving the application's resources from the resource database."
+
+    // This is what sway does, but labwc uses instance for icon lookup?
+
+    xwayland_view->base.app_id = xwayland_view->xwayland_surface->class;
+
+    if (xwayland_view->base.foreign_toplevel != NULL)
+        e_foreign_toplevel_set_app_id(xwayland_view->base.foreign_toplevel, xwayland_view->base.app_id);
 }
 
 // Surface becomes valid, like me!
@@ -279,6 +303,7 @@ static void e_xwayland_view_destroy(struct wl_listener* listener, void* data)
     wl_signal_emit_mutable(&xwayland_view->base.events.destroy, NULL);
 
     SIGNAL_DISCONNECT(xwayland_view->set_title);
+    SIGNAL_DISCONNECT(xwayland_view->set_class);
     SIGNAL_DISCONNECT(xwayland_view->map_request);
 
     SIGNAL_DISCONNECT(xwayland_view->request_fullscreen);
@@ -368,9 +393,9 @@ static const struct e_view_impl view_xwayland_implementation = {
 
 // Creates new xwayland view.
 // Returns NULL on fail.
-struct e_xwayland_view* e_xwayland_view_create(struct wlr_xwayland_surface* xwayland_surface, struct wlr_scene_tree* parent)
+struct e_xwayland_view* e_xwayland_view_create(struct e_server* server, struct wlr_xwayland_surface* xwayland_surface)
 {
-    assert(xwayland_surface && parent);
+    assert(server && xwayland_surface);
     
     struct e_xwayland_view* xwayland_view = calloc(1, sizeof(*xwayland_view));
 
@@ -382,13 +407,14 @@ struct e_xwayland_view* e_xwayland_view_create(struct wlr_xwayland_surface* xway
 
     xwayland_view->xwayland_surface = xwayland_surface;
 
-    e_view_init(&xwayland_view->base, E_VIEW_XWAYLAND, xwayland_view, &view_xwayland_implementation, parent);
+    e_view_init(&xwayland_view->base, E_VIEW_XWAYLAND, xwayland_view, &view_xwayland_implementation, server);
 
     xwayland_view->base.title = xwayland_surface->title;
 
     // events
 
     SIGNAL_CONNECT(xwayland_surface->events.set_title, xwayland_view->set_title, e_xwayland_view_set_title);
+    SIGNAL_CONNECT(xwayland_surface->events.set_class, xwayland_view->set_class, e_xwayland_view_set_class);
     SIGNAL_CONNECT(xwayland_surface->events.map_request, xwayland_view->map_request, e_xwayland_view_map_request);
     
     SIGNAL_CONNECT(xwayland_surface->events.request_fullscreen, xwayland_view->request_fullscreen, e_xwayland_view_request_fullscreen);

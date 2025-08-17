@@ -112,14 +112,19 @@ void e_desktop_focus_view_container(struct e_view_container* view_container)
     e_log_info("desktop focus on view container");
     #endif
 
-    if (view_container->view->surface == NULL)
+    if (!view_container->view->mapped || view_container->base.workspace == NULL || view_container->base.workspace->output == NULL)
     {
-        e_log_error("e_desktop_focus_view_container: view has no surface!");
+        e_log_error("e_desktop_focus_view_container: view is not visible, won't focus");
         return;
     }
 
     if (e_seat_focus_surface(view_container->base.server->seat, view_container->view->surface, false))
     {
+        struct e_output* output = view_container->base.workspace->output;
+
+        if (output->active_workspace != view_container->base.workspace)
+            e_output_display_workspace(output, view_container->base.workspace);
+
         e_view_set_activated(view_container->view, true);
         e_container_raise_to_top(&view_container->base);
     }

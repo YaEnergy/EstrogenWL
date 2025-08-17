@@ -50,11 +50,10 @@ struct e_xwayland_view
     struct wl_listener request_resize;
 
     struct wl_listener set_title;
+    struct wl_listener set_class;
 
     // Xwayland surface is destroyed.
     struct wl_listener destroy;
-
-    //TODO: request resize, fullscreen, ... events
 };
 
 // Xwayland surface that doesn't want to be managed as a view. (Override redirect = true)
@@ -92,7 +91,7 @@ void e_server_update_xwayland_workareas(struct e_server* server);
 
 // Creates new xwayland view.
 // Returns NULL on fail.
-struct e_xwayland_view* e_xwayland_view_create(struct wlr_xwayland_surface* xwayland_surface, struct wlr_scene_tree* parent);
+struct e_xwayland_view* e_xwayland_view_create(struct e_server* server, struct wlr_xwayland_surface* xwayland_surface);
 
 /* xwayland unmanaged functions */
 
