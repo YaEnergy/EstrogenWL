@@ -33,6 +33,18 @@ static void view_get_ext_handle_state(const struct e_view* view, struct e_ext_fo
     state->app_id = view->app_id;
 }
 
+static void ext_handle_update_state(struct e_ext_foreign_toplevel* ext_handle)
+{
+    assert(ext_handle);
+
+    struct wlr_ext_foreign_toplevel_handle_v1_state state = {
+        .title = ext_handle->state.title,
+        .app_id = ext_handle->state.app_id
+    };
+
+    wlr_ext_foreign_toplevel_handle_v1_update_state(ext_handle->handle, &state);
+}
+
 static void ext_handle_fini(struct e_ext_foreign_toplevel* ext_handle)
 {
     assert(ext_handle);
@@ -120,8 +132,6 @@ static void wlr_handle_init(struct e_wlr_foreign_toplevel* wlr_handle, struct e_
     SIGNAL_CONNECT(wlr_handle->handle->events.request_close, wlr_handle->request_close, wlr_handle_handle_request_close);
 
     SIGNAL_CONNECT(wlr_handle->handle->events.destroy, wlr_handle->destroy, wlr_handle_handle_destroy);
-
-    //TODO: initial state
 }
 
 /* foreign toplevel */
@@ -144,7 +154,13 @@ struct e_foreign_toplevel* e_foreign_toplevel_create(struct e_view* view)
 
     e_foreign_toplevel_set_activated(foreign_toplevel, view->activated);
     e_foreign_toplevel_set_fullscreen(foreign_toplevel, view->fullscreen);
-    //TODO: initial state
+
+    /* ext handle sends state on creation, only send for wlr */
+
+    wlr_foreign_toplevel_handle_v1_set_title(foreign_toplevel->wlr.handle, (view->title != NULL) ? view->title : "");
+    wlr_foreign_toplevel_handle_v1_set_app_id(foreign_toplevel->wlr.handle, (view->app_id != NULL) ? view->app_id : "");
+
+    //TODO: parents, maximized, minimized
 
     return foreign_toplevel;
 }
@@ -161,6 +177,26 @@ void e_foreign_toplevel_output_leave(struct e_foreign_toplevel* foreign_toplevel
     assert(foreign_toplevel && output);
 
     wlr_foreign_toplevel_handle_v1_output_leave(foreign_toplevel->wlr.handle, output->wlr_output);
+}
+
+void e_foreign_toplevel_set_title(struct e_foreign_toplevel* foreign_toplevel, const char* title)
+{
+    assert(foreign_toplevel);
+
+    foreign_toplevel->ext.state.title = title;
+    ext_handle_update_state(&foreign_toplevel->ext);
+
+    wlr_foreign_toplevel_handle_v1_set_title(foreign_toplevel->wlr.handle, (title != NULL) ? title : "");
+}
+
+void e_foreign_toplevel_set_app_id(struct e_foreign_toplevel* foreign_toplevel, const char* app_id)
+{
+    assert(foreign_toplevel);
+
+    foreign_toplevel->ext.state.app_id = app_id;
+    ext_handle_update_state(&foreign_toplevel->ext);
+
+    wlr_foreign_toplevel_handle_v1_set_app_id(foreign_toplevel->wlr.handle, (app_id != NULL) ? app_id : "");
 }
 
 void e_foreign_toplevel_set_activated(struct e_foreign_toplevel* foreign_toplevel, bool activated)

@@ -17,6 +17,7 @@
 #include "desktop/output.h"
 #include "desktop/tree/node.h"
 #include "desktop/views/view.h"
+#include "desktop/foreign_toplevel.h"
 
 #include "input/cursor.h"
 
@@ -278,6 +279,9 @@ static void e_toplevel_view_set_title(struct wl_listener* listener, void* data)
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, set_title);
 
     toplevel_view->base.title = toplevel_view->xdg_toplevel->title;
+
+    if (toplevel_view->base.foreign_toplevel != NULL)
+        e_foreign_toplevel_set_title(toplevel_view->base.foreign_toplevel, toplevel_view->base.title);
 }
 
 static void e_toplevel_view_set_app_id(struct wl_listener* listener, void* data)
@@ -285,6 +289,9 @@ static void e_toplevel_view_set_app_id(struct wl_listener* listener, void* data)
     struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, set_app_id);
 
     toplevel_view->base.app_id = toplevel_view->xdg_toplevel->app_id;
+
+    if (toplevel_view->base.foreign_toplevel != NULL)
+        e_foreign_toplevel_set_app_id(toplevel_view->base.foreign_toplevel, toplevel_view->base.app_id);
 }
 
 //xdg_toplevel got destroyed

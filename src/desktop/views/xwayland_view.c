@@ -18,6 +18,7 @@
 
 #include "desktop/tree/node.h"
 #include "desktop/views/view.h"
+#include "desktop/foreign_toplevel.h"
 
 #include "input/cursor.h"
 
@@ -240,6 +241,9 @@ static void e_xwayland_view_set_title(struct wl_listener* listener, void* data)
     struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, set_title);
 
     xwayland_view->base.title = xwayland_view->xwayland_surface->title;
+
+    if (xwayland_view->base.foreign_toplevel != NULL)
+        e_foreign_toplevel_set_title(xwayland_view->base.foreign_toplevel, xwayland_view->base.title);
 }
 
 // Surface becomes valid, like me!

@@ -63,6 +63,10 @@ struct e_foreign_toplevel* e_foreign_toplevel_create(struct e_view* view);
 void e_foreign_toplevel_output_enter(struct e_foreign_toplevel* foreign_toplevel, struct e_output* output);
 void e_foreign_toplevel_output_leave(struct e_foreign_toplevel* foreign_toplevel, struct e_output* output);
 
+//TODO: set_parent, set_maximized, set_minimized
+
+void e_foreign_toplevel_set_title(struct e_foreign_toplevel* foreign_toplevel, const char* title);
+void e_foreign_toplevel_set_app_id(struct e_foreign_toplevel* foreign_toplevel, const char* app_id);
 void e_foreign_toplevel_set_activated(struct e_foreign_toplevel* foreign_toplevel, bool activated);
 void e_foreign_toplevel_set_fullscreen(struct e_foreign_toplevel* foreign_toplevel, bool fullscreen);
 
