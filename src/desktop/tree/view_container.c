@@ -123,18 +123,9 @@ static void e_view_container_handle_view_unmap(struct wl_listener* listener, voi
         e_workspace_rearrange(workspace);
 }
 
-static void e_view_container_handle_view_commit(struct wl_listener* listener, void* data)
+static void view_container_update_popup_space(struct e_view_container* view_container)
 {
-    struct e_view_container* view_container = wl_container_of(listener, view_container, commit);
-
-    //TODO: view tree node position needs to be updated immediately if only position is changed (not after a commit, like currently), but after a geometry update (not just a commit) if size was also changed
-    //FIXME: anchor edges opposite the grabbed ones during interactive resizes, as view may not commit requested sizes
-    //TODO: center view if container is tiled?
-
-    view_container->view_pending.width = view_container->view->width;
-    view_container->view_pending.height = view_container->view->height;
-    view_container->view_current = view_container->view_pending;
-    view_container_set_content_position(view_container, view_container->view_current.x, view_container->view_current.y);
+    assert(view_container);
 
     struct e_output* output = view_container->view->output;
 
@@ -152,6 +143,74 @@ static void e_view_container_handle_view_commit(struct wl_listener* listener, vo
     };
 
     e_view_set_popup_space(view_container->view, toplevel_popup_space);
+}
+
+// Applies the new geometry to the view container and its view.
+// As view may commit sizes that are different from what we requested, they may not match view_pending.
+static void view_container_apply_geometry(struct e_view_container* view_container, int width, int height)
+{
+    assert(view_container);
+
+    //when resizing interactively, edges opposite the grabbed edges need to be anchored
+    //when grabbing right or bottom edge, left and top are automatically anchored
+    //but when grabbing left or top edge, right and bottom need to be anchored
+
+    //because views can commit sizes that are different from what we requested, (they may not match view_pending) 
+    //we need to take this into account when anchoring the edges
+
+    //I struggle to wrap my head around this problem, but the solution is easier to wrap my head around
+    //I would prefer not having to touch cursor from the seat & server too much in here though...
+
+    //TODO: center view if container is tiled?
+
+    view_container->view_current.width = width;
+    view_container->view_current.height = height;
+
+    struct e_cursor* cursor = view_container->base.server->seat->cursor;
+    uint32_t grabbed_edges = cursor->grab_edges;
+    bool grabbed = (cursor->grab_container == &view_container->base);
+
+    if (grabbed && (grabbed_edges & WLR_EDGE_LEFT))
+        view_container->view_current.x = view_container->view_pending.x + view_container->view_pending.width - width;
+    else
+        view_container->view_current.x = view_container->view_pending.x;
+
+    if (grabbed && (grabbed_edges & WLR_EDGE_TOP))
+        view_container->view_current.y = view_container->view_pending.y + view_container->view_pending.height - height;
+    else
+        view_container->view_current.y = view_container->view_pending.y;
+
+    //update container area if container is floating, as they should be the same size in this case
+    if (!e_container_is_tiled(&view_container->base))
+        view_container->base.area = view_container->view_current;
+
+    view_container_set_content_position(view_container, view_container->view_current.x, view_container->view_current.y);
+    view_container_update_popup_space(view_container);
+
+    //keep in sync when no requests are pending
+    view_container->view_pending = view_container->view_current;
+}
+
+static void e_view_container_handle_view_commit(struct wl_listener* listener, void* data)
+{
+    struct e_view_container* view_container = wl_container_of(listener, view_container, commit);
+
+    //TODO: view tree node position needs to be updated immediately if only position is changed (not after a commit, like currently), but after a geometry update (not just a commit) if size was also changed
+
+    //TODO: center view if container is tiled?
+
+    bool size_changed = (view_container->view_current.width != view_container->view->width
+        || view_container->view_current.height != view_container->view->height);
+
+    bool size_pending = (view_container->view_current.width != view_container->view_pending.width
+        || view_container->view_current.height != view_container->view_pending.height);
+
+    bool position_pending = (view_container->view_current.x != view_container->view_pending.x
+        || view_container->view_current.y != view_container->view_pending.y);
+
+    //size changed or position pending but no size pending
+    if (size_changed || (!size_pending && position_pending))
+        view_container_apply_geometry(view_container, view_container->view->width, view_container->view->height);
 }
 
 static void e_view_container_handle_view_request_move(struct wl_listener* listener, void* data)
