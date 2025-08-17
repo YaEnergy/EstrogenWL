@@ -58,10 +58,6 @@ void e_desktop_focus_surface(struct e_server* server, struct wlr_surface* surfac
 // Returns NULL if no view container has focus.
 struct e_view_container* e_desktop_focused_view_container(struct e_server* server);
 
-// Returns view container previously in focus.
-// Returns NULL if no view container had focus.
-struct e_view_container* e_desktop_prev_focused_view_container(struct e_server* server);
-
 void e_desktop_clear_focus(struct e_server* server);
 
 /* interactive */

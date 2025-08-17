@@ -195,18 +195,6 @@ struct e_view_container* e_desktop_focused_view_container(struct e_server* serve
     return e_view_container_try_from_surface(server, server->seat->focus_surface);
 }
 
-// Returns view container previously in focus.
-// Returns NULL if no view container had focus.
-struct e_view_container* e_desktop_prev_focused_view_container(struct e_server* server)
-{
-    assert(server);
-
-    if (server->seat == NULL || server->seat->previous_focus_surface == NULL)
-        return NULL;
-
-    return e_view_container_try_from_surface(server, server->seat->previous_focus_surface);
-}
-
 void e_desktop_clear_focus(struct e_server* server)
 {
     assert(server);

@@ -48,9 +48,6 @@ struct e_seat
     struct wlr_surface* focus_surface;
     struct wl_listener focus_surface_unmap;
 
-    // surface that previously has focus
-    struct wlr_surface* previous_focus_surface;
-
     // client requests to set the surface of the cursor
     struct wl_listener request_set_cursor;
 

@@ -233,7 +233,6 @@ struct e_seat* e_seat_create(struct e_server* server, struct wlr_output_layout* 
     seat->server = server;
     seat->wlr_seat = wlr_seat;
     seat->focus_surface = NULL;
-    seat->previous_focus_surface = NULL;
 
     seat->cursor = e_cursor_create(seat, output_layout);
 
@@ -342,7 +341,6 @@ bool e_seat_focus_surface(struct e_seat* seat, struct wlr_surface* surface, bool
     if (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface != surface)
         wlr_seat_keyboard_notify_enter(seat->wlr_seat, surface, wlr_keyboard->keycodes, wlr_keyboard->num_keycodes, &wlr_keyboard->modifiers);
     
-    seat->previous_focus_surface = seat->focus_surface;
     seat->focus_surface = surface;
 
     //clear focus on surface unmap
@@ -412,7 +410,6 @@ void e_seat_clear_focus(struct e_seat* seat)
     
     SIGNAL_DISCONNECT(seat->focus_surface_unmap);
     
-    seat->previous_focus_surface = seat->focus_surface;
     seat->focus_surface = NULL;
 }
 
