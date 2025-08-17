@@ -25,7 +25,7 @@ static void ext_handle_handle_destroy(struct wl_listener* listener, void* data)
     SIGNAL_DISCONNECT(ext_handle->destroy);
 }
 
-static void view_get_ext_handle_state(const struct e_view* view, struct wlr_ext_foreign_toplevel_handle_v1_state* state)
+static void view_get_ext_handle_state(const struct e_view* view, struct e_ext_foreign_toplevel_state* state)
 {
     assert(view && state);
 
@@ -46,8 +46,12 @@ static void ext_handle_init(struct e_ext_foreign_toplevel* ext_handle, struct e_
 
     ext_handle->view = view;
 
-    struct wlr_ext_foreign_toplevel_handle_v1_state state = {0};
-    view_get_ext_handle_state(view, &state);
+    view_get_ext_handle_state(view, &ext_handle->state);
+
+    struct wlr_ext_foreign_toplevel_handle_v1_state state = {
+        .title = ext_handle->state.title,
+        .app_id = ext_handle->state.app_id
+    };
 
     ext_handle->handle = wlr_ext_foreign_toplevel_handle_v1_create(view->server->foreign_toplevel_list, &state);    
 

@@ -14,10 +14,20 @@ struct e_output;
 
 struct e_view;
 
+struct e_ext_foreign_toplevel_state
+{
+    // May be NULL.
+    const char* title;
+    // May be NULL.
+    const char* app_id;
+};
+
 struct e_ext_foreign_toplevel
 {
     struct e_view* view;
 
+    struct e_ext_foreign_toplevel_state state;
+    
     struct wlr_ext_foreign_toplevel_handle_v1* handle;
 
     struct wl_listener destroy;
