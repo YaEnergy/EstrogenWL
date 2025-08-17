@@ -118,7 +118,7 @@ void e_desktop_focus_view_container(struct e_view_container* view_container)
         return;
     }
 
-    if (e_seat_focus_surface(view_container->base.server->seat, view_container->view->surface, false))
+    if (e_seat_focus_surface(view_container->base.server->seat, view_container->view->surface))
     {
         struct e_output* output = view_container->base.workspace->output;
 
@@ -135,7 +135,7 @@ void e_desktop_focus_layer_surface(struct e_layer_surface* layer_surface)
 {
     assert(layer_surface);
 
-    e_seat_focus_layer_surface(layer_surface->server->seat, layer_surface->scene_layer_surface_v1->layer_surface);
+    e_seat_focus_surface(layer_surface->server->seat, layer_surface->scene_layer_surface_v1->layer_surface->surface);
 }
 
 // Gets the type of surface (view container or layer surface) and sets seat focus.

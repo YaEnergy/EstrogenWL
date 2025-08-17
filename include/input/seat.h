@@ -71,20 +71,12 @@ struct e_seat* e_seat_create(struct e_server* server, struct wlr_output_layout* 
 // Add a new input device to a seat.
 void e_seat_add_input_device(struct e_seat* seat, struct wlr_input_device* input);
 
-// Set seat focus on a surface if possible, doing nothing extra. (AKA raw focus)
-// Set override exclusive to true if you want to ignore focused layer surfaces with exclusive interactivity.
-// Returns whether surface was successfully focused.
-bool e_seat_focus_surface(struct e_seat* seat, struct wlr_surface* surface, bool override_exclusive);
-
-// Set seat focus on a layer surface if possible.
-// Returns whether layer surface was successfully focused.
-bool e_seat_focus_layer_surface(struct e_seat* seat, struct wlr_layer_surface_v1* layer_surface);
+// Set seat keyboard focus on a surface, doing nothing extra. (AKA raw focus)
+// Returns whether this was succesful or not.
+bool e_seat_focus_surface(struct e_seat* seat, struct wlr_surface* surface);
 
 // Returns true if seat has focus on this surface.
 bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface);
-
-// Returns true if seat has focus on a layer surface with exclusive interactivity.
-bool e_seat_has_exclusive_layer_focus(struct e_seat* seat);
 
 void e_seat_clear_focus(struct e_seat* seat);
 
