@@ -50,11 +50,10 @@ struct e_xwayland_view
     struct wl_listener request_resize;
 
     struct wl_listener set_title;
+    struct wl_listener set_class;
 
     // Xwayland surface is destroyed.
     struct wl_listener destroy;
-
-    //TODO: request resize, fullscreen, ... events
 };
 
 // Xwayland surface that doesn't want to be managed as a view. (Override redirect = true)

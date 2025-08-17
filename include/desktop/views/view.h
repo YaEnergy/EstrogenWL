@@ -159,6 +159,7 @@ struct e_view
     // May be NULL.
     const char* title;
     // View's application identifier.
+    // For XDG toplevels, this is the app id property, but for xwayland surfaces this is set to its class.
     // May be NULL.
     const char* app_id;
 

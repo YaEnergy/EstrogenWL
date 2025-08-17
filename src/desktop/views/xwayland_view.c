@@ -246,6 +246,22 @@ static void e_xwayland_view_set_title(struct wl_listener* listener, void* data)
         e_foreign_toplevel_set_title(xwayland_view->base.foreign_toplevel, xwayland_view->base.title);
 }
 
+static void e_xwayland_view_set_class(struct wl_listener* listener, void* data)
+{
+    struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, set_class);
+
+    // According to xlib documentation: 
+    // "the name specified as part of WM_CLASS is the formal name of the application that 
+    // should be used when retrieving the application's resources from the resource database."
+
+    // This is what sway does, but labwc uses instance for icon lookup?
+
+    xwayland_view->base.app_id = xwayland_view->xwayland_surface->class;
+
+    if (xwayland_view->base.foreign_toplevel != NULL)
+        e_foreign_toplevel_set_app_id(xwayland_view->base.foreign_toplevel, xwayland_view->base.app_id);
+}
+
 // Surface becomes valid, like me!
 static void e_xwayland_view_associate(struct wl_listener* listener, void* data)
 {
@@ -287,6 +303,7 @@ static void e_xwayland_view_destroy(struct wl_listener* listener, void* data)
     wl_signal_emit_mutable(&xwayland_view->base.events.destroy, NULL);
 
     SIGNAL_DISCONNECT(xwayland_view->set_title);
+    SIGNAL_DISCONNECT(xwayland_view->set_class);
     SIGNAL_DISCONNECT(xwayland_view->map_request);
 
     SIGNAL_DISCONNECT(xwayland_view->request_fullscreen);
@@ -397,6 +414,7 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_server* server, struct w
     // events
 
     SIGNAL_CONNECT(xwayland_surface->events.set_title, xwayland_view->set_title, e_xwayland_view_set_title);
+    SIGNAL_CONNECT(xwayland_surface->events.set_class, xwayland_view->set_class, e_xwayland_view_set_class);
     SIGNAL_CONNECT(xwayland_surface->events.map_request, xwayland_view->map_request, e_xwayland_view_map_request);
     
     SIGNAL_CONNECT(xwayland_surface->events.request_fullscreen, xwayland_view->request_fullscreen, e_xwayland_view_request_fullscreen);
