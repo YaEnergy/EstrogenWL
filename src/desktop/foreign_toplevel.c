@@ -29,9 +29,8 @@ static void view_get_ext_handle_state(const struct e_view* view, struct wlr_ext_
 {
     assert(view && state);
 
-    state->title = view->title; //TODO: is this okay?
-    state->app_id = NULL;
-    //TODO: get app id
+    state->title = view->title;
+    state->app_id = view->app_id;
 }
 
 static void ext_handle_fini(struct e_ext_foreign_toplevel* ext_handle)
