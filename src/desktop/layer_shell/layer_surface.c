@@ -366,6 +366,16 @@ struct e_layer_surface* e_layer_surface_create(struct e_server* server, struct w
     return layer_surface;
 }
 
+// Returns layer surface's requested keyboard interactivity.
+enum zwlr_layer_surface_v1_keyboard_interactivity e_layer_surface_get_interactivity(struct e_layer_surface* layer_surface)
+{
+    assert(layer_surface);
+
+    struct wlr_layer_surface_v1* wlr_layer_surface = layer_surface->scene_layer_surface_v1->layer_surface;
+
+    return wlr_layer_surface->current.keyboard_interactive;
+}
+
 // Configures an e_layer_surface's layout, updates remaining area.
 void e_layer_surface_configure(struct e_layer_surface* layer_surface, struct wlr_box* full_area, struct wlr_box* remaining_area)
 {
