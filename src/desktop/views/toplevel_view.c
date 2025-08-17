@@ -432,7 +432,7 @@ struct e_toplevel_view* e_toplevel_view_create(struct e_server* server, struct w
     SIGNAL_CONNECT(xdg_toplevel->events.request_move, toplevel_view->request_move, e_toplevel_view_request_move);
     SIGNAL_CONNECT(xdg_toplevel->events.request_resize, toplevel_view->request_resize, e_toplevel_view_request_resize);
     SIGNAL_CONNECT(xdg_toplevel->events.set_title, toplevel_view->set_title, e_toplevel_view_set_title);
-    SIGNAL_CONNECT(xdg_toplevel->events.set_app_id, toplevel_view->set_title, e_toplevel_view_set_app_id);
+    SIGNAL_CONNECT(xdg_toplevel->events.set_app_id, toplevel_view->set_app_id, e_toplevel_view_set_app_id);
 
     SIGNAL_CONNECT(xdg_toplevel->events.destroy, toplevel_view->destroy, e_toplevel_view_destroy);
 
