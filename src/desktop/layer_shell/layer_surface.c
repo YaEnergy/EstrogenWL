@@ -350,8 +350,7 @@ struct e_layer_surface* e_layer_surface_create(struct e_server* server, struct w
 
     wl_list_init(&layer_surface->link);
     
-    //allows popups to attach themselves this layer surface's scene tree
-    wlr_layer_surface_v1->data = scene_layer_surface->tree;
+    wlr_layer_surface_v1->data = layer_surface;
 
     //events
 

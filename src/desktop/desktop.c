@@ -171,14 +171,14 @@ void e_desktop_focus_surface(struct e_server* server, struct wlr_surface* surfac
 
     //focus on layer surfaces that request on demand interactivity
 
-    struct wlr_layer_surface_v1* hover_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(surface);
+    struct wlr_layer_surface_v1* wlr_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(surface);
 
     //is layer surface that allows focus?
-    if (hover_layer_surface != NULL && hover_layer_surface->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE)
+    if (wlr_layer_surface != NULL && wlr_layer_surface->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE)
     {
-        if (!e_seat_has_focus(seat, hover_layer_surface->surface))
-            e_seat_focus_layer_surface(seat, hover_layer_surface);    
+        struct e_layer_surface* layer_surface = wlr_layer_surface->data;
 
+        e_desktop_focus_layer_surface(layer_surface);
         return;  
     }
 }
