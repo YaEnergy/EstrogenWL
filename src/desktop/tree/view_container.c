@@ -232,14 +232,6 @@ static void e_view_container_handle_view_request_activate(struct wl_listener* li
 {
     struct e_view_container* view_container = wl_container_of(listener, view_container, request_activate);
 
-    if (view_container->base.workspace == NULL || view_container->base.workspace->output == NULL)
-        return;
-
-    struct e_output* output = view_container->base.workspace->output;
-
-    if (output->active_workspace != view_container->base.workspace)
-        e_output_display_workspace(output, view_container->base.workspace);
-
     e_desktop_focus_view_container(view_container);
 }
 
