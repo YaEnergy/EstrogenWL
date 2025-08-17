@@ -12,7 +12,6 @@
 #include "desktop/tree/workspace.h"
 
 struct e_server;
-struct e_desktop;
 
 struct e_cosmic_workspace_group;
 struct e_ext_workspace_group;

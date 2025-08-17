@@ -14,7 +14,6 @@
 #include "input/cursor.h"
 
 struct e_view;
-struct e_desktop;
 
 // Drag & drop action
 struct e_dnd_action
