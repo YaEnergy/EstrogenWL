@@ -155,8 +155,12 @@ struct e_view
     bool activated;
     bool fullscreen;
 
-    // View's title
-    char* title;
+    // View's title.
+    // May be NULL.
+    const char* title;
+    // View's application identifier.
+    // May be NULL.
+    const char* app_id;
 
     // Output where view is currently being displayed, may be NULL.
     struct e_output* output;

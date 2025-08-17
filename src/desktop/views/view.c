@@ -42,9 +42,11 @@ void e_view_init(struct e_view* view, enum e_view_type type, void* data, const s
     view->surface = NULL;
 
     view->tiled = false;
+    view->activated = false;
     view->fullscreen = false;
 
     view->title = NULL;
+    view->app_id = NULL;
     
     view->tree = wlr_scene_tree_create(server->pending);
     e_node_desc_create(&view->tree->node, E_NODE_DESC_VIEW, view);

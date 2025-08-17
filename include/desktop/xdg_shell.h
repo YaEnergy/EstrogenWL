@@ -31,6 +31,7 @@ struct e_toplevel_view
     struct wl_listener request_resize;
 
     struct wl_listener set_title;
+    struct wl_listener set_app_id;
 
     //xdg_toplevel got destroyed
     struct wl_listener destroy;

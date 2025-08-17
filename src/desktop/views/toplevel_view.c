@@ -280,6 +280,13 @@ static void e_toplevel_view_set_title(struct wl_listener* listener, void* data)
     toplevel_view->base.title = toplevel_view->xdg_toplevel->title;
 }
 
+static void e_toplevel_view_set_app_id(struct wl_listener* listener, void* data)
+{
+    struct e_toplevel_view* toplevel_view = wl_container_of(listener, toplevel_view, set_app_id);
+
+    toplevel_view->base.app_id = toplevel_view->xdg_toplevel->app_id;
+}
+
 //xdg_toplevel got destroyed
 static void e_toplevel_view_destroy(struct wl_listener* listener, void* data)
 {
@@ -298,6 +305,7 @@ static void e_toplevel_view_destroy(struct wl_listener* listener, void* data)
     SIGNAL_DISCONNECT(toplevel_view->request_move);
     SIGNAL_DISCONNECT(toplevel_view->request_resize);
     SIGNAL_DISCONNECT(toplevel_view->set_title);
+    SIGNAL_DISCONNECT(toplevel_view->set_app_id);
 
     SIGNAL_DISCONNECT(toplevel_view->destroy);
 
@@ -424,6 +432,7 @@ struct e_toplevel_view* e_toplevel_view_create(struct e_server* server, struct w
     SIGNAL_CONNECT(xdg_toplevel->events.request_move, toplevel_view->request_move, e_toplevel_view_request_move);
     SIGNAL_CONNECT(xdg_toplevel->events.request_resize, toplevel_view->request_resize, e_toplevel_view_request_resize);
     SIGNAL_CONNECT(xdg_toplevel->events.set_title, toplevel_view->set_title, e_toplevel_view_set_title);
+    SIGNAL_CONNECT(xdg_toplevel->events.set_app_id, toplevel_view->set_title, e_toplevel_view_set_app_id);
 
     SIGNAL_CONNECT(xdg_toplevel->events.destroy, toplevel_view->destroy, e_toplevel_view_destroy);
 
