@@ -7,9 +7,6 @@
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_ext_foreign_toplevel_list_v1.h>
 
-//TODO: comments
-//TODO: finish header
-
 struct e_output;
 
 struct e_view;
@@ -65,7 +62,9 @@ void e_foreign_toplevel_output_leave(struct e_foreign_toplevel* foreign_toplevel
 
 //TODO: set_parent, set_maximized, set_minimized
 
+// title may be NULL.
 void e_foreign_toplevel_set_title(struct e_foreign_toplevel* foreign_toplevel, const char* title);
+// app_id may be NULL.
 void e_foreign_toplevel_set_app_id(struct e_foreign_toplevel* foreign_toplevel, const char* app_id);
 void e_foreign_toplevel_set_activated(struct e_foreign_toplevel* foreign_toplevel, bool activated);
 void e_foreign_toplevel_set_fullscreen(struct e_foreign_toplevel* foreign_toplevel, bool fullscreen);
