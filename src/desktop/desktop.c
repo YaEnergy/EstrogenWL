@@ -21,6 +21,14 @@
 
 #include "server.h"
 
+void e_desktop_state_init(struct e_desktop_state* desktop_state)
+{
+    assert(desktop_state);
+
+    desktop_state->focused_layer_surface = NULL;
+    desktop_state->active_view_container = NULL;
+}
+
 /* scene */
 
 // Finds the scene surface at the specified layout coords in given scene graph.

@@ -373,6 +373,8 @@ int e_server_init(struct e_server* server, struct e_config* config)
     wlr_xdg_foreign_v1_create(server->display, foreign_registry);
     wlr_xdg_foreign_v2_create(server->display, foreign_registry);
 
+    e_desktop_state_init(&server->desktop_state);
+
     return 0;
 }
 
