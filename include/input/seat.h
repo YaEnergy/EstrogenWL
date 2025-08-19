@@ -72,13 +72,12 @@ struct e_seat* e_seat_create(struct e_server* server, struct wlr_output_layout* 
 void e_seat_add_input_device(struct e_seat* seat, struct wlr_input_device* input);
 
 // Set seat keyboard focus on a surface, doing nothing extra. (AKA raw focus)
+// surface is allowed to be NULL.
 // Returns whether this was succesful or not.
-bool e_seat_focus_surface(struct e_seat* seat, struct wlr_surface* surface);
+bool e_seat_set_focus_surface(struct e_seat* seat, struct wlr_surface* surface);
 
 // Returns true if seat has focus on this surface.
 bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface);
-
-void e_seat_clear_focus(struct e_seat* seat);
 
 // Destroy seat.
 void e_seat_destroy(struct e_seat* seat);

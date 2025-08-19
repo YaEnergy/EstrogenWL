@@ -56,21 +56,20 @@ struct e_container* e_desktop_hovered_container(struct e_server* server);
 
 /* focus */
 
-// Set seat focus on a view container if possible, and does whatever is necessary to do so.
-void e_desktop_focus_view_container(struct e_view_container* view_container);
+//TODO: improve comments
 
-// Set seat focus on a layer surface if possible.
-void e_desktop_focus_layer_surface(struct e_layer_surface* layer_surface);
+// view_container is allowed to be NULL.
+void e_desktop_set_focus_view_container(struct e_server* server, struct e_view_container* view_container);
 
-// Gets the type of surface (view container or layer surface) and sets seat focus.
-// This will do nothing if surface isn't of a type that can be focused on by the seat
-void e_desktop_focus_surface(struct e_server* server, struct wlr_surface* surface);
+// layer_surface is allowed to be NULL.
+void e_desktop_set_focus_layer_surface(struct e_server* server, struct e_layer_surface* layer_surface);
+
+// surface is allowed to be NULL.
+void e_desktop_set_focus_surface(struct e_server* server, struct wlr_surface* surface);
 
 // Returns view container currently in focus.
 // Returns NULL if no view container has focus.
 struct e_view_container* e_desktop_focused_view_container(struct e_server* server);
-
-void e_desktop_clear_focus(struct e_server* server);
 
 /* interactive */
 

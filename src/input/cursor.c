@@ -689,7 +689,7 @@ void e_cursor_set_focus_hover(struct e_cursor* cursor)
         wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface->surface, sx, sy); //is only sent once
 
         //sloppy focus
-        e_desktop_focus_surface(server, hover_surface->surface);
+        e_desktop_set_focus_surface(server, hover_surface->surface);
     }
     else 
     {

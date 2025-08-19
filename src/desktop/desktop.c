@@ -8,6 +8,8 @@
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_scene.h>
 
+#include "wlr-layer-shell-unstable-v1-protocol.h"
+
 #include "input/seat.h"
 #include "input/cursor.h"
 
@@ -111,83 +113,129 @@ struct e_container* e_desktop_hovered_container(struct e_server* server)
 
 /* focus */
 
-// Set seat focus on a view container if possible, and does whatever is necessary to do so.
-void e_desktop_focus_view_container(struct e_view_container* view_container)
+static bool desktop_has_exclusive_focus(struct e_server* server)
 {
-    assert(view_container);
+    assert(server);
 
-    #if E_VERBOSE
-    e_log_info("desktop focus on view container");
-    #endif
+    struct e_desktop_state* state = &server->desktop_state;
 
-    if (!view_container->view->mapped || view_container->base.workspace == NULL || view_container->base.workspace->output == NULL)
+    return (state->focused_layer_surface != NULL && e_layer_surface_get_layer(state->focused_layer_surface) >= ZWLR_LAYER_SHELL_V1_LAYER_TOP && e_layer_surface_get_interactivity(state->focused_layer_surface) == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE);
+}
+
+static bool desktop_set_focus_raw_surface(struct e_server* server, struct wlr_surface* surface, bool replace_exclusive)
+{
+    assert(server);
+
+    if (desktop_has_exclusive_focus(server) && !replace_exclusive)
     {
-        e_log_error("e_desktop_focus_view_container: view is not visible, won't focus");
-        return;
+        e_log_info("desktop has exclusive focus!: not focusing on given surface");
+        return false;
     }
 
-    if (e_seat_focus_surface(view_container->base.server->seat, view_container->view->surface))
+    return e_seat_set_focus_surface(server->seat, surface);
+}
+
+static void desktop_set_active_view_container(struct e_server* server, struct e_view_container* view_container)
+{
+    assert(server);
+
+    //don't set it to the same view container
+    if (server->desktop_state.active_view_container == view_container)
+        return;
+
+    if (server->desktop_state.active_view_container != NULL)
+        e_view_set_activated(server->desktop_state.active_view_container->view, false);
+
+    server->desktop_state.active_view_container = view_container;
+
+    if (view_container != NULL)
     {
-        struct e_output* output = view_container->base.workspace->output;
-
-        if (output->active_workspace != view_container->base.workspace)
-            e_output_display_workspace(output, view_container->base.workspace);
-
         e_view_set_activated(view_container->view, true);
         e_container_raise_to_top(&view_container->base);
+
+        struct e_output* output = (view_container->base.workspace != NULL) ? view_container->base.workspace->output : NULL;
+
+        if (output != NULL && output->active_workspace != view_container->base.workspace)
+            e_output_display_workspace(output, view_container->base.workspace);
     }
 }
 
-// Set seat focus on a layer surface if possible.
-void e_desktop_focus_layer_surface(struct e_layer_surface* layer_surface)
+void e_desktop_set_focus_view_container(struct e_server* server, struct e_view_container* view_container)
 {
-    assert(layer_surface);
+    assert(server);
 
-    e_seat_focus_surface(layer_surface->server->seat, layer_surface->scene_layer_surface_v1->layer_surface->surface);
+    desktop_set_active_view_container(server, view_container);
+
+    if (view_container != NULL)
+        desktop_set_focus_raw_surface(server, view_container->view->surface, false);
 }
 
-// Gets the type of surface (view container or layer surface) and sets seat focus.
-// This will do nothing if surface isn't of a type that should be focused on by the desktop's seat.
-void e_desktop_focus_surface(struct e_server* server, struct wlr_surface* surface)
+void e_desktop_set_focus_layer_surface(struct e_server* server, struct e_layer_surface* layer_surface)
 {
-    assert(server && surface);
+    assert(server);
 
-    if (server == NULL)
+    //don't set it to the same layer surface
+    if (server->desktop_state.focused_layer_surface == layer_surface)
+        return;
+
+    if (layer_surface == NULL)
     {
-        e_log_error("e_desktop_focus_surface: server is NULL!");
+        server->desktop_state.focused_layer_surface = NULL;
+        e_desktop_set_focus_view_container(server, server->desktop_state.active_view_container);
         return;
     }
 
-    if (server == NULL)
-    {
-        e_log_error("e_desktop_focus_surface: surface is NULL!");
+    enum zwlr_layer_shell_v1_layer layer = e_layer_surface_get_layer(layer_surface);
+    enum zwlr_layer_surface_v1_keyboard_interactivity interactivity = e_layer_surface_get_interactivity(layer_surface);
+
+    if (interactivity == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE)
         return;
-    }
 
-    struct e_seat* seat = server->seat;
+    bool replace_exclusive = (layer >= ZWLR_LAYER_SHELL_V1_LAYER_TOP && interactivity == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE);
 
-    //focus on views containers
+    //new exclusive must be on a higher layer
+    if (desktop_has_exclusive_focus(server) && replace_exclusive)
+        replace_exclusive = layer > e_layer_surface_get_layer(server->desktop_state.focused_layer_surface);
 
-    struct wlr_surface* root_surface = wlr_surface_get_root_surface(surface);
-    struct e_view_container* view_container = e_view_container_try_from_surface(server, root_surface);
+    struct wlr_surface* surface = layer_surface->scene_layer_surface_v1->layer_surface->surface;
 
-    if (view_container != NULL && !e_seat_has_focus(seat, view_container->view->surface))
-    {
-        e_desktop_focus_view_container(view_container);
-        return;
-    }
+    if (desktop_set_focus_raw_surface(server, surface, replace_exclusive))
+        server->desktop_state.focused_layer_surface = layer_surface;
+}
 
-    //focus on layer surfaces that request on demand interactivity
+// Returns NULL on fail.
+static struct e_layer_surface* layer_surface_try_from_surface(struct wlr_surface* surface)
+{
+    assert(surface);
 
     struct wlr_layer_surface_v1* wlr_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(surface);
 
-    //is layer surface that allows focus?
-    if (wlr_layer_surface != NULL && wlr_layer_surface->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE)
-    {
-        struct e_layer_surface* layer_surface = wlr_layer_surface->data;
+    return (wlr_layer_surface != NULL) ? wlr_layer_surface->data : NULL;
+}
 
-        e_desktop_focus_layer_surface(layer_surface);
-        return;  
+void e_desktop_set_focus_surface(struct e_server* server, struct wlr_surface* surface)
+{
+    assert(server);
+
+    if (surface == NULL)
+        return;
+
+    surface = wlr_surface_get_root_surface(surface);
+    
+    struct e_view_container* view_container = e_view_container_try_from_surface(server, surface);
+
+    if (view_container != NULL)
+    {
+        e_desktop_set_focus_view_container(server, view_container);
+        return;
+    }
+
+    struct e_layer_surface* layer_surface = layer_surface_try_from_surface(surface);
+
+    if (layer_surface != NULL)
+    {
+        e_desktop_set_focus_layer_surface(server, layer_surface);
+        return;
     }
 }
 
@@ -201,22 +249,4 @@ struct e_view_container* e_desktop_focused_view_container(struct e_server* serve
         return NULL;
 
     return e_view_container_try_from_surface(server, server->seat->focus_surface);
-}
-
-void e_desktop_clear_focus(struct e_server* server)
-{
-    assert(server);
-
-    if (server == NULL)
-    {
-        e_log_error("e_desktop_clear_focus: server is NULL!");
-        return;
-    }
-
-    struct e_view_container* focused_view_container = e_desktop_focused_view_container(server);
-
-    if (focused_view_container != NULL)
-        e_view_set_activated(focused_view_container->view, false);
-
-    e_seat_clear_focus(server->seat);
 }

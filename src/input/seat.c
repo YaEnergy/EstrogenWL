@@ -71,6 +71,26 @@ static void e_seat_request_set_primary_selection(struct wl_listener* listener, v
     wlr_seat_set_primary_selection(seat->wlr_seat, event->source, event->serial);
 }
 
+static void e_seat_clear_focus(struct e_seat* seat)
+{
+    assert(seat);
+
+    if (seat->focus_surface == NULL)
+        return;
+
+    //clear keyboard focus
+
+    struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
+
+    //if there is an active keyboard (and is focused), clear its focus
+    if (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface != NULL)
+        wlr_seat_keyboard_notify_clear_focus(seat->wlr_seat);
+    
+    SIGNAL_DISCONNECT(seat->focus_surface_unmap);
+    
+    seat->focus_surface = NULL;
+}
+
 // Focused surface was unmapped.
 static void e_seat_focus_surface_unmap(struct wl_listener* listener, void* data)
 {
@@ -314,10 +334,11 @@ void e_seat_add_input_device(struct e_seat* seat, struct wlr_input_device* input
 // focus
 
 // Set seat keyboard focus on a surface, doing nothing extra. (AKA raw focus)
+// surface is allowed to be NULL.
 // Returns whether this was succesful or not.
-bool e_seat_focus_surface(struct e_seat* seat, struct wlr_surface* surface)
+bool e_seat_set_focus_surface(struct e_seat* seat, struct wlr_surface* surface)
 {
-    assert(seat && surface);
+    assert(seat);
 
     //already focused on surface
     if (seat->focus_surface == surface)
@@ -326,17 +347,20 @@ bool e_seat_focus_surface(struct e_seat* seat, struct wlr_surface* surface)
     if (seat->focus_surface != NULL)
         e_seat_clear_focus(seat);
 
-    struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
-
-    //set active keyboard focus to surface
-    //only if there is an active keyboard and this keyboard doesn't already have focus on the surface
-    if (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface != surface)
-        wlr_seat_keyboard_notify_enter(seat->wlr_seat, surface, wlr_keyboard->keycodes, wlr_keyboard->num_keycodes, &wlr_keyboard->modifiers);
+    if (surface != NULL)
+    {
+        struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
     
-    seat->focus_surface = surface;
-
-    //clear focus on surface unmap
-    SIGNAL_CONNECT(surface->events.unmap, seat->focus_surface_unmap, e_seat_focus_surface_unmap);
+        //set active keyboard focus to surface
+        //only if there is an active keyboard and this keyboard doesn't already have focus on the surface
+        if (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface != surface)
+            wlr_seat_keyboard_notify_enter(seat->wlr_seat, surface, wlr_keyboard->keycodes, wlr_keyboard->num_keycodes, &wlr_keyboard->modifiers);
+        
+        seat->focus_surface = surface;
+    
+        //clear focus on surface unmap
+        SIGNAL_CONNECT(surface->events.unmap, seat->focus_surface_unmap, e_seat_focus_surface_unmap);
+    }
 
     return true;
 }
@@ -350,26 +374,6 @@ bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface)
     struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
 
     return (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface == surface);
-}
-
-void e_seat_clear_focus(struct e_seat* seat)
-{
-    assert(seat);
-
-    if (seat->focus_surface == NULL)
-        return;
-
-    //clear keyboard focus
-
-    struct wlr_keyboard* wlr_keyboard = wlr_seat_get_keyboard(seat->wlr_seat);
-
-    //if there is an active keyboard (and is focused), clear its focus
-    if (wlr_keyboard != NULL && seat->wlr_seat->keyboard_state.focused_surface != NULL)
-        wlr_seat_keyboard_notify_clear_focus(seat->wlr_seat);
-    
-    SIGNAL_DISCONNECT(seat->focus_surface_unmap);
-    
-    seat->focus_surface = NULL;
 }
 
 // Destroy seat.
