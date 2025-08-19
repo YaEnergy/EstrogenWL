@@ -78,23 +78,6 @@ static void xwayland_view_update_geometry(struct e_xwayland_view* xwayland_view)
     xwayland_view->base.height = xwayland_view->xwayland_surface->height;
 }
 
-// Xwayland surface wants to be mapped.
-static void e_xwayland_view_map_request(struct wl_listener* listener, void* data)
-{
-    struct e_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, map_request);
-
-    #if E_VERBOSE
-    e_log_info("xwayland view map request");
-    #endif
-
-    //TODO: add signal
-    //TODO: init fullscreen view size if requested
-
-    xwayland_view_update_geometry(xwayland_view);
-
-    e_view_configure(&xwayland_view->base, xwayland_view->xwayland_surface->x, xwayland_view->xwayland_surface->y, xwayland_view->xwayland_surface->width, xwayland_view->xwayland_surface->height);
-}
-
 // New surface state got committed.
 static void e_xwayland_view_commit(struct wl_listener* listener, void* data)
 {
@@ -304,7 +287,6 @@ static void e_xwayland_view_destroy(struct wl_listener* listener, void* data)
 
     SIGNAL_DISCONNECT(xwayland_view->set_title);
     SIGNAL_DISCONNECT(xwayland_view->set_class);
-    SIGNAL_DISCONNECT(xwayland_view->map_request);
 
     SIGNAL_DISCONNECT(xwayland_view->request_fullscreen);
     SIGNAL_DISCONNECT(xwayland_view->request_maximize);
@@ -415,7 +397,6 @@ struct e_xwayland_view* e_xwayland_view_create(struct e_server* server, struct w
 
     SIGNAL_CONNECT(xwayland_surface->events.set_title, xwayland_view->set_title, e_xwayland_view_set_title);
     SIGNAL_CONNECT(xwayland_surface->events.set_class, xwayland_view->set_class, e_xwayland_view_set_class);
-    SIGNAL_CONNECT(xwayland_surface->events.map_request, xwayland_view->map_request, e_xwayland_view_map_request);
     
     SIGNAL_CONNECT(xwayland_surface->events.request_fullscreen, xwayland_view->request_fullscreen, e_xwayland_view_request_fullscreen);
     SIGNAL_CONNECT(xwayland_surface->events.request_maximize, xwayland_view->request_maximize, e_xwayland_view_request_maximize);

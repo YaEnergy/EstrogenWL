@@ -38,9 +38,6 @@ struct e_xwayland_view
     // New surface state got committed.
     struct wl_listener commit;
 
-    // Xwayland surface wants to be mapped.
-    struct wl_listener map_request;
-    
     struct wl_listener request_fullscreen;
     struct wl_listener request_maximize;
 
