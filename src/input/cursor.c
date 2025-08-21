@@ -669,6 +669,42 @@ void e_cursor_start_container_move(struct e_cursor* cursor, struct e_container* 
     e_cursor_start_grab_container_mode(cursor, container, E_CURSOR_MODE_MOVE);
 }
 
+// Returns NULL on fail.
+static struct e_layer_surface* layer_surface_try_from_surface(struct wlr_surface* surface)
+{
+    assert(surface);
+
+    struct wlr_layer_surface_v1* wlr_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(surface);
+
+    return (wlr_layer_surface != NULL) ? wlr_layer_surface->data : NULL;
+}
+
+static void set_focus_from_surface(struct e_seat* seat, struct wlr_surface* surface)
+{
+    assert(seat && surface);
+    
+    if (surface == NULL)
+        return;
+
+    surface = wlr_surface_get_root_surface(surface);
+    
+    struct e_view_container* view_container = e_view_container_try_from_surface(seat->server, surface);
+
+    if (view_container != NULL)
+    {
+        e_seat_set_focus_view_container(seat, view_container);
+        return;
+    }
+
+    struct e_layer_surface* layer_surface = layer_surface_try_from_surface(surface);
+
+    if (layer_surface != NULL)
+    {
+        e_seat_set_focus_layer_surface(seat, layer_surface);
+        return;
+    }
+}
+
 // Sets seat focus to whatever surface is under cursor.
 // If nothing is under cursor, doesn't change seat focus.
 void e_cursor_set_focus_hover(struct e_cursor* cursor)
@@ -689,7 +725,7 @@ void e_cursor_set_focus_hover(struct e_cursor* cursor)
         wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface->surface, sx, sy); //is only sent once
 
         //sloppy focus
-        e_desktop_set_focus_surface(server, hover_surface->surface);
+        set_focus_from_surface(seat, hover_surface->surface);
     }
     else 
     {

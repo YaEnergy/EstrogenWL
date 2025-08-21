@@ -52,9 +52,6 @@ void e_desktop_set_focus_view_container(struct e_server* server, struct e_view_c
 // layer_surface is allowed to be NULL.
 void e_desktop_set_focus_layer_surface(struct e_server* server, struct e_layer_surface* layer_surface);
 
-// surface is allowed to be NULL.
-void e_desktop_set_focus_surface(struct e_server* server, struct wlr_surface* surface);
-
 // Returns view container currently in focus.
 // Returns NULL if no view container has focus.
 struct e_view_container* e_desktop_focused_view_container(struct e_server* server);

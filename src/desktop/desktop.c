@@ -117,42 +117,6 @@ void e_desktop_set_focus_layer_surface(struct e_server* server, struct e_layer_s
     e_seat_set_focus_layer_surface(server->seat, layer_surface);
 }
 
-// Returns NULL on fail.
-static struct e_layer_surface* layer_surface_try_from_surface(struct wlr_surface* surface)
-{
-    assert(surface);
-
-    struct wlr_layer_surface_v1* wlr_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(surface);
-
-    return (wlr_layer_surface != NULL) ? wlr_layer_surface->data : NULL;
-}
-
-void e_desktop_set_focus_surface(struct e_server* server, struct wlr_surface* surface)
-{
-    assert(server);
-
-    if (surface == NULL)
-        return;
-
-    surface = wlr_surface_get_root_surface(surface);
-    
-    struct e_view_container* view_container = e_view_container_try_from_surface(server, surface);
-
-    if (view_container != NULL)
-    {
-        e_desktop_set_focus_view_container(server, view_container);
-        return;
-    }
-
-    struct e_layer_surface* layer_surface = layer_surface_try_from_surface(surface);
-
-    if (layer_surface != NULL)
-    {
-        e_desktop_set_focus_layer_surface(server, layer_surface);
-        return;
-    }
-}
-
 // Returns view container currently in focus.
 // Returns NULL if no view container has focus.
 struct e_view_container* e_desktop_focused_view_container(struct e_server* server)
