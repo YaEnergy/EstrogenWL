@@ -13,8 +13,6 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output_layout.h>
 
-#include "desktop/desktop.h"
-
 #include "config.h"
 
 struct e_seat;
@@ -126,8 +124,6 @@ struct e_server
 
     // collection & management of input devices: keyboard, mouse, ...
     struct e_seat* seat;
-
-    struct e_desktop_state desktop_state;
 };
 
 // Init server output handling.

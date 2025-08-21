@@ -18,6 +18,8 @@
 #include "desktop/output.h"
 #include "desktop/tree/node.h"
 
+#include "input/seat.h"
+
 #include "util/log.h"
 #include "util/wl_macros.h"
 
@@ -195,10 +197,11 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
         struct e_server* server = layer_surface->server;
 
         //give exclusive focus if requested and allowed and doesn't have focus
-        if (wlr_layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE && server->desktop_state.focused_layer_surface != layer_surface)
+        if (wlr_layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE && server->seat->focus.focused_layer_surface != layer_surface)
             e_desktop_set_focus_layer_surface(server, layer_surface);
+        //TODO: if there were multiple seats, focus on this layer surface should be cleared from all seats
         //clear focus if layer surface no longer wants focus and has focus
-        else if (wlr_layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE && server->desktop_state.focused_layer_surface == layer_surface)
+        else if (wlr_layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE && server->seat->focus.focused_layer_surface == layer_surface)
             e_desktop_set_focus_layer_surface(server, NULL);
 
         e_log_info("layer surface committed keyboard interactivity");
@@ -257,7 +260,8 @@ static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
 {
     struct e_layer_surface* unmapped_layer_surface = wl_container_of(listener, unmapped_layer_surface, unmap);
 
-    if (unmapped_layer_surface->server->desktop_state.focused_layer_surface == unmapped_layer_surface)
+    //TODO: if there were multiple seats, focus on this layer surface should be cleared from all seats
+    if (unmapped_layer_surface->server->seat->focus.focused_layer_surface == unmapped_layer_surface)
         e_desktop_set_focus_layer_surface(unmapped_layer_surface->server, NULL);
 
     wlr_scene_node_set_enabled(&unmapped_layer_surface->scene_layer_surface_v1->tree->node, false);

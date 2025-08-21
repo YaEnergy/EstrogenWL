@@ -13,7 +13,8 @@
 
 #include "input/cursor.h"
 
-struct e_view;
+struct e_layer_surface;
+struct e_view_container;
 
 // Drag & drop action
 struct e_dnd_action
@@ -44,9 +45,14 @@ struct e_seat
     // handles cursor shape protocol
     struct wlr_cursor_shape_manager_v1* cursor_shape_manager;
 
-    // surface that currently has focus
-    struct wlr_surface* focus_surface;
-    struct wl_listener focus_surface_unmap;
+    struct {
+        // View container currently considered active.
+        // This receives focus as long as there is no focused layer surface.
+        struct e_view_container* active_view_container;
+
+        // May be NULL.
+        struct e_layer_surface* focused_layer_surface;
+    } focus;
 
     // client requests to set the surface of the cursor
     struct wl_listener request_set_cursor;
@@ -71,10 +77,15 @@ struct e_seat* e_seat_create(struct e_server* server, struct wlr_output_layout* 
 // Add a new input device to a seat.
 void e_seat_add_input_device(struct e_seat* seat, struct wlr_input_device* input);
 
-// Set seat keyboard focus on a surface, doing nothing extra. (AKA raw focus)
-// surface is allowed to be NULL.
+// Attempts to set seat keyboard focus on a view container.
+// view_container is allowed to be NULL.
 // Returns whether this was succesful or not.
-bool e_seat_set_focus_surface(struct e_seat* seat, struct wlr_surface* surface);
+bool e_seat_set_focus_view_container(struct e_seat* seat, struct e_view_container* view_container);
+
+// Attempts to set seat keyboard focus on a layer surface.
+// layer_surface is allowed to be NULL.
+// Returns whether this was succesful or not.
+bool e_seat_set_focus_layer_surface(struct e_seat* seat, struct e_layer_surface* layer_surface);
 
 // Returns true if seat has focus on this surface.
 bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface);

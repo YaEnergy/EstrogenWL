@@ -117,7 +117,8 @@ static void e_view_container_handle_view_unmap(struct wl_listener* listener, voi
 
     struct e_workspace* workspace = view_container->base.workspace;
 
-    if (view_container->base.server->desktop_state.active_view_container == view_container)
+    //TODO: if there were multiple seats, focus on this view container should be cleared from all seats
+    if (view_container->base.server->seat->focus.active_view_container == view_container)
         e_desktop_set_focus_view_container(view_container->base.server, NULL);
 
     e_container_leave(&view_container->base);

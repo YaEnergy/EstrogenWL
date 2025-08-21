@@ -24,18 +24,6 @@ struct e_layer_surface;
 // - Managing a collection of views
 // - Desktop focus management (seat handles raw focus)
 
-struct e_desktop_state
-{
-    // Layer surface with focus.
-    struct e_layer_surface* focused_layer_surface;
-
-    // View container currently considered active.
-    // This receives focus as long as there is no focused layer surface.
-    struct e_view_container* active_view_container;
-};
-
-void e_desktop_state_init(struct e_desktop_state* desktop_state);
-
 /* scene */
 
 // Finds the scene surface at the specified layout coords in given scene graph.
