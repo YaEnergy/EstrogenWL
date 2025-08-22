@@ -25,6 +25,14 @@ enum e_cursor_mode
     E_CURSOR_MODE_MOVE
 };
 
+struct e_cursor_context
+{
+    // May be NULL.
+    struct wlr_scene_surface* scene_surface;
+    // Local position on surface.
+    double sx, sy;
+};
+
 //display of cursor image and management cursor
 struct e_cursor
 {
@@ -57,6 +65,9 @@ struct e_cursor
 
 // Returns NULL on fail.
 struct e_cursor* e_cursor_create(struct e_seat* seat, struct wlr_output_layout* output_layout);
+
+// Outs cursor's current hover context.
+void e_cursor_get_context(const struct e_cursor* cursor, struct e_cursor_context* context);
 
 void e_cursor_set_mode(struct e_cursor* cursor, enum e_cursor_mode mode);
 

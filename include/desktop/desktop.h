@@ -24,14 +24,6 @@ struct e_layer_surface;
 // - Managing a collection of views
 // - Desktop focus management (seat handles raw focus)
 
-/* scene */
-
-// Finds the scene surface at the specified layout coords in given scene graph.
-// Also translates the layout coords to the surface coords if not NULL. (sx, sy)
-// NULL for sx & sy is allowed.
-// Returns NULL if nothing is found.
-struct wlr_scene_surface* e_desktop_scene_surface_at(struct wlr_scene_node* node, double lx, double ly, double* sx, double* sy);
-
 /* hover */
 
 // Returns output currently hovered by cursor.

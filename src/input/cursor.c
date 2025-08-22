@@ -432,16 +432,15 @@ static void e_cursor_handle_motion(struct e_cursor* cursor, uint32_t time_msec)
             break;
     }
 
-    struct e_server* server = cursor->seat->server;
     struct e_seat* seat = cursor->seat;
 
-    double sx, sy;
-    struct wlr_scene_surface* hover_surface = e_desktop_scene_surface_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &sx, &sy);
+    struct e_cursor_context context;
+    e_cursor_get_context(cursor, &context);
 
     e_cursor_set_focus_hover(cursor);
 
-    if (hover_surface != NULL)
-        wlr_seat_pointer_notify_motion(seat->wlr_seat, time_msec, sx, sy);
+    if (context.scene_surface != NULL)
+        wlr_seat_pointer_notify_motion(seat->wlr_seat, time_msec, context.sx, context.sy);
 }
 
 static void e_cursor_motion(struct wl_listener* listener, void* data)
@@ -557,6 +556,51 @@ struct e_cursor* e_cursor_create(struct e_seat* seat, struct wlr_output_layout* 
     SIGNAL_CONNECT(cursor->wlr_cursor->events.axis, cursor->axis, e_cursor_axis);
 
     return cursor;
+}
+
+// Finds the scene surface at the specified layout coords in given scene graph.
+// Also translates the layout coords to the surface coords if not NULL. (sx, sy)
+// NULL for sx & sy is allowed.
+// Returns NULL if nothing is found.
+struct wlr_scene_surface* scene_surface_at(struct wlr_scene_node* node, double lx, double ly, double* sx, double* sy)
+{
+    assert(node);
+
+    if (sx != NULL)
+        *sx = 0.0;
+
+    if (sy != NULL)
+        *sy = 0.0;
+
+    double nx, ny = 0.0;
+    struct wlr_scene_node* snode = wlr_scene_node_at(node, lx, ly, &nx, &ny);
+
+    if (snode == NULL || snode->type != WLR_SCENE_NODE_BUFFER)
+        return NULL;
+
+    struct wlr_scene_buffer* buffer = wlr_scene_buffer_from_node(snode);
+    struct wlr_scene_surface* scene_surface = wlr_scene_surface_try_from_buffer(buffer);
+
+    if (scene_surface == NULL)
+        return NULL;
+
+    if (sx != NULL)
+        *sx = nx;
+
+    if (sy != NULL)
+        *sy = ny;
+
+    return scene_surface;
+}
+
+// Outs cursor's current hover context.
+void e_cursor_get_context(const struct e_cursor* cursor, struct e_cursor_context* context)
+{
+    assert(cursor && context);
+
+    struct e_server* server = cursor->seat->server;
+
+    context->scene_surface = scene_surface_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &context->sx, &context->sy);
 }
 
 void e_cursor_set_mode(struct e_cursor* cursor, enum e_cursor_mode mode)
@@ -740,19 +784,19 @@ void e_cursor_set_focus_hover(struct e_cursor* cursor)
     if (cursor->mode != E_CURSOR_MODE_DEFAULT)
         return;
 
-    struct e_server* server = cursor->seat->server;
     struct e_seat* seat = cursor->seat;
 
-    double sx, sy;
-    struct wlr_scene_surface* hover_surface = e_desktop_scene_surface_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &sx, &sy);
-    struct e_view* view = (hover_surface == NULL) ? NULL : e_view_try_from_node_ancestors(&hover_surface->buffer->node);
+    struct e_cursor_context context;
+    e_cursor_get_context(cursor, &context);
 
-    if (hover_surface != NULL)
+    struct e_view* view = (context.scene_surface == NULL) ? NULL : e_view_try_from_node_ancestors(&context.scene_surface->buffer->node);
+
+    if (context.scene_surface != NULL)
     {
-        wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface->surface, sx, sy); //is only sent once
+        wlr_seat_pointer_notify_enter(seat->wlr_seat, context.scene_surface->surface, context.sx, context.sy); //is only sent once
 
         //sloppy focus
-        set_focus_from_surface(seat, hover_surface->surface);
+        set_focus_from_surface(seat, context.scene_surface->surface);
     }
     else 
     {
