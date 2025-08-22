@@ -71,6 +71,14 @@ struct e_cursor* e_cursor_create(struct e_seat* seat, struct wlr_output_layout* 
 // Outs cursor's current hover context.
 void e_cursor_get_context(const struct e_cursor* cursor, struct e_cursor_context* context);
 
+// Returns output hovered by cursor.
+// Returns NULL if none.
+struct e_output* e_cursor_hovered_output(const struct e_cursor* cursor);
+
+// Returns container hovered by container.
+// Returns NULL if none.
+struct e_container* e_cursor_hovered_container(const struct e_cursor* cursor);
+
 void e_cursor_set_mode(struct e_cursor* cursor, enum e_cursor_mode mode);
 
 // Lets go of a possibly grabbed view, & sets cursor mode to default.

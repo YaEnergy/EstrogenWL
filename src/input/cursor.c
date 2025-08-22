@@ -206,9 +206,7 @@ static void e_cursor_handle_mode_move(struct e_cursor* cursor)
     if (e_container_is_tiled(cursor->grab_container))
     {
         //TODO: tiled container interactive reparenting
-        struct e_server* server = cursor->seat->server;
-
-        struct e_container* hovered_container = e_desktop_hovered_container(server);
+        struct e_container* hovered_container = e_cursor_hovered_container(cursor);
     
         //if not the same tiled container as grabbed tiled container, swap them
         if (hovered_container != NULL && e_container_is_tiled(hovered_container) && hovered_container != cursor->grab_container)
@@ -409,8 +407,6 @@ static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
         e_cursor_reset_mode(cursor);
         return;
     }
-
-    //TODO: wait for view to finish committing (resize) before applying pending position
 
     if (e_container_is_tiled(cursor->grab_container))
         e_cursor_resize_tiled(cursor);
@@ -620,6 +616,30 @@ void e_cursor_get_context(const struct e_cursor* cursor, struct e_cursor_context
 
     context->scene_surface = scene_surface_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &context->sx, &context->sy);
     context->view = (context->scene_surface != NULL) ? e_view_try_from_node_ancestors(&context->scene_surface->buffer->node) : NULL;
+}
+
+// Returns output hovered by cursor.
+// Returns NULL if none.
+struct e_output* e_cursor_hovered_output(const struct e_cursor* cursor)
+{
+    assert(cursor);
+
+    struct e_server* server = cursor->seat->server;
+
+    struct wlr_output* wlr_output = wlr_output_layout_output_at(server->output_layout, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
+    
+    return (wlr_output != NULL) ? wlr_output->data : NULL;
+}
+
+// Returns container hovered by cursor.
+// Returns NULL if none.
+struct e_container* e_cursor_hovered_container(const struct e_cursor* cursor)
+{
+    assert(cursor);
+
+    struct e_server* server = cursor->seat->server;
+
+    return e_container_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
 }
 
 void e_cursor_set_mode(struct e_cursor* cursor, enum e_cursor_mode mode)

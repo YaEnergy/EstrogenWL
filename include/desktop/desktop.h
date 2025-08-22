@@ -9,8 +9,6 @@
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_scene.h>
 
-//TODO: interactive container action functions here instead of in cursor, #include <wlr/util/edges.h>
-
 struct e_server;
 
 struct e_output;
@@ -20,17 +18,16 @@ struct e_container;
 struct e_view_container; //TODO: remove, only use e_container here
 struct e_layer_surface;
 
-// Functions for
-// - Managing a collection of views
-// - Desktop focus management (seat handles raw focus)
+// These functions are mainly meant for if there were ever support for multiple seats,
+// and whatever is calling these doesn't which seat.
 
 /* hover */
 
-// Returns output currently hovered by cursor.
+// Returns output currently hovered by current seat's cursor.
 // Returns NULL if no output is being hovered.
 struct e_output* e_desktop_hovered_output(struct e_server* server);
 
-// Returns container currently hovered by cursor.
+// Returns container currently hovered by current seat's cursor.
 // Returns NULL if no container is being hovered.
 struct e_container* e_desktop_hovered_container(struct e_server* server);
 
