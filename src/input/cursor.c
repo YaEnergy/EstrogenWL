@@ -455,10 +455,8 @@ static void e_cursor_motion(struct wl_listener* listener, void* data)
         server->relative_pointer_manager,
         cursor->seat->wlr_seat,
         (uint64_t)event->time_msec * 1000, //convert to microseconds (us)
-        event->delta_x,
-        event->delta_y,
-        event->unaccel_dx,
-        event->unaccel_dy
+        event->delta_x, event->delta_y,
+        event->unaccel_dx, event->unaccel_dy
     );
 
     //move & send to clients
@@ -484,10 +482,8 @@ static void e_cursor_motion_absolute(struct wl_listener* listener, void* data)
         server->relative_pointer_manager,
         cursor->seat->wlr_seat,
         (uint64_t)event->time_msec * 1000, //convert to microseconds (us)
-        dx,
-        dy,
-        dx,
-        dy
+        dx, dy,
+        dx, dy
     );
 
     //move & send to clients
