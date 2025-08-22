@@ -472,6 +472,24 @@ static void e_cursor_motion_absolute(struct wl_listener* listener, void* data)
     struct e_cursor* cursor = wl_container_of(listener, cursor, motion_absolute);
     struct wlr_pointer_motion_absolute_event* event = data;
 
+    double lx, ly;
+    wlr_cursor_absolute_to_layout_coords(cursor->wlr_cursor, &event->pointer->base, event->x, event->y, &lx, &ly);
+    
+    double dx = lx - cursor->wlr_cursor->x;
+    double dy = ly - cursor->wlr_cursor->y;
+
+    struct e_server* server = cursor->seat->server;
+
+    wlr_relative_pointer_manager_v1_send_relative_motion(
+        server->relative_pointer_manager,
+        cursor->seat->wlr_seat,
+        (uint64_t)event->time_msec * 1000, //convert to microseconds (us)
+        dx,
+        dy,
+        dx,
+        dy
+    );
+
     //move & send to clients
     wlr_cursor_warp_absolute(cursor->wlr_cursor, &event->pointer->base, event->x, event->y);
     
