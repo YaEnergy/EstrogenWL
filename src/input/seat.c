@@ -22,6 +22,7 @@
 #include "input/keyboard.h"
 #include "input/cursor.h"
 
+#include "desktop/output.h"
 #include "desktop/layer_shell.h"
 #include "desktop/tree/container.h"
 

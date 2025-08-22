@@ -44,11 +44,11 @@ struct e_container* e_desktop_hovered_container(struct e_server* server);
 
 /* focus */
 
-//TODO: improve comments
-
+// Sets desktop's current seat's focus to given view container.
 // view_container is allowed to be NULL.
 void e_desktop_set_focus_view_container(struct e_server* server, struct e_view_container* view_container);
 
+// Sets desktop's current seat's focus to given layer surface.
 // layer_surface is allowed to be NULL.
 void e_desktop_set_focus_layer_surface(struct e_server* server, struct e_layer_surface* layer_surface);
 
