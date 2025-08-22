@@ -36,6 +36,7 @@
 #include <wlr/types/wlr_linux_drm_syncobj_v1.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_ext_foreign_toplevel_list_v1.h>
+#include <wlr/types/wlr_relative_pointer_v1.h>
 
 #if E_XWAYLAND_SUPPORT
 #include <wlr/xwayland.h>
@@ -364,6 +365,15 @@ int e_server_init(struct e_server* server, struct e_config* config)
     if (server->ext_workspace_manager == NULL)
     {
         e_log_error("e_server_init: failed to create ext workspace manager");
+        return 1;
+    }
+
+    // Handles sending relative pointer motion events to clients.
+    server->relative_pointer_manager = wlr_relative_pointer_manager_v1_create(server->display);
+
+    if (server->relative_pointer_manager == NULL)
+    {
+        e_log_error("e_server_init: failed to create wlr relative pointer manager v1");
         return 1;
     }
 
