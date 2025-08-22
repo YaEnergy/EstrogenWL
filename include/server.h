@@ -28,6 +28,8 @@ struct wlr_foreign_toplevel_manager_v1;
 struct e_cosmic_workspace_manager;
 struct e_ext_workspace_manager;
 
+struct wlr_relative_pointer_manager_v1;
+
 #define E_COMPOSITOR_VERSION 6
 
 #define E_XDG_WM_BASE_VERSION 6
@@ -102,6 +104,9 @@ struct e_server
 
     struct e_cosmic_workspace_manager* cosmic_workspace_manager;
     struct e_ext_workspace_manager* ext_workspace_manager;
+
+    // Handles sending relative pointer motion events to clients.
+    struct wlr_relative_pointer_manager_v1* relative_pointer_manager;
 
     struct wl_list outputs; //struct e_output* 
     // wlroots utility for working with arrangement of screens in a physical layout
