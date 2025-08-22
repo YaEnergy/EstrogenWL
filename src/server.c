@@ -42,7 +42,6 @@
 #include <wlr/xwayland.h>
 #endif
 
-#include "desktop/desktop.h"
 #include "desktop/output.h"
 
 #include "util/log.h"

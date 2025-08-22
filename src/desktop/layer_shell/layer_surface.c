@@ -194,14 +194,15 @@ static void e_layer_surface_commit(struct wl_listener* listener, void* data)
     //committed keyboard interactivity
     if (wlr_layer_surface_v1->current.committed & WLR_LAYER_SURFACE_V1_STATE_KEYBOARD_INTERACTIVITY)
     {
-        struct e_seat* seat = layer_surface->server->seat;
+        struct e_server* server = layer_surface->server;
 
         //give exclusive focus if requested and allowed and doesn't have focus
-        if (wlr_layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE && !e_seat_has_focus(seat, wlr_layer_surface_v1->surface))
-            e_desktop_focus_layer_surface(layer_surface);
+        if (wlr_layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE && server->seat->focus.focused_layer_surface != layer_surface)
+            e_desktop_set_focus_layer_surface(server, layer_surface);
+        //TODO: if there were multiple seats, focus on this layer surface should be cleared from all seats
         //clear focus if layer surface no longer wants focus and has focus
-        else if (wlr_layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE && e_seat_has_focus(seat, wlr_layer_surface_v1->surface))
-            e_desktop_clear_focus(layer_surface->server);
+        else if (wlr_layer_surface_v1->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE && server->seat->focus.focused_layer_surface == layer_surface)
+            e_desktop_set_focus_layer_surface(server, NULL);
 
         e_log_info("layer surface committed keyboard interactivity");
     }
@@ -251,13 +252,17 @@ static void e_layer_surface_map(struct wl_listener* listener, void* data)
 
     //give focus if requests exclusive focus
     if (layer_surface->scene_layer_surface_v1->layer_surface->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE)
-        e_desktop_focus_layer_surface(layer_surface);
+        e_desktop_set_focus_layer_surface(layer_surface->server, layer_surface);
 }
 
 // Surface no longer wants to be displayed.
 static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
 {
     struct e_layer_surface* unmapped_layer_surface = wl_container_of(listener, unmapped_layer_surface, unmap);
+
+    //TODO: if there were multiple seats, focus on this layer surface should be cleared from all seats
+    if (unmapped_layer_surface->server->seat->focus.focused_layer_surface == unmapped_layer_surface)
+        e_desktop_set_focus_layer_surface(unmapped_layer_surface->server, NULL);
 
     wlr_scene_node_set_enabled(&unmapped_layer_surface->scene_layer_surface_v1->tree->node, false);
 
@@ -273,7 +278,7 @@ static void e_layer_surface_unmap(struct wl_listener* listener, void* data)
     struct e_layer_surface* next_layer_surface = e_output_get_exclusive_topmost_layer_surface(unmapped_layer_surface->output);
 
     if (next_layer_surface != NULL)
-        e_desktop_focus_layer_surface(next_layer_surface);
+        e_desktop_set_focus_layer_surface(next_layer_surface->server, next_layer_surface);
 }
 
 static void e_layer_surface_handle_node_destroy(struct wl_listener* listener, void* data)
@@ -364,6 +369,16 @@ struct e_layer_surface* e_layer_surface_create(struct e_server* server, struct w
     SIGNAL_CONNECT(wlr_layer_surface_v1->output->events.destroy, layer_surface->output_destroy, e_layer_surface_handle_output_destroy);
 
     return layer_surface;
+}
+
+// Returns layer surface's requested keyboard interactivity.
+enum zwlr_layer_surface_v1_keyboard_interactivity e_layer_surface_get_interactivity(struct e_layer_surface* layer_surface)
+{
+    assert(layer_surface);
+
+    struct wlr_layer_surface_v1* wlr_layer_surface = layer_surface->scene_layer_surface_v1->layer_surface;
+
+    return wlr_layer_surface->current.keyboard_interactive;
 }
 
 // Configures an e_layer_surface's layout, updates remaining area.

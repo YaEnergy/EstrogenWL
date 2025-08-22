@@ -16,6 +16,7 @@
 #include "desktop/views/view.h"
 
 struct e_output;
+struct e_container;
 
 enum e_cursor_mode
 {

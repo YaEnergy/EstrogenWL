@@ -108,7 +108,7 @@ static void e_view_container_handle_view_map(struct wl_listener* listener, void*
     
     //TODO: tiled -> parent to previously focused tiled container
 
-    e_desktop_focus_view_container(view_container);
+    e_desktop_set_focus_view_container(view_container->base.server, view_container);
 }
 
 static void e_view_container_handle_view_unmap(struct wl_listener* listener, void* data)
@@ -116,6 +116,10 @@ static void e_view_container_handle_view_unmap(struct wl_listener* listener, voi
     struct e_view_container* view_container = wl_container_of(listener, view_container, unmap);
 
     struct e_workspace* workspace = view_container->base.workspace;
+
+    //TODO: if there were multiple seats, focus on this view container should be cleared from all seats
+    if (view_container->base.server->seat->focus.active_view_container == view_container)
+        e_desktop_set_focus_view_container(view_container->base.server, NULL);
 
     e_container_leave(&view_container->base);
 
@@ -291,7 +295,7 @@ static void e_view_container_handle_view_request_activate(struct wl_listener* li
 {
     struct e_view_container* view_container = wl_container_of(listener, view_container, request_activate);
 
-    e_desktop_focus_view_container(view_container);
+    e_desktop_set_focus_view_container(view_container->base.server, view_container);
 }
 
 static void e_view_container_handle_view_destroy(struct wl_listener* listener, void* data)

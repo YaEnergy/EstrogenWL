@@ -103,84 +103,18 @@ struct e_container* e_desktop_hovered_container(struct e_server* server)
 
 /* focus */
 
-// Set seat focus on a view container if possible, and does whatever is necessary to do so.
-void e_desktop_focus_view_container(struct e_view_container* view_container)
+void e_desktop_set_focus_view_container(struct e_server* server, struct e_view_container* view_container)
 {
-    assert(view_container);
+    assert(server);
 
-    #if E_VERBOSE
-    e_log_info("desktop focus on view container");
-    #endif
-
-    if (!view_container->view->mapped || view_container->base.workspace == NULL || view_container->base.workspace->output == NULL)
-    {
-        e_log_error("e_desktop_focus_view_container: view is not visible, won't focus");
-        return;
-    }
-
-    if (e_seat_focus_surface(view_container->base.server->seat, view_container->view->surface, false))
-    {
-        struct e_output* output = view_container->base.workspace->output;
-
-        if (output->active_workspace != view_container->base.workspace)
-            e_output_display_workspace(output, view_container->base.workspace);
-
-        e_view_set_activated(view_container->view, true);
-        e_container_raise_to_top(&view_container->base);
-    }
+    e_seat_set_focus_view_container(server->seat, view_container);
 }
 
-// Set seat focus on a layer surface if possible.
-void e_desktop_focus_layer_surface(struct e_layer_surface* layer_surface)
+void e_desktop_set_focus_layer_surface(struct e_server* server, struct e_layer_surface* layer_surface)
 {
-    assert(layer_surface);
+    assert(server);
 
-    e_seat_focus_layer_surface(layer_surface->server->seat, layer_surface->scene_layer_surface_v1->layer_surface);
-}
-
-// Gets the type of surface (view container or layer surface) and sets seat focus.
-// This will do nothing if surface isn't of a type that should be focused on by the desktop's seat.
-void e_desktop_focus_surface(struct e_server* server, struct wlr_surface* surface)
-{
-    assert(server && surface);
-
-    if (server == NULL)
-    {
-        e_log_error("e_desktop_focus_surface: server is NULL!");
-        return;
-    }
-
-    if (server == NULL)
-    {
-        e_log_error("e_desktop_focus_surface: surface is NULL!");
-        return;
-    }
-
-    struct e_seat* seat = server->seat;
-
-    //focus on views containers
-
-    struct wlr_surface* root_surface = wlr_surface_get_root_surface(surface);
-    struct e_view_container* view_container = e_view_container_try_from_surface(server, root_surface);
-
-    if (view_container != NULL && !e_seat_has_focus(seat, view_container->view->surface))
-    {
-        e_desktop_focus_view_container(view_container);
-        return;
-    }
-
-    //focus on layer surfaces that request on demand interactivity
-
-    struct wlr_layer_surface_v1* wlr_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(surface);
-
-    //is layer surface that allows focus?
-    if (wlr_layer_surface != NULL && wlr_layer_surface->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE)
-    {
-        struct e_layer_surface* layer_surface = wlr_layer_surface->data;
-
-        e_desktop_focus_layer_surface(layer_surface);
-        return;  
-    }
+    e_seat_set_focus_layer_surface(server->seat, layer_surface);
 }
 
 // Returns view container currently in focus.
@@ -189,38 +123,5 @@ struct e_view_container* e_desktop_focused_view_container(struct e_server* serve
 {
     assert(server);
 
-    if (server->seat == NULL || server->seat->focus_surface == NULL)
-        return NULL;
-
-    return e_view_container_try_from_surface(server, server->seat->focus_surface);
-}
-
-// Returns view container previously in focus.
-// Returns NULL if no view container had focus.
-struct e_view_container* e_desktop_prev_focused_view_container(struct e_server* server)
-{
-    assert(server);
-
-    if (server->seat == NULL || server->seat->previous_focus_surface == NULL)
-        return NULL;
-
-    return e_view_container_try_from_surface(server, server->seat->previous_focus_surface);
-}
-
-void e_desktop_clear_focus(struct e_server* server)
-{
-    assert(server);
-
-    if (server == NULL)
-    {
-        e_log_error("e_desktop_clear_focus: server is NULL!");
-        return;
-    }
-
-    struct e_view_container* focused_view_container = e_desktop_focused_view_container(server);
-
-    if (focused_view_container != NULL)
-        e_view_set_activated(focused_view_container->view, false);
-
-    e_seat_clear_focus(server->seat);
+    return server->seat->focus.active_view_container;
 }

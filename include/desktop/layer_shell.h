@@ -71,6 +71,9 @@ void e_layer_surface_configure(struct e_layer_surface* layer_surface, struct wlr
 
 /* some helper getter functions for layer surfaces */
 
+// Returns layer surface's requested keyboard interactivity.
+enum zwlr_layer_surface_v1_keyboard_interactivity e_layer_surface_get_interactivity(struct e_layer_surface* layer_surface);
+
 // Returns this layer surface's layer.
 enum zwlr_layer_shell_v1_layer e_layer_surface_get_layer(struct e_layer_surface* layer_surface);
 
