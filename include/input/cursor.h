@@ -28,6 +28,8 @@ enum e_cursor_mode
 struct e_cursor_context
 {
     // May be NULL.
+    struct e_view* view;
+    // May be NULL.
     struct wlr_scene_surface* scene_surface;
     // Local position on surface.
     double sx, sy;
@@ -80,9 +82,5 @@ void e_cursor_start_container_resize(struct e_cursor* cursor, struct e_container
 
 // Starts grabbing a container under the move mode.
 void e_cursor_start_container_move(struct e_cursor* cursor, struct e_container* container);
-
-// Sets seat focus to whatever surface is under cursor.
-// If nothing is under cursor, doesn't change seat focus.
-void e_cursor_set_focus_hover(struct e_cursor* cursor);
 
 void e_cursor_destroy(struct e_cursor* cursor);

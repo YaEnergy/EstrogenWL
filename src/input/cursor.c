@@ -418,6 +418,16 @@ static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
         e_cursor_resize_floating(cursor);
 }
 
+static void seat_notify_cursor_context(struct e_seat* seat, const struct e_cursor_context* context)
+{
+    assert(seat && context);
+
+    if (context->scene_surface != NULL)
+        wlr_seat_pointer_notify_enter(seat->wlr_seat, context->scene_surface->surface, context->sx, context->sy); //is only sent once
+    else
+        wlr_seat_pointer_notify_clear_focus(seat->wlr_seat);
+}
+
 static void e_cursor_handle_motion(struct e_cursor* cursor, uint32_t time_msec)
 {
     switch (cursor->mode)
@@ -437,10 +447,18 @@ static void e_cursor_handle_motion(struct e_cursor* cursor, uint32_t time_msec)
     struct e_cursor_context context;
     e_cursor_get_context(cursor, &context);
 
-    e_cursor_set_focus_hover(cursor);
+    seat_notify_cursor_context(seat, &context);
 
     if (context.scene_surface != NULL)
         wlr_seat_pointer_notify_motion(seat->wlr_seat, time_msec, context.sx, context.sy);
+
+    //FIXME: cursor image doesn't change when hovered view changes while idle
+    //display default cursor when not hovering any VIEWS (not just any surface)
+    if (context.view == NULL)
+        wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
+
+    //sloppy focus
+    e_seat_set_focus_from_hover(seat);
 }
 
 static void e_cursor_motion(struct wl_listener* listener, void* data)
@@ -601,6 +619,7 @@ void e_cursor_get_context(const struct e_cursor* cursor, struct e_cursor_context
     struct e_server* server = cursor->seat->server;
 
     context->scene_surface = scene_surface_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &context->sx, &context->sy);
+    context->view = (context->scene_surface != NULL) ? e_view_try_from_node_ancestors(&context->scene_surface->buffer->node) : NULL;
 }
 
 void e_cursor_set_mode(struct e_cursor* cursor, enum e_cursor_mode mode)
@@ -738,74 +757,6 @@ void e_cursor_start_container_move(struct e_cursor* cursor, struct e_container* 
     }
 
     e_cursor_start_grab_container_mode(cursor, container, E_CURSOR_MODE_MOVE);
-}
-
-// Returns NULL on fail.
-static struct e_layer_surface* layer_surface_try_from_surface(struct wlr_surface* surface)
-{
-    assert(surface);
-
-    struct wlr_layer_surface_v1* wlr_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(surface);
-
-    return (wlr_layer_surface != NULL) ? wlr_layer_surface->data : NULL;
-}
-
-static void set_focus_from_surface(struct e_seat* seat, struct wlr_surface* surface)
-{
-    assert(seat && surface);
-    
-    if (surface == NULL)
-        return;
-
-    surface = wlr_surface_get_root_surface(surface);
-    
-    struct e_view_container* view_container = e_view_container_try_from_surface(seat->server, surface);
-
-    if (view_container != NULL)
-    {
-        e_seat_set_focus_view_container(seat, view_container);
-        return;
-    }
-
-    struct e_layer_surface* layer_surface = layer_surface_try_from_surface(surface);
-
-    if (layer_surface != NULL)
-    {
-        e_seat_set_focus_layer_surface(seat, layer_surface);
-        return;
-    }
-}
-
-// Sets seat focus to whatever surface is under cursor.
-// If nothing is under cursor, doesn't change seat focus.
-void e_cursor_set_focus_hover(struct e_cursor* cursor)
-{
-    //only update focus in default mode
-    if (cursor->mode != E_CURSOR_MODE_DEFAULT)
-        return;
-
-    struct e_seat* seat = cursor->seat;
-
-    struct e_cursor_context context;
-    e_cursor_get_context(cursor, &context);
-
-    struct e_view* view = (context.scene_surface == NULL) ? NULL : e_view_try_from_node_ancestors(&context.scene_surface->buffer->node);
-
-    if (context.scene_surface != NULL)
-    {
-        wlr_seat_pointer_notify_enter(seat->wlr_seat, context.scene_surface->surface, context.sx, context.sy); //is only sent once
-
-        //sloppy focus
-        set_focus_from_surface(seat, context.scene_surface->surface);
-    }
-    else 
-    {
-        wlr_seat_pointer_notify_clear_focus(seat->wlr_seat);
-    }
-
-    //display default cursor when not hovering any VIEWS (not just any surface)
-    if (view == NULL)
-        wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
 }
 
 void e_cursor_destroy(struct e_cursor* cursor)
