@@ -430,6 +430,58 @@ bool e_seat_set_focus_layer_surface(struct e_seat* seat, struct e_layer_surface*
     }
 }
 
+// Returns NULL on fail.
+static struct e_layer_surface* layer_surface_try_from_surface(struct wlr_surface* surface)
+{
+    assert(surface);
+
+    struct wlr_layer_surface_v1* wlr_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(surface);
+
+    return (wlr_layer_surface != NULL) ? wlr_layer_surface->data : NULL;
+}
+
+static void set_focus_from_surface(struct e_seat* seat, struct wlr_surface* surface)
+{
+    assert(seat && surface);
+    
+    if (surface == NULL)
+        return;
+
+    surface = wlr_surface_get_root_surface(surface);
+    
+    struct e_view_container* view_container = e_view_container_try_from_surface(seat->server, surface);
+
+    if (view_container != NULL)
+    {
+        e_seat_set_focus_view_container(seat, view_container);
+        return;
+    }
+
+    struct e_layer_surface* layer_surface = layer_surface_try_from_surface(surface);
+
+    if (layer_surface != NULL)
+    {
+        e_seat_set_focus_layer_surface(seat, layer_surface);
+        return;
+    }
+}
+
+// Attempts to set seat keyboard focus using seat's cursor's hover context.
+void e_seat_set_focus_from_hover(struct e_seat* seat)
+{
+    assert(seat);
+
+    //only update focus in default mode
+    if (seat->cursor->mode != E_CURSOR_MODE_DEFAULT)
+        return;
+
+    struct e_cursor_context context;
+    e_cursor_get_context(seat->cursor, &context);
+
+    if (context.scene_surface != NULL)
+        set_focus_from_surface(seat, context.scene_surface->surface);
+}
+
 // Returns true if seat has focus on this surface.
 bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface)
 {

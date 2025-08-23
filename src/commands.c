@@ -214,7 +214,7 @@ void e_commands_parse(struct e_server* server, const char* command)
         int i = e_list_find_index(&output->workspace_group.workspaces, workspace);
 
         e_output_display_workspace(output, e_list_at(&output->workspace_group.workspaces, (i + 1) % output->workspace_group.workspaces.count));
-        e_cursor_set_focus_hover(server->seat->cursor);
+        e_seat_set_focus_from_hover(server->seat);
         e_log_info("output workspace index: %i", (i + 1) % output->workspace_group.workspaces.count);
     }
     //TODO: testing only, remove
@@ -248,7 +248,7 @@ void e_commands_parse(struct e_server* server, const char* command)
         if (new_workspace != old_workspace)
             e_workspace_rearrange(new_workspace);
 
-        e_cursor_set_focus_hover(server->seat->cursor);
+        e_seat_set_focus_from_hover(server->seat);
         e_log_info("container workspace index: %i", (i + 1) % output->workspace_group.workspaces.count);
     }
     else 

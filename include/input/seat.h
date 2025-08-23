@@ -87,6 +87,9 @@ bool e_seat_set_focus_view_container(struct e_seat* seat, struct e_view_containe
 // Returns whether this was succesful or not.
 bool e_seat_set_focus_layer_surface(struct e_seat* seat, struct e_layer_surface* layer_surface);
 
+// Attempts to set seat keyboard focus using seat's cursor's hover context.
+void e_seat_set_focus_from_hover(struct e_seat* seat);
+
 // Returns true if seat has focus on this surface.
 bool e_seat_has_focus(struct e_seat* seat, struct wlr_surface* surface);
 

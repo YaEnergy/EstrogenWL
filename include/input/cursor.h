@@ -25,6 +25,16 @@ enum e_cursor_mode
     E_CURSOR_MODE_MOVE
 };
 
+struct e_cursor_context
+{
+    // May be NULL.
+    struct e_view* view;
+    // May be NULL.
+    struct wlr_scene_surface* scene_surface;
+    // Local position on surface.
+    double sx, sy;
+};
+
 //display of cursor image and management cursor
 struct e_cursor
 {
@@ -58,6 +68,17 @@ struct e_cursor
 // Returns NULL on fail.
 struct e_cursor* e_cursor_create(struct e_seat* seat, struct wlr_output_layout* output_layout);
 
+// Outs cursor's current hover context.
+void e_cursor_get_context(const struct e_cursor* cursor, struct e_cursor_context* context);
+
+// Returns output hovered by cursor.
+// Returns NULL if none.
+struct e_output* e_cursor_hovered_output(const struct e_cursor* cursor);
+
+// Returns container hovered by container.
+// Returns NULL if none.
+struct e_container* e_cursor_hovered_container(const struct e_cursor* cursor);
+
 void e_cursor_set_mode(struct e_cursor* cursor, enum e_cursor_mode mode);
 
 // Lets go of a possibly grabbed view, & sets cursor mode to default.
@@ -69,9 +90,5 @@ void e_cursor_start_container_resize(struct e_cursor* cursor, struct e_container
 
 // Starts grabbing a container under the move mode.
 void e_cursor_start_container_move(struct e_cursor* cursor, struct e_container* container);
-
-// Sets seat focus to whatever surface is under cursor.
-// If nothing is under cursor, doesn't change seat focus.
-void e_cursor_set_focus_hover(struct e_cursor* cursor);
 
 void e_cursor_destroy(struct e_cursor* cursor);

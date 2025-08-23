@@ -206,9 +206,7 @@ static void e_cursor_handle_mode_move(struct e_cursor* cursor)
     if (e_container_is_tiled(cursor->grab_container))
     {
         //TODO: tiled container interactive reparenting
-        struct e_server* server = cursor->seat->server;
-
-        struct e_container* hovered_container = e_desktop_hovered_container(server);
+        struct e_container* hovered_container = e_cursor_hovered_container(cursor);
     
         //if not the same tiled container as grabbed tiled container, swap them
         if (hovered_container != NULL && e_container_is_tiled(hovered_container) && hovered_container != cursor->grab_container)
@@ -410,12 +408,20 @@ static void e_cursor_handle_mode_resize(struct e_cursor* cursor)
         return;
     }
 
-    //TODO: wait for view to finish committing (resize) before applying pending position
-
     if (e_container_is_tiled(cursor->grab_container))
         e_cursor_resize_tiled(cursor);
     else //floating
         e_cursor_resize_floating(cursor);
+}
+
+static void seat_notify_cursor_context(struct e_seat* seat, const struct e_cursor_context* context)
+{
+    assert(seat && context);
+
+    if (context->scene_surface != NULL)
+        wlr_seat_pointer_notify_enter(seat->wlr_seat, context->scene_surface->surface, context->sx, context->sy); //is only sent once
+    else
+        wlr_seat_pointer_notify_clear_focus(seat->wlr_seat);
 }
 
 static void e_cursor_handle_motion(struct e_cursor* cursor, uint32_t time_msec)
@@ -432,16 +438,23 @@ static void e_cursor_handle_motion(struct e_cursor* cursor, uint32_t time_msec)
             break;
     }
 
-    struct e_server* server = cursor->seat->server;
     struct e_seat* seat = cursor->seat;
 
-    double sx, sy;
-    struct wlr_scene_surface* hover_surface = e_desktop_scene_surface_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &sx, &sy);
+    struct e_cursor_context context;
+    e_cursor_get_context(cursor, &context);
 
-    e_cursor_set_focus_hover(cursor);
+    seat_notify_cursor_context(seat, &context);
 
-    if (hover_surface != NULL)
-        wlr_seat_pointer_notify_motion(seat->wlr_seat, time_msec, sx, sy);
+    if (context.scene_surface != NULL)
+        wlr_seat_pointer_notify_motion(seat->wlr_seat, time_msec, context.sx, context.sy);
+
+    //FIXME: cursor image doesn't change when hovered view changes while idle
+    //display default cursor when not hovering any VIEWS (not just any surface)
+    if (context.view == NULL)
+        wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
+
+    //sloppy focus
+    e_seat_set_focus_from_hover(seat);
 }
 
 static void e_cursor_motion(struct wl_listener* listener, void* data)
@@ -557,6 +570,76 @@ struct e_cursor* e_cursor_create(struct e_seat* seat, struct wlr_output_layout* 
     SIGNAL_CONNECT(cursor->wlr_cursor->events.axis, cursor->axis, e_cursor_axis);
 
     return cursor;
+}
+
+// Finds the scene surface at the specified layout coords in given scene graph.
+// Also translates the layout coords to the surface coords if not NULL. (sx, sy)
+// NULL for sx & sy is allowed.
+// Returns NULL if nothing is found.
+struct wlr_scene_surface* scene_surface_at(struct wlr_scene_node* node, double lx, double ly, double* sx, double* sy)
+{
+    assert(node);
+
+    if (sx != NULL)
+        *sx = 0.0;
+
+    if (sy != NULL)
+        *sy = 0.0;
+
+    double nx, ny = 0.0;
+    struct wlr_scene_node* snode = wlr_scene_node_at(node, lx, ly, &nx, &ny);
+
+    if (snode == NULL || snode->type != WLR_SCENE_NODE_BUFFER)
+        return NULL;
+
+    struct wlr_scene_buffer* buffer = wlr_scene_buffer_from_node(snode);
+    struct wlr_scene_surface* scene_surface = wlr_scene_surface_try_from_buffer(buffer);
+
+    if (scene_surface == NULL)
+        return NULL;
+
+    if (sx != NULL)
+        *sx = nx;
+
+    if (sy != NULL)
+        *sy = ny;
+
+    return scene_surface;
+}
+
+// Outs cursor's current hover context.
+void e_cursor_get_context(const struct e_cursor* cursor, struct e_cursor_context* context)
+{
+    assert(cursor && context);
+
+    struct e_server* server = cursor->seat->server;
+
+    context->scene_surface = scene_surface_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &context->sx, &context->sy);
+    context->view = (context->scene_surface != NULL) ? e_view_try_from_node_ancestors(&context->scene_surface->buffer->node) : NULL;
+}
+
+// Returns output hovered by cursor.
+// Returns NULL if none.
+struct e_output* e_cursor_hovered_output(const struct e_cursor* cursor)
+{
+    assert(cursor);
+
+    struct e_server* server = cursor->seat->server;
+
+    struct wlr_output* wlr_output = wlr_output_layout_output_at(server->output_layout, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
+    
+    return (wlr_output != NULL) ? wlr_output->data : NULL;
+}
+
+// Returns container hovered by cursor.
+// Returns NULL if none.
+struct e_container* e_cursor_hovered_container(const struct e_cursor* cursor)
+{
+    assert(cursor);
+
+    struct e_server* server = cursor->seat->server;
+
+    return e_container_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y);
 }
 
 void e_cursor_set_mode(struct e_cursor* cursor, enum e_cursor_mode mode)
@@ -694,74 +777,6 @@ void e_cursor_start_container_move(struct e_cursor* cursor, struct e_container* 
     }
 
     e_cursor_start_grab_container_mode(cursor, container, E_CURSOR_MODE_MOVE);
-}
-
-// Returns NULL on fail.
-static struct e_layer_surface* layer_surface_try_from_surface(struct wlr_surface* surface)
-{
-    assert(surface);
-
-    struct wlr_layer_surface_v1* wlr_layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(surface);
-
-    return (wlr_layer_surface != NULL) ? wlr_layer_surface->data : NULL;
-}
-
-static void set_focus_from_surface(struct e_seat* seat, struct wlr_surface* surface)
-{
-    assert(seat && surface);
-    
-    if (surface == NULL)
-        return;
-
-    surface = wlr_surface_get_root_surface(surface);
-    
-    struct e_view_container* view_container = e_view_container_try_from_surface(seat->server, surface);
-
-    if (view_container != NULL)
-    {
-        e_seat_set_focus_view_container(seat, view_container);
-        return;
-    }
-
-    struct e_layer_surface* layer_surface = layer_surface_try_from_surface(surface);
-
-    if (layer_surface != NULL)
-    {
-        e_seat_set_focus_layer_surface(seat, layer_surface);
-        return;
-    }
-}
-
-// Sets seat focus to whatever surface is under cursor.
-// If nothing is under cursor, doesn't change seat focus.
-void e_cursor_set_focus_hover(struct e_cursor* cursor)
-{
-    //only update focus in default mode
-    if (cursor->mode != E_CURSOR_MODE_DEFAULT)
-        return;
-
-    struct e_server* server = cursor->seat->server;
-    struct e_seat* seat = cursor->seat;
-
-    double sx, sy;
-    struct wlr_scene_surface* hover_surface = e_desktop_scene_surface_at(&server->scene->tree.node, cursor->wlr_cursor->x, cursor->wlr_cursor->y, &sx, &sy);
-    struct e_view* view = (hover_surface == NULL) ? NULL : e_view_try_from_node_ancestors(&hover_surface->buffer->node);
-
-    if (hover_surface != NULL)
-    {
-        wlr_seat_pointer_notify_enter(seat->wlr_seat, hover_surface->surface, sx, sy); //is only sent once
-
-        //sloppy focus
-        set_focus_from_surface(seat, hover_surface->surface);
-    }
-    else 
-    {
-        wlr_seat_pointer_notify_clear_focus(seat->wlr_seat);
-    }
-
-    //display default cursor when not hovering any VIEWS (not just any surface)
-    if (view == NULL)
-        wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_manager, "default");
 }
 
 void e_cursor_destroy(struct e_cursor* cursor)
