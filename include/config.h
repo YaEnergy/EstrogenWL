@@ -40,5 +40,4 @@ void e_config_init(struct e_config* config);
 
 void e_config_fini(struct e_config* config);
 
-//TODO: implement e_config_parse_config_file
-//bool e_config_parse_config_file(char* file_path, struct e_config* out);
+bool e_config_parse(struct e_config* config, const char* path);
