@@ -12,18 +12,7 @@
 #include "config.h"
 #include "server.h"
 
-#include "input/keybind.h"
 #include "util/log.h"
-
-static bool bind_keybind(struct e_list* keybinds, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods, const char* command)
-{
-    struct e_keybind* keybind = e_keybind_create(keysym, mods, command);
-
-    if (keybind == NULL)
-        return false;
-
-    return e_list_add(keybinds, keybind);
-}
 
 // Called when event loop is ready.
 static void event_loop_handle_ready(void* data)
@@ -50,20 +39,9 @@ int main()
     struct e_config config = {0};
     e_config_init(&config);
 
-    // test keybinds
-    
-    //check out: xkbcommon.org
-    //Important function: xkb_keysym_from_name (const char *name, enum xkb_keysym_flags flags)
-    
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F1, WLR_MODIFIER_LOGO, "exec rofi -modi drun,run -show drun");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F2, WLR_MODIFIER_LOGO, "exec $TERM");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F3, WLR_MODIFIER_LOGO, "exit");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F4, WLR_MODIFIER_LOGO, "kill");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F5, WLR_MODIFIER_LOGO, "toggle_fullscreen");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F6, WLR_MODIFIER_LOGO, "toggle_tiled");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F7, WLR_MODIFIER_LOGO, "switch_tiling_mode");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F8, WLR_MODIFIER_LOGO, "next_workspace");
-    bind_keybind(&config.keyboard.keybinds, XKB_KEY_F9, WLR_MODIFIER_LOGO, "move_to_next_workspace");
+    //TODO: replace config path with user's specified path
+    if (!e_config_parse(&config, "/home/kiara/.config/EstrogenWL/config.json"))
+        return 1;
     
     struct e_server server = {0};
 
