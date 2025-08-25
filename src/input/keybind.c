@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #include <string.h>
@@ -10,7 +11,10 @@
 
 #include "util/log.h"
 
-struct e_keybind* e_keybind_create(xkb_keysym_t keysym, enum wlr_keyboard_modifier mods, const char* command)
+// Command is copied.
+// mods is enum wlr_keyboard_modifier bit flags
+// Returns NULL on fail.
+struct e_keybind* e_keybind_create(xkb_keysym_t keysym, uint32_t mods, const char* command)
 {
     assert(command);
 
@@ -36,7 +40,8 @@ struct e_keybind* e_keybind_create(xkb_keysym_t keysym, enum wlr_keyboard_modifi
     return keybind;
 }
 
-bool e_keybind_should_activate(struct e_keybind* keybind, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods)
+// mods is enum wlr_keyboard_modifier bit flags
+bool e_keybind_should_activate(struct e_keybind* keybind, xkb_keysym_t keysym, uint32_t mods)
 {
     return (xkb_keysym_to_lower(keybind->keysym) == xkb_keysym_to_lower(keysym) && keybind->mods == mods);
 }

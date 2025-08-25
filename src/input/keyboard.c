@@ -24,7 +24,8 @@
 #include "commands.h"
 #include "server.h"
 
-bool e_desktop_handle_keybind(struct e_server* server, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods)
+// mods is enum wlr_keyboard_modifier bit flags
+bool e_desktop_handle_keybind(struct e_server* server, xkb_keysym_t keysym, uint32_t mods)
 {
     struct e_list* keybinds = &server->config->keyboard.keybinds;
 
