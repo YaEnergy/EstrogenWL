@@ -38,7 +38,7 @@ struct e_keybind* e_keybind_create(xkb_keysym_t keysym, enum wlr_keyboard_modifi
 
 bool e_keybind_should_activate(struct e_keybind* keybind, xkb_keysym_t keysym, enum wlr_keyboard_modifier mods)
 {
-    return (keybind->keysym == keysym && keybind->mods == mods);
+    return (xkb_keysym_to_lower(keybind->keysym) == xkb_keysym_to_lower(keysym) && keybind->mods == mods);
 }
 
 void e_keybind_free(struct e_keybind* keybind)
