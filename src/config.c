@@ -11,15 +11,22 @@
 #include <xkbcommon/xkbcommon.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 
-#include <json-c/json.h>
+#include <json-c/arraylist.h>
+#include <json-c/json_object.h>
+#include <json-c/json_object_iterator.h>
+#include <json-c/json_tokener.h>
+#include <json-c/linkhash.h>
 
 #include "desktop/tree/container.h"
 
 #include "input/keybind.h"
 
-#include "json_types.h"
 #include "util/list.h"
 #include "util/log.h"
+
+#define NUM_MODIFIERS 8
+
+static const char* modifiers_names[] = {"shift", "caps", "ctrl", "alt", "mod2", "mod3", "logo", "mod5"};
 
 void e_config_init(struct e_config* config)
 {
@@ -138,6 +145,63 @@ static struct json_object* json_parse_file(const char* path)
     return object;
 }
 
+//TODO: comment
+static bool parse_mod(const char* string, enum wlr_keyboard_modifier* mod)
+{
+    assert(string && mod);
+
+    //TODO: case insensitive comparison
+
+    for (int i = 0; i < NUM_MODIFIERS; i++)
+    {
+        if (strcmp(string, modifiers_names[i]) == 0)
+        {
+            *mod = (enum wlr_keyboard_modifier)(1 << i);
+            return  true;
+        }
+    }
+
+    return false;
+}
+
+//TODO: comment
+static bool parse_mods(const char* string, uint32_t* mods)
+{
+    assert(string && mods);
+
+    uint32_t result = 0;
+    char* copy = strdup(string); //strtok edits string
+
+    if (copy == NULL)
+        return false;
+
+    //TODO: don't use strtok, I don't like it
+    const char* token = strtok(copy, "+");
+
+    //parse modifiers separated by plus-sign
+
+    while (token != NULL)
+    {
+        enum wlr_keyboard_modifier mod = WLR_MODIFIER_SHIFT; //overridden
+
+        if (!parse_mod(token, &mod))
+        {
+            free(copy);
+            return false;
+        }
+
+        result |= mod; //add modifier
+        token = strtok(NULL, "+"); //next, strtok retains internal state, don't really like that
+    }
+
+    free(copy);
+    copy = NULL;
+
+    *mods = result;
+
+    return true;
+}
+
 static bool config_parse_keybind(struct e_config* config, const struct json_object* obj)
 {
     assert(config && obj);
@@ -165,14 +229,22 @@ static bool config_parse_keybind(struct e_config* config, const struct json_obje
 
     struct json_object* keysym_val = NULL;
     if (json_object_object_get_ex(obj, "keysym", &keysym_val) == 1 && json_object_is_type(keysym_val, json_type_string))
-    {
-        const char* name = json_object_get_string(keysym_val);
-        keysym = xkb_keysym_from_name(name, XKB_KEYSYM_CASE_INSENSITIVE);
-    }
+        keysym = xkb_keysym_from_name(json_object_get_string(keysym_val), XKB_KEYSYM_CASE_INSENSITIVE);
     
     if (keysym == XKB_KEY_NoSymbol)
     {
         e_log_error("config_parse_keybind: keybind must have a recognizeable keysym (character)!");
+        return false;
+    }
+
+    struct json_object* mods_val = NULL;
+    bool parsed_mods = false;
+    if (json_object_object_get_ex(obj, "mods", &mods_val) == 1 && json_object_is_type(mods_val, json_type_string))
+        parsed_mods = parse_mods(json_object_get_string(mods_val), &mods);
+
+    if (!parsed_mods)
+    {
+        e_log_error("config_parse_keybind: keybind must have mods AKA modifiers (separated by plus-signs!)");
         return false;
     }
 
