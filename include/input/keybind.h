@@ -10,9 +10,10 @@ struct e_keybind
 {
     xkb_keysym_t keysym;
     enum wlr_keyboard_modifier mods;
-    const char* command;
+    char* command;
 };
 
+// Command is copied.
 // Returns NULL on fail.
 struct e_keybind* e_keybind_create(xkb_keysym_t keysym, enum wlr_keyboard_modifier mods, const char* command);
 

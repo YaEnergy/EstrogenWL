@@ -19,6 +19,7 @@ This already has been quite the adventure...
 - pixman
 - libdrm
 - xcb
+- json-c
 
 ## Support (out-of-date, updating later...)
 

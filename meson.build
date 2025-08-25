@@ -79,6 +79,8 @@ libdrm = dependency('libdrm', required: true)
 libudev = dependency('libudev', required: true)
 libinput = dependency('libinput', required: true)
 
+jsonc = dependency('json-c', required: true)
+
 deps = [
     wlroots,
     wayland_server,
@@ -89,6 +91,7 @@ deps = [
     libdrm,
     libudev,
     libinput,
+    jsonc
 ]
 
 # xwayland support dependancies
